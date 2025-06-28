@@ -1,0 +1,1288 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+{% if request.user.is_staff %}
+<script>
+const editField = function(fieldName, currentValue) {
+    const container = document.getElementById(`${fieldName}-container`);
+    const display = document.getElementById(`${fieldName}-display`);
+    const editor = document.getElementById(`${fieldName}-editor`);
+    
+    if (!container || !display || !editor) {
+        return;
+    }
+    
+    const input = editor.querySelector('textarea, input');
+    if (!input) {
+        return;
+    }
+    
+    // Hide display and show editor
+    display.style.display = 'none';
+    editor.style.display = 'block';
+    
+    // Decode any escaped characters and preserve line breaks
+    let decodedValue = currentValue || '';
+    try {
+        // First unescape any Django-escaped characters
+        decodedValue = decodedValue
+            .replace(/\\x([0-9A-Fa-f]{2})/g, function(match, p1) {
+                return String.fromCharCode(parseInt(p1, 16));
+            })
+            .replace(/\\u([0-9A-Fa-f]{4})/g, function(match, p1) {
+                return String.fromCharCode(parseInt(p1, 16));
+            });
+        
+        // Then handle normal escapes
+        decodedValue = decodedValue
+            .replace(/\\n/g, '\n')
+            .replace(/\\'/g, "'")
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+    } catch (decodeError) {
+        decodedValue = currentValue || '';
+    }
+    
+    // Set the value and focus
+    input.value = decodedValue;
+    input.focus();
+};
+
+const saveField = function(fieldName, charName, charId) {
+    const container = document.getElementById(`${fieldName}-container`);
+    const display = document.getElementById(`${fieldName}-display`);
+    const editor = document.getElementById(`${fieldName}-editor`);
+    
+    if (!container || !display || !editor) {
+        return;
+    }
+    
+    const input = editor.querySelector('textarea, input');
+    if (!input) {
+        return;
+    }
+    
+    const value = input.value;
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:update_character_field' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `field=${fieldName}&value=${encodeURIComponent(value)}`
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            // Hide editor first to prevent visual glitches
+            editor.style.display = 'none';
+            
+            // Update content based on field type
+            if (fieldName === 'desc' || fieldName === 'background' || fieldName === 'personality' || fieldName === 'notable_traits' || fieldName === 'special_effects') {
+                display.innerHTML = value.replace(/\n/g, '<br>');
+            } else {
+                display.textContent = value;
+            }
+            
+            // Show display
+            display.style.display = 'block';
+        } else {
+            alert('Error saving field: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(function(error) {
+        alert('Error saving field: ' + error);
+    });
+};
+
+const cancelEdit = function(fieldName) {
+    const display = document.getElementById(`${fieldName}-display`);
+    const editor = document.getElementById(`${fieldName}-editor`);
+    
+    if (!display || !editor) {
+        return;
+    }
+    
+    // Show display and hide editor
+    display.style.display = 'block';
+    editor.style.display = 'none';
+};
+
+const editTrait = function(category, traitKey, currentValue) {
+    const badgeId = `${category}_${traitKey}_badge`;
+    const badge = document.getElementById(badgeId);
+    
+    if (!badge) {
+        console.error('Badge not found:', badgeId);
+        return;
+    }
+    
+    // Create a select dropdown for die sizes
+    const select = document.createElement('select');
+    select.className = 'form-select form-select-sm d-inline-block';
+    select.style.width = 'auto';
+    
+    const dieSizes = ['d4', 'd6', 'd8', 'd10', 'd12'];
+    dieSizes.forEach(size => {
+        const option = document.createElement('option');
+        option.value = size;
+        option.textContent = size;
+        if (size === currentValue) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Replace badge with select
+    badge.style.display = 'none';
+    badge.parentNode.insertBefore(select, badge.nextSibling);
+    
+    // Handle selection
+    select.onchange = function() {
+        saveTrait(category, traitKey, select.value, badgeId);
+        select.remove();
+        badge.style.display = 'inline';
+    };
+    
+    // Handle clicking away
+    select.onblur = function() {
+        select.remove();
+        badge.style.display = 'inline';
+    };
+    
+    select.focus();
+};
+
+const saveTrait = function(category, traitKey, newValue, badgeId) {
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:update_character_field' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `field=trait_${category}_${traitKey}&value=${encodeURIComponent(newValue)}`
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                badge.textContent = newValue;
+            }
+        } else {
+            alert('Error saving trait: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(function(error) {
+        alert('Error saving trait: ' + error);
+    });
+};
+
+const editDistinction = function(slot, field, currentValue) {
+    const containerId = `distinction_${slot}_${field}_container`;
+    const displayId = `distinction_${slot}_${field}_display`;
+    const editorId = `distinction_${slot}_${field}_editor`;
+    
+    const container = document.getElementById(containerId);
+    const display = document.getElementById(displayId);
+    const editor = document.getElementById(editorId);
+    
+    if (!container || !display || !editor) {
+        console.error('Missing elements for distinction editing:', {
+            container: !!container,
+            display: !!display,
+            editor: !!editor
+        });
+        return;
+    }
+    
+    const input = editor.querySelector('textarea, input');
+    if (!input) {
+        console.error('Could not find input element in editor');
+        return;
+    }
+    
+    // Hide display and show editor
+    display.style.display = 'none';
+    editor.style.display = 'block';
+    
+    // Decode any escaped characters and preserve line breaks
+    let decodedValue = currentValue || '';
+    try {
+        decodedValue = decodedValue
+            .replace(/\\x([0-9A-Fa-f]{2})/g, function(match, p1) {
+                return String.fromCharCode(parseInt(p1, 16));
+            })
+            .replace(/\\u([0-9A-Fa-f]{4})/g, function(match, p1) {
+                return String.fromCharCode(parseInt(p1, 16));
+            })
+            .replace(/\\n/g, '\n')
+            .replace(/\\'/g, "'")
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+    } catch (decodeError) {
+        decodedValue = currentValue || '';
+    }
+    
+    input.value = decodedValue;
+    input.focus();
+};
+
+const saveDistinction = function(slot, field, charName, charId) {
+    const containerId = `distinction_${slot}_${field}_container`;
+    const displayId = `distinction_${slot}_${field}_display`;
+    const editorId = `distinction_${slot}_${field}_editor`;
+    
+    const container = document.getElementById(containerId);
+    const display = document.getElementById(displayId);
+    const editor = document.getElementById(editorId);
+    
+    if (!container || !display || !editor) {
+        return;
+    }
+    
+    const input = editor.querySelector('textarea, input');
+    if (!input) {
+        return;
+    }
+    
+    const value = input.value;
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:update_character_field' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `field=distinction_${slot}_${field}&value=${encodeURIComponent(value)}`
+    })
+    .then(function(response) {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            // Hide editor first
+            editor.style.display = 'none';
+            
+            // Update content based on field type
+            if (field === 'description') {
+                display.innerHTML = value.replace(/\n/g, '<br>');
+            } else {
+                display.textContent = value;
+            }
+            
+            // Show display
+            display.style.display = 'block';
+        } else {
+            alert('Error saving distinction: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(function(error) {
+        alert('Error saving distinction: ' + error);
+    });
+};
+
+const cancelDistinctionEdit = function(slot, field) {
+    const displayId = `distinction_${slot}_${field}_display`;
+    const editorId = `distinction_${slot}_${field}_editor`;
+    
+    const display = document.getElementById(displayId);
+    const editor = document.getElementById(editorId);
+    
+    if (!display || !editor) {
+        return;
+    }
+    
+    // Show display and hide editor
+    display.style.display = 'block';
+    editor.style.display = 'none';
+};
+</script>
+{% endif %}
+
+<div class="container mt-4">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    {% if character.db.image_url %}
+                        <img src="{{ character.db.image_url }}" alt="{{ basic_info.name }}" class="img-fluid rounded mb-3" style="max-height: 300px;">
+                    {% else %}
+                        <div class="bg-light rounded mb-3 p-5 text-muted">No image available</div>
+                    {% endif %}
+                    
+                    <!-- Gallery Button -->
+                    <button class="btn btn-outline-primary btn-sm mb-3" onclick="toggleGallery()">
+                        📸 Gallery ({{ gallery_images|length }})
+                    </button>
+                    
+                    <h1 class="h3 mb-3" id="full_name-container">
+                        <span id="full_name-display">{{ basic_info.name|default:'' }}</span>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('full_name', '{{ basic_info.name|default:'' }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="full_name-editor" style="display: none;">
+                                <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+                                <button onclick="saveField('full_name', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
+                                <button onclick="cancelEdit('full_name')" class="btn btn-sm btn-secondary">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </h1>
+
+                    <div class="text-muted">
+                        {% if basic_info.concept %}
+                            <p><strong>Concept:</strong> {{ basic_info.concept }}</p>
+                        {% endif %}
+
+                        <p id="gender-container">
+                            <strong>Gender:</strong> 
+                            <span id="gender-display">{{ basic_info.gender|default:'' }}</span>
+                            {% if request.user.is_staff %}
+                                <button onclick="editField('gender', '{{ basic_info.gender|default:'' }}')" class="btn btn-sm btn-link">
+                                    Edit
+                                </button>
+                                <span id="gender-editor" style="display: none;">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+                                    <button onclick="saveField('gender', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
+                                    <button onclick="cancelEdit('gender')" class="btn btn-sm btn-secondary">Cancel</button>
+                                </span>
+                            {% endif %}
+                        </p>
+
+                        <p id="age-container">
+                            <strong>Age:</strong> 
+                            <span id="age-display">{{ basic_info.age|default:'' }}</span>
+                            {% if request.user.is_staff %}
+                                <button onclick="editField('age', '{{ basic_info.age|default:'' }}')" class="btn btn-sm btn-link">
+                                    Edit
+                                </button>
+                                <span id="age-editor" style="display: none;">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+                                    <button onclick="saveField('age', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
+                                    <button onclick="cancelEdit('age')" class="btn btn-sm btn-secondary">Cancel</button>
+                                </span>
+                            {% endif %}
+                        </p>
+
+                        <p id="birthday-container">
+                            <strong>Birthday:</strong> 
+                            <span id="birthday-display">{{ basic_info.birthday|default:'' }}</span>
+                            {% if request.user.is_staff %}
+                                <button onclick="editField('birthday', '{{ basic_info.birthday|default:'' }}')" class="btn btn-sm btn-link">
+                                    Edit
+                                </button>
+                                <span id="birthday-editor" style="display: none;">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+                                    <button onclick="saveField('birthday', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
+                                    <button onclick="cancelEdit('birthday')" class="btn btn-sm btn-secondary">Cancel</button>
+                                </span>
+                            {% endif %}
+                        </p>
+
+                        <p id="realm-container">
+                            <strong>Realm:</strong> 
+                            <span id="realm-display">{{ basic_info.realm|default:'' }}</span>
+                            {% if request.user.is_staff %}
+                                <button onclick="editField('realm', '{{ basic_info.realm|default:'' }}')" class="btn btn-sm btn-link">
+                                    Edit
+                                </button>
+                                <span id="realm-editor" style="display: none;">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-auto">
+                                    <button onclick="saveField('realm', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
+                                    <button onclick="cancelEdit('realm')" class="btn btn-sm btn-secondary">Cancel</button>
+                                </span>
+                            {% endif %}
+                        </p>
+
+                        {% if basic_info.culture %}
+                            <p><strong>Culture:</strong> {{ basic_info.culture }}</p>
+                        {% endif %}
+
+                        {% if basic_info.vocation %}
+                            <p><strong>Vocation:</strong> {{ basic_info.vocation }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if organizations %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Organizations</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                    {% for org in organizations %}
+                        <li class="mb-2">
+                            <strong>{{ org.name }}</strong><br>
+                            <span class="text-muted">{{ org.rank }}</span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Secondary and Tertiary Images -->
+            {% if character.db.secondary_image_url or character.db.tertiary_image_url %}
+            <div class="card mb-4" id="additional-images-card">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Additional Images</h2>
+                </div>
+                <div class="card-body text-center">
+                    {% if character.db.secondary_image_url %}
+                        <div class="mb-3" data-image-type="secondary">
+                            <img src="{{ character.db.secondary_image_url }}" alt="Secondary image" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="showImageModal('{{ character.db.secondary_image_url }}', 'Secondary Image', '')">
+                        </div>
+                    {% endif %}
+                    {% if character.db.tertiary_image_url %}
+                        <div class="mb-3" data-image-type="tertiary">
+                            <img src="{{ character.db.tertiary_image_url }}" alt="Tertiary image" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="showImageModal('{{ character.db.tertiary_image_url }}', 'Tertiary Image', '')">
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-8">
+            <!-- Gallery View (hidden by default) -->
+            <div id="gallery-view" style="display: none;">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">Character Gallery</h2>
+                        <div>
+                            {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                                <button class="btn btn-success btn-sm" onclick="showUploadModal()">
+                                    ➕ Add Image
+                                </button>
+                            {% endif %}
+                            <button class="btn btn-secondary btn-sm" onclick="toggleGallery()">
+                                ✖️ Close Gallery
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="gallery-grid" class="row">
+                            {% for image in gallery_images %}
+                            <div class="col-md-4 col-sm-6 mb-3" data-image-id="{{ image.id }}">
+                                <div class="card">
+                                    <img src="{{ image.url }}" class="card-img-top gallery-image" alt="{{ image.caption|default:'Character image' }}" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="showImageModal('{{ image.url }}', '{{ image.caption|default:'' }}', '{{ image.id }}')">
+                                    {% if image.caption %}
+                                    <div class="card-body p-2">
+                                        <small class="text-muted">{{ image.caption }}</small>
+                                    </div>
+                                    {% endif %}
+                                    {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                                    <div class="card-footer p-2">
+                                        <div class="btn-group w-100 mb-2" role="group">
+                                            <button class="btn btn-primary btn-sm" onclick="setMainImage('{{ image.id }}', '{{ image.url }}')" title="Set as main character image">
+                                                🖼️ Main
+                                            </button>
+                                            <button class="btn btn-info btn-sm" onclick="setSecondaryImage('{{ image.id }}', '{{ image.url }}')" title="Set as secondary image">
+                                                🖼️ 2nd
+                                            </button>
+                                            <button class="btn btn-warning btn-sm" onclick="setTertiaryImage('{{ image.id }}', '{{ image.url }}')" title="Set as tertiary image">
+                                                🖼️ 3rd
+                                            </button>
+                                        </div>
+                                        <button class="btn btn-danger btn-sm w-100" onclick="deleteImage('{{ image.id }}')">
+                                            🗑️ Delete
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="col-12">
+                                <div class="text-center py-5 text-muted">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
+                                    <p>No images in gallery yet</p>
+                                    {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                                        <button class="btn btn-primary" onclick="showUploadModal()">Add First Image</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content View -->
+            <div id="main-content">
+            
+            <!-- Description -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Description</h2>
+                </div>
+                <div class="card-body">
+                    <div id="desc-container">
+                        <p class="card-text" id="desc-display">{{ basic_info.description|default:''|linebreaks }}</p>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('desc', '{{ basic_info.description|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="desc-editor" style="display: none;">
+                                <textarea class="form-control form-control-sm w-100" rows="5"></textarea>
+                                <button onclick="saveField('desc', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                <button onclick="cancelEdit('desc')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Background -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Background</h2>
+                </div>
+                <div class="card-body">
+                    <div id="background-container">
+                        <p class="card-text" id="background-display">{{ basic_info.background|default:''|linebreaks }}</p>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('background', '{{ basic_info.background|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="background-editor" style="display: none;">
+                                <textarea class="form-control form-control-sm w-100" rows="5"></textarea>
+                                <button onclick="saveField('background', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                <button onclick="cancelEdit('background')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personality -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Personality</h2>
+                </div>
+                <div class="card-body">
+                    <div id="personality-container">
+                        <p class="card-text" id="personality-display">{{ basic_info.personality|default:''|linebreaks }}</p>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('personality', '{{ basic_info.personality|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="personality-editor" style="display: none;">
+                                <textarea class="form-control form-control-sm w-100" rows="5"></textarea>
+                                <button onclick="saveField('personality', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                <button onclick="cancelEdit('personality')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notable Traits -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Notable Traits</h2>
+                </div>
+                <div class="card-body">
+                    <div id="notable_traits-container">
+                        <p class="card-text" id="notable_traits-display">{{ basic_info.notable_traits|default:''|linebreaks }}</p>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('notable_traits', '{{ basic_info.notable_traits|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="notable_traits-editor" style="display: none;">
+                                <textarea class="form-control form-control-sm w-100" rows="5"></textarea>
+                                <button onclick="saveField('notable_traits', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                <button onclick="cancelEdit('notable_traits')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Effects -->
+            {% if can_see_traits %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Special Effects</h2>
+                </div>
+                <div class="card-body">
+                    <div id="special_effects-container">
+                        <p class="card-text" id="special_effects-display">{{ basic_info.special_effects|default:'No special effects recorded.'|linebreaks }}</p>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('special_effects', '{{ basic_info.special_effects|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="special_effects-editor" style="display: none;">
+                                <textarea class="form-control form-control-sm w-100" rows="5"></textarea>
+                                <button onclick="saveField('special_effects', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                <button onclick="cancelEdit('special_effects')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_see_traits %}
+            <!-- Distinctions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Distinctions</h2>
+                </div>
+                <div class="card-body">
+                    {% if distinctions %}
+                        {% for name, trait in distinctions.items %}
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center">
+                                    <strong class="me-2">{{ trait.key|title }}:</strong>
+                                    <span class="badge bg-info me-2">d8</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Name editing -->
+                            <div id="distinction_{{ trait.key }}_name_container" class="mb-2">
+                                <span id="distinction_{{ trait.key }}_name_display" class="fw-bold">{{ name }}</span>
+                                {% if request.user.is_staff %}
+                                    <button onclick="editDistinction('{{ trait.key }}', 'name', '{{ name|escapejs }}')" class="btn btn-sm btn-link">
+                                        Edit Name
+                                    </button>
+                                    <span id="distinction_{{ trait.key }}_name_editor" style="display: none;">
+                                        <input type="text" class="form-control form-control-sm d-inline-block w-50">
+                                        <button onclick="saveDistinction('{{ trait.key }}', 'name', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
+                                        <button onclick="cancelDistinctionEdit('{{ trait.key }}', 'name')" class="btn btn-sm btn-secondary">Cancel</button>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Description editing -->
+                            <div id="distinction_{{ trait.key }}_description_container">
+                                <div id="distinction_{{ trait.key }}_description_display" class="text-muted">{{ trait.description|default:'No description'|linebreaks }}</div>
+                                {% if request.user.is_staff %}
+                                    <button onclick="editDistinction('{{ trait.key }}', 'description', '{{ trait.description|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                        Edit Description
+                                    </button>
+                                    <span id="distinction_{{ trait.key }}_description_editor" style="display: none;">
+                                        <textarea class="form-control form-control-sm w-100 mt-1" rows="3"></textarea>
+                                        <button onclick="saveDistinction('{{ trait.key }}', 'description', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                        <button onclick="cancelDistinctionEdit('{{ trait.key }}', 'description')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="card-text text-muted">No distinctions recorded.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Attributes -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Attributes</h2>
+                </div>
+                <div class="card-body">
+                    {% if attributes %}
+                        <div class="row">
+                            {% for name, trait in attributes.items %}
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">{{ name }}</span>
+                                    <div>
+                                        <span class="badge bg-primary me-1" id="attributes_{{ trait.key }}_badge">{{ trait.value }}</span>
+                                        {% if request.user.is_staff %}
+                                            <button onclick="editTrait('attributes', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link" title="{{ trait.description }}">
+                                                Edit
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if trait.description and trait.description != "No description" %}
+                                    <small class="text-muted d-block">{{ trait.description }}</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="card-text text-muted">No attributes recorded.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Skills -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Skills</h2>
+                </div>
+                <div class="card-body">
+                    {% if skills %}
+                        <div class="row">
+                            {% for name, trait in skills.items %}
+                            <div class="col-md-6 col-lg-4 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">{{ name }}</span>
+                                    <div>
+                                        <span class="badge bg-success me-1" id="skills_{{ trait.key }}_badge">{{ trait.value }}</span>
+                                        {% if request.user.is_staff %}
+                                            <button onclick="editTrait('skills', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link" title="{{ trait.description }}">
+                                                Edit
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if trait.description and trait.description != "No description" %}
+                                    <small class="text-muted d-block">{{ trait.description }}</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="card-text text-muted">No skills recorded.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Signature Assets -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Signature Assets</h2>
+                </div>
+                <div class="card-body">
+                    {% if signature_assets %}
+                        <div class="row">
+                            {% for name, trait in signature_assets.items %}
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">{{ name }}</span>
+                                    <div>
+                                        <span class="badge bg-warning me-1" id="signature_assets_{{ trait.key }}_badge">{{ trait.value }}</span>
+                                        {% if request.user.is_staff %}
+                                            <button onclick="editTrait('signature_assets', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link" title="{{ trait.description }}">
+                                                Edit
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if trait.description and trait.description != "No description" %}
+                                    <small class="text-muted d-block">{{ trait.description }}</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="card-text text-muted">No signature assets recorded.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            </div> <!-- End main-content -->
+        </div>
+    </div>
+</div>
+
+<!-- Image Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="upload-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="image-file" class="form-label">Select Image</label>
+                        <input type="file" class="form-control" id="image-file" name="image" accept="image/*" required>
+                        <div class="form-text">Allowed formats: JPG, PNG, GIF, WebP. Max size: 1MB. Max 20 images per character.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="image-caption" class="form-label">Caption (optional)</label>
+                        <textarea class="form-control" id="image-caption" name="caption" rows="2" placeholder="Enter a caption for this image..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="uploadImage()">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image View Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="image-modal-title">Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modal-image" src="" class="img-fluid" style="max-height: 70vh;">
+                <div id="modal-caption" class="mt-3 text-muted"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Gallery functionality
+let galleryVisible = false;
+
+function toggleGallery() {
+    const galleryView = document.getElementById('gallery-view');
+    const mainContent = document.getElementById('main-content');
+    
+    galleryVisible = !galleryVisible;
+    
+    if (galleryVisible) {
+        galleryView.style.display = 'block';
+        mainContent.style.display = 'none';
+    } else {
+        galleryView.style.display = 'none';
+        mainContent.style.display = 'block';
+    }
+}
+
+function showUploadModal() {
+    const modalElement = document.getElementById('uploadModal');
+    
+    // Try Bootstrap 5 method first
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+    // Try Bootstrap 4 method
+    else if (typeof $ !== 'undefined' && $.fn.modal) {
+        $(modalElement).modal('show');
+    }
+    // Fallback - basic modal display
+    else {
+        modalElement.style.display = 'block';
+        modalElement.classList.add('show');
+        document.body.classList.add('modal-open');
+        
+        // Add backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
+    }
+}
+
+function showImageModal(imageUrl, caption, imageId) {
+    const modalElement = document.getElementById('imageModal');
+    document.getElementById('modal-image').src = imageUrl;
+    document.getElementById('modal-caption').textContent = caption || '';
+    document.getElementById('image-modal-title').textContent = caption || 'Character Image';
+    
+    // Try Bootstrap 5 method first
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+    // Try Bootstrap 4 method
+    else if (typeof $ !== 'undefined' && $.fn.modal) {
+        $(modalElement).modal('show');
+    }
+    // Fallback - basic modal display
+    else {
+        modalElement.style.display = 'block';
+        modalElement.classList.add('show');
+        document.body.classList.add('modal-open');
+        
+        // Add backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
+    }
+}
+
+function uploadImage() {
+    const form = document.getElementById('upload-form');
+    const formData = new FormData(form);
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Show loading state
+    const uploadBtn = event.target;
+    const originalText = uploadBtn.textContent;
+    uploadBtn.textContent = 'Uploading...';
+    uploadBtn.disabled = true;
+    
+    fetch("{% url 'roster:upload_character_image' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal - try multiple methods for compatibility
+            const modalElement = document.getElementById('uploadModal');
+            
+            // Try Bootstrap 5 method first
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal && bootstrap.Modal.getInstance) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            // Try Bootstrap 4 method
+            else if (typeof $ !== 'undefined' && $.fn.modal) {
+                $(modalElement).modal('hide');
+            }
+            // Fallback - just hide the modal element
+            else {
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                document.body.classList.remove('modal-open');
+                document.body.style.paddingRight = '';
+            }
+            
+            // Refresh the page to show new image
+            location.reload();
+        } else {
+            alert('Error uploading image: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error uploading image: ' + error);
+    })
+    .finally(() => {
+        uploadBtn.textContent = originalText;
+        uploadBtn.disabled = false;
+    });
+}
+
+function deleteImage(imageId) {
+    if (!confirm('Are you sure you want to delete this image?')) {
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:delete_character_image' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `image_id=${encodeURIComponent(imageId)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the image element from the DOM
+            const imageElement = document.querySelector(`[data-image-id="${imageId}"]`);
+            if (imageElement) {
+                imageElement.remove();
+            }
+            
+                         // Update gallery count in button
+             const galleryButton = document.querySelector('button[onclick="toggleGallery()"]');
+             if (galleryButton) {
+                 const currentCount = parseInt(galleryButton.textContent.match(/\d+/)[0]);
+                 const newCount = currentCount - 1;
+                 galleryButton.innerHTML = `📸 Gallery (${newCount})`;
+             }
+            
+            // Show empty state if no images left
+            const galleryGrid = document.getElementById('gallery-grid');
+            if (galleryGrid.children.length === 0) {
+                galleryGrid.innerHTML = `
+                                         <div class="col-12">
+                         <div class="text-center py-5 text-muted">
+                             <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
+                             <p>No images in gallery yet</p>
+                             {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                                 <button class="btn btn-primary" onclick="showUploadModal()">Add First Image</button>
+                             {% endif %}
+                         </div>
+                     </div>
+                `;
+            }
+        } else {
+            alert('Error deleting image: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error deleting image: ' + error);
+    });
+}
+
+function setMainImage(imageId, imageUrl) {
+    if (!confirm('Set this image as the main character image?')) {
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:set_main_character_image' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `image_id=${encodeURIComponent(imageId)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the main character image in the left column
+            const mainImageContainer = document.querySelector('.col-md-4 .card .card-body');
+            if (mainImageContainer) {
+                const existingImage = mainImageContainer.querySelector('img');
+                const existingPlaceholder = mainImageContainer.querySelector('.bg-light');
+                
+                if (existingImage) {
+                    existingImage.src = data.image_url;
+                } else if (existingPlaceholder) {
+                    // Replace placeholder with actual image
+                    existingPlaceholder.outerHTML = `<img src="${data.image_url}" alt="{{ basic_info.name }}" class="img-fluid rounded mb-3" style="max-height: 300px;">`;
+                }
+            }
+            
+            // Show success message
+            const successAlert = document.createElement('div');
+            successAlert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            successAlert.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            successAlert.innerHTML = `
+                <span>Main image updated successfully!</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(successAlert);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                if (successAlert.parentNode) {
+                    successAlert.remove();
+                }
+            }, 3000);
+            
+        } else {
+            alert('Error setting main image: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error setting main image: ' + error);
+    });
+}
+
+function setSecondaryImage(imageId, imageUrl) {
+    if (!confirm('Set this image as the secondary character image?')) {
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:set_secondary_character_image' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `image_id=${encodeURIComponent(imageId)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update or create the secondary image in the sidebar
+            updateSidebarImage('secondary', data.image_url, 'Secondary Image');
+            showSuccessAlert('Secondary image updated successfully!');
+        } else {
+            alert('Error setting secondary image: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error setting secondary image: ' + error);
+    });
+}
+
+function setTertiaryImage(imageId, imageUrl) {
+    if (!confirm('Set this image as the tertiary character image?')) {
+        return;
+    }
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch("{% url 'roster:set_tertiary_character_image' character.name character.id %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `image_id=${encodeURIComponent(imageId)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update or create the tertiary image in the sidebar
+            updateSidebarImage('tertiary', data.image_url, 'Tertiary Image');
+            showSuccessAlert('Tertiary image updated successfully!');
+        } else {
+            alert('Error setting tertiary image: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error setting tertiary image: ' + error);
+    });
+}
+
+function updateSidebarImage(type, imageUrl, altText) {
+    // Find or create the additional images card
+    let additionalImagesCard = document.getElementById('additional-images-card');
+    
+    if (!additionalImagesCard) {
+        // Create the card if it doesn't exist
+        const sidebar = document.querySelector('.col-md-4');
+        additionalImagesCard = document.createElement('div');
+        additionalImagesCard.className = 'card mb-4';
+        additionalImagesCard.id = 'additional-images-card';
+        additionalImagesCard.innerHTML = `
+            <div class="card-header">
+                <h2 class="h5 mb-0">Additional Images</h2>
+            </div>
+            <div class="card-body text-center">
+            </div>
+        `;
+        sidebar.appendChild(additionalImagesCard);
+    }
+    
+    const cardBody = additionalImagesCard.querySelector('.card-body');
+    
+    // Find or create the image container
+    let imageContainer = cardBody.querySelector(`[data-image-type="${type}"]`);
+    
+    if (!imageContainer) {
+        imageContainer = document.createElement('div');
+        imageContainer.className = 'mb-3';
+        imageContainer.setAttribute('data-image-type', type);
+        cardBody.appendChild(imageContainer);
+    }
+    
+    // Update the image
+    imageContainer.innerHTML = `
+        <img src="${imageUrl}" alt="${altText}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="showImageModal('${imageUrl}', '${altText}', '')">
+    `;
+    
+    // Make sure the card is visible
+    additionalImagesCard.style.display = 'block';
+}
+
+function showSuccessAlert(message) {
+    const successAlert = document.createElement('div');
+    successAlert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    successAlert.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+    successAlert.innerHTML = `
+        <span>${message}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(successAlert);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        if (successAlert.parentNode) {
+            successAlert.remove();
+        }
+    }, 3000);
+}
+
+// Add event listeners for modal close buttons when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Close buttons for upload modal
+    const uploadModalCloseButtons = document.querySelectorAll('#uploadModal [data-bs-dismiss="modal"], #uploadModal .btn-close');
+    uploadModalCloseButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            closeModal('uploadModal');
+        });
+    });
+    
+    // Close buttons for image modal  
+    const imageModalCloseButtons = document.querySelectorAll('#imageModal [data-bs-dismiss="modal"], #imageModal .btn-close');
+    imageModalCloseButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            closeModal('imageModal');
+        });
+    });
+    
+    // Close modal when clicking backdrop
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal')) {
+            closeModal(e.target.id);
+        }
+    });
+});
+
+function closeModal(modalId) {
+    const modalElement = document.getElementById(modalId);
+    
+    // Try Bootstrap methods first
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal && bootstrap.Modal.getInstance) {
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+            return;
+        }
+    }
+    
+    if (typeof $ !== 'undefined' && $.fn.modal) {
+        $(modalElement).modal('hide');
+        return;
+    }
+    
+    // Fallback method
+    modalElement.style.display = 'none';
+    modalElement.classList.remove('show');
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+        backdrop.remove();
+    }
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+}
+</script>
+
+<style>
+.badge {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.gallery-image:hover {
+    opacity: 0.8;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+</style>
+
+{% endblock %} 

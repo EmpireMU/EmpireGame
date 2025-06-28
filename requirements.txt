@@ -1,0 +1,9 @@
+# Core framework
+evennia>=4.0.0
+
+# Database support (uncomment as needed)
+# psycopg2-binary>=2.8.6  # For PostgreSQL
+# mysqlclient>=2.0.0      # For MySQL
+
+# Additional dependencies for specific features
+Pillow>=9.0.0           # For image handling in roster system 
