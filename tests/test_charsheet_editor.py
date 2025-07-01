@@ -1,51 +1,42 @@
+#!/usr/bin/env python3
+
 """
-Tests for character sheet editor functionality.
+Test cases for character sheet editor commands.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call
 from evennia.utils.test_resources import EvenniaTest
+
 from commands.charsheet_editor import (
     CmdSetTrait,
-    CmdDeleteTrait,
-    CmdSetDistinction,
+    CmdDeleteTrait, 
     CmdBiography,
+    CmdSetDistinction,
     CmdSetSpecialEffects
 )
-from evennia.contrib.rpg.traits import TraitHandler
 
 class TestCharSheetEditor(EvenniaTest):
-    """Test cases for character sheet editor functionality."""
-    
+
     def setUp(self):
-        """Set up test case."""
+        """Set up test fixtures."""
         super().setUp()
+        
+        # Set up test commands
         self.cmd_settrait = CmdSetTrait()
         self.cmd_settrait.caller = self.char1
         self.cmd_settrait.obj = self.char1
         self.cmd_settrait.msg = MagicMock()
-        
-        self.cmd_setdist = CmdSetDistinction()
-        self.cmd_setdist.caller = self.char1
-        self.cmd_setdist.obj = self.char1
-        self.cmd_setdist.msg = MagicMock()
         
         self.cmd_bio = CmdBiography()
         self.cmd_bio.caller = self.char1
         self.cmd_bio.obj = self.char1
         self.cmd_bio.msg = MagicMock()
         
-        # Initialize trait handlers
-        if not hasattr(self.char1, 'character_attributes'):
-            self.char1.character_attributes = TraitHandler(self.char1, db_attribute_key="character_attributes")
-        if not hasattr(self.char1, 'skills'):
-            self.char1.skills = TraitHandler(self.char1, db_attribute_key="skills")
-        if not hasattr(self.char1, 'distinctions'):
-            self.char1.distinctions = TraitHandler(self.char1, db_attribute_key="char_distinctions")
-        if not hasattr(self.char1, 'signature_assets'):
-            self.char1.signature_assets = TraitHandler(self.char1, db_attribute_key="char_signature_assets")
-        if not hasattr(self.char1, 'powers'):
-            self.char1.powers = TraitHandler(self.char1, db_attribute_key="powers")
+        self.cmd_setdist = CmdSetDistinction()
+        self.cmd_setdist.caller = self.char1
+        self.cmd_setdist.obj = self.char1
+        self.cmd_setdist.msg = MagicMock()
         
         # Add test traits
         self.char1.character_attributes.add("strength", "Strength", trait_type="static", base=8, desc="Strong and tough")
@@ -69,6 +60,7 @@ class TestCharSheetEditor(EvenniaTest):
         self.char1.db.age = "25"
         self.char1.db.birthday = "January 1st"
         self.char1.db.gender = "Female"
+        self.char1.db.secret_information = ""  # Initialize secret information
         self.char1.get_display_desc = MagicMock(return_value="Test description")
     
     def test_set_trait(self):
@@ -135,6 +127,7 @@ class TestCharSheetEditor(EvenniaTest):
         self.cmd_deltrait.args = "self = invalid test_str"
         self.cmd_deltrait.func()
         self.assertIn("Invalid category", self.cmd_deltrait.msg.mock_calls[-1][1][0])
+    
     def test_biography(self):
         """Test biography command."""
         # Set up test distinctions
@@ -193,6 +186,7 @@ class TestCharSheetEditor(EvenniaTest):
         self.cmd_bio.func()
         output = self.cmd_bio.msg.mock_calls[-1][1][0]
         self.assertIn("No demographics set", output)
+    
     def test_biography_editing(self):
         """Test biography command switches for editing."""
         # Test setting background and showing old value
@@ -243,6 +237,73 @@ class TestCharSheetEditor(EvenniaTest):
         
         # Check that new value was set
         self.assertEqual(self.char1.db.notable_traits, "Exceptional at climbing, speaks three languages")
+        
+        # Test setting secret information
+        self.cmd_bio.msg.reset_mock()
+        self.cmd_bio.switches = ["secret"]
+        self.cmd_bio.args = "self = Has trust issues due to past betrayal"
+        self.cmd_bio.func()
+        
+        # Check that new value was set
+        self.assertEqual(self.char1.db.secret_information, "Has trust issues due to past betrayal")
+
+    def test_secret_information_permissions(self):
+        """Test that secret information is only visible to character owner and staff."""
+        # Set up secret information
+        self.char1.db.secret_information = "Character has hidden magical abilities"
+        
+        # Test 1: Character owner can see their own secret information
+        self.cmd_bio.caller = self.char1
+        self.cmd_bio.args = ""
+        self.cmd_bio.func()
+        output = self.cmd_bio.msg.mock_calls[-1][1][0]
+        self.assertIn("Secret Information:", output)
+        self.assertIn("hidden magical abilities", output)
+        
+        # Test 2: Staff can see another character's secret information
+        # char1 has Builder permissions, so viewing char2's secrets should work
+        if hasattr(self, 'char2'):
+            self.char2.db.secret_information = "Character fears water"
+            self.cmd_bio.msg.reset_mock()
+            self.cmd_bio.caller = self.char1  # Staff member
+            self.cmd_bio.args = self.char2.name
+            self.cmd_bio.func()
+            output = self.cmd_bio.msg.mock_calls[-1][1][0]
+            self.assertIn("Secret Information:", output)
+            self.assertIn("fears water", output)
+        
+        # Test 3: Character can see secret information when viewing themselves by name
+        self.cmd_bio.msg.reset_mock()
+        self.cmd_bio.caller = self.char1
+        self.cmd_bio.args = "self"  # Viewing self by name
+        self.cmd_bio.func()
+        output = self.cmd_bio.msg.mock_calls[-1][1][0]
+        self.assertIn("Secret Information:", output)
+        self.assertIn("hidden magical abilities", output)
+
+    def test_secret_information_display_conditions(self):
+        """Test secret information display conditions."""
+        # Test that empty secret information is not displayed
+        self.char1.db.secret_information = ""
+        self.cmd_bio.caller = self.char1
+        self.cmd_bio.args = ""
+        self.cmd_bio.func()
+        output = self.cmd_bio.msg.mock_calls[-1][1][0]
+        self.assertNotIn("Secret Information:", output)
+        
+        # Test that secret information is displayed when it has content
+        self.char1.db.secret_information = "Has a secret twin brother"
+        self.cmd_bio.msg.reset_mock()
+        self.cmd_bio.func()
+        output = self.cmd_bio.msg.mock_calls[-1][1][0]
+        self.assertIn("Secret Information:", output)
+        self.assertIn("secret twin brother", output)
+
+    def test_secret_information_initialization(self):
+        """Test that secret information field is properly initialized on character creation."""
+        # The secret information field should exist and be empty string by default
+        self.assertTrue(hasattr(self.char1.db, 'secret_information'))
+        self.assertEqual(self.char1.db.secret_information, "")
 
     def test_biography_editing_unset_values(self):
         """Test biography editing when previous values are not set."""
@@ -287,8 +348,6 @@ class TestCharSheetEditor(EvenniaTest):
         self.cmd_setdist.args = "self = invalid : Test : Description"
         self.cmd_setdist.func()
         self.cmd_setdist.msg.assert_called_with("Invalid slot. Must be one of: concept, culture, reputation")
-
-
 
     def test_special_effects_command(self):
         """Test the setsfx command."""

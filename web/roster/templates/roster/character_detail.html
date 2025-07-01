@@ -86,7 +86,7 @@ const saveField = function(fieldName, charName, charId) {
             editor.style.display = 'none';
             
             // Update content based on field type
-            if (fieldName === 'desc' || fieldName === 'background' || fieldName === 'personality' || fieldName === 'notable_traits' || fieldName === 'special_effects') {
+            if (fieldName === 'desc' || fieldName === 'background' || fieldName === 'personality' || fieldName === 'notable_traits' || fieldName === 'special_effects' || fieldName === 'secret_information') {
                 display.innerHTML = value.replace(/\n/g, '<br>');
             } else {
                 display.textContent = value;
@@ -620,6 +620,30 @@ const cancelDistinctionEdit = function(slot, field) {
                     </div>
                 </div>
             </div>
+
+            <!-- Secret Information -->
+            {% if can_see_traits %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Secret Information</h2>
+                </div>
+                <div class="card-body">
+                    <div id="secret_information-container">
+                        <p class="card-text" id="secret_information-display">{{ basic_info.secret_information|default:'No secret information recorded.'|linebreaks }}</p>
+                        {% if request.user.is_staff %}
+                            <button onclick="editField('secret_information', '{{ basic_info.secret_information|default:''|escapejs }}')" class="btn btn-sm btn-link">
+                                Edit
+                            </button>
+                            <span id="secret_information-editor" style="display: none;">
+                                <textarea class="form-control form-control-sm w-100" rows="5"></textarea>
+                                <button onclick="saveField('secret_information', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
+                                <button onclick="cancelEdit('secret_information')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Special Effects -->
             {% if can_see_traits %}

@@ -261,6 +261,7 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
         biography/name <char> = <full name>       - Set full name
         biography/notable <char> = <text>         - Set notable traits
         biography/realm <char> = <realm>          - Set realm
+        biography/secret <char> = <text>          - Set secret information
         
     Examples:
         biography                    - View your own biography
@@ -271,11 +272,12 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
         biography/age Ada = 30
         biography/birthday Ada = December 25th
         biography/gender Ada = Female
-        biography/name Ada = Empress Ada Lovelace
-        biography/notable Ada = Master of disguise, speaks 5 languages
+        biography/name Ada = Ada the Adventurer
+        biography/notable Ada = The best explorer ever.
         biography/realm Ada = Imperial Territories
+        biography/secret Ada = Has trust issues due to past betrayal
         
-    Shows:
+            Shows:
         - Description (set with 'desc' command or biography/description)
         - Age (set with biography/age)
         - Birthday (set with biography/birthday)
@@ -288,6 +290,7 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
           * Culture
           * Vocation
         - Notable Traits (set with biography/notable)
+        - Secret Information (set with biography/secret) - visible only to character owner and staff
         
     Note: When editing description, background, personality, notable traits,
     or special effects, the old value will be displayed before making changes.
@@ -328,7 +331,8 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
                     "name": "full_name",
                     "notable": "notable_traits",
                     "realm": "realm",
-                    "description": "desc"  # Special case for description
+                    "description": "desc",  # Special case for description
+                    "secret": "secret_information"
                 }
                 
                 if switch not in switch_map:
@@ -452,6 +456,12 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
         # Add notable traits if they exist
         if char.db.notable_traits:
             msg += f"\n\n|wNotable Traits:|n\n{char.db.notable_traits}"
+        
+        # Add secret information if viewer has permission (character owner or staff)
+        can_see_secret = (self.caller == char or 
+                         self.caller.locks.check_lockstring(self.caller, "edit:perm(Builder)"))
+        if can_see_secret and char.db.secret_information:
+            msg += f"\n\n|wSecret Information:|n\n{char.db.secret_information}"
         
         self.msg(msg)
 

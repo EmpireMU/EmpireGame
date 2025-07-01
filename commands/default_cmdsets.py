@@ -32,6 +32,7 @@ from commands.mail import CmdMailCharacterOOC
 from commands import where
 from commands.account_admin import CmdCreatePlayerAccount
 from commands.roster import CmdRoster, CmdApplication
+from commands.places import PlaceCmdSet
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -49,6 +50,12 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         """
         super().at_cmdset_creation()
         #
+        # Remove unwanted default commands
+        #
+        # Disable the chardelete command - don't want players to be able to delete characters
+        self.remove(default_cmds.CmdCharDelete)
+        
+        #
         # any commands you add below will overload the default ones.
         #
         self.add(CharSheetCmdSet)
@@ -64,6 +71,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(home.CmdHome())
         self.add(where.CmdWhere())
         self.add(CmdMailCharacterOOC())
+        self.add(PlaceCmdSet)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

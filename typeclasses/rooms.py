@@ -99,3 +99,63 @@ class Room(ObjectParent, DefaultRoom):
                 return True
                 
         return False
+
+    def return_appearance(self, looker, **kwargs):
+        """
+        This formats a description. It is the hook a 'look' command
+        should call.
+
+        Args:
+            looker (Object): Object doing the looking.
+            **kwargs: Arbitrary, optional arguments for users
+                overriding the call (unused by default).
+        """
+        if not looker:
+            return ""
+        
+        # Get the base appearance from the parent class
+        appearance = super().return_appearance(looker, **kwargs)
+        
+        # Add places to the description
+        places = self.db.places or {}
+        if places:
+            # Insert places section after room description but before characters/objects
+            lines = appearance.split('\n')
+            
+            # Find where to insert places (after description, before character list)
+            insert_index = len(lines)
+            for i, line in enumerate(lines):
+                # Look for the start of character/contents listing
+                if any(keyword in line.lower() for keyword in ['exits:', 'you see:', 'contents:']):
+                    insert_index = i
+                    break
+            
+            # Build places display - just names on one line
+            place_names = []
+            for place_key, place_data in places.items():
+                place_name = place_data.get("name", place_key)
+                characters = place_data.get("characters", [])
+                    
+                place_display = f"|c{place_name}|n"
+                if characters:
+                    # Filter to only show characters the looker can see
+                    visible_chars = [char for char in characters if looker.access(char, "view")]
+                    if visible_chars:
+                        char_names = [char.name for char in visible_chars]
+                        if len(char_names) == 1:
+                            place_display += f" |w({char_names[0]})|n"
+                        else:
+                            place_display += f" |w({', '.join(char_names)})|n"
+                
+                place_names.append(place_display)
+            
+            place_lines = [f"|wPlaces:|n {', '.join(place_names)}"]
+            
+            # Insert places into the appearance
+            place_text = '\n'.join(place_lines)
+            lines.insert(insert_index, place_text)
+            lines.insert(insert_index + 1, "")  # Add blank line after places
+            
+            appearance = '\n'.join(lines)
+        
+        return appearance

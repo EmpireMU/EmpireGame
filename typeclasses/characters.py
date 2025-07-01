@@ -207,6 +207,9 @@ class Character(ObjectParent, DefaultCharacter):
 
         # Initialize special effects (staff-only text field)
         self.db.special_effects = ""
+        
+        # Initialize secret information (staff/owner-only text field)
+        self.db.secret_information = ""
 
     def at_init(self):
         """
@@ -283,6 +286,72 @@ class Character(ObjectParent, DefaultCharacter):
             
         # Let the parent handle other messages
         return super().at_msg_receive(text, from_obj, **kwargs)
+
+
+            
+    def at_pre_unpuppet(self):
+        """
+        Called just before un-puppeting. Remove character from any places.
+        """
+        # Call parent first
+        super().at_pre_unpuppet()
+        
+        # Clean up places in current location
+        if self.location and hasattr(self.location, 'db') and self.location.db.places:
+            self._cleanup_places(self.location)
+            
+    def at_pre_move(self, destination, **kwargs):
+        """
+        Called just before moving. Remove character from any places
+        in the current location.
+        
+        Args:
+            destination: The location we're moving to
+            **kwargs: Arbitrary keyword arguments
+        """
+        # Call parent first
+        result = super().at_pre_move(destination, **kwargs)
+        
+        # Clean up places in current location before leaving
+        if self.location and hasattr(self.location, 'db') and self.location.db.places:
+            self._cleanup_places(self.location)
+            
+        return result
+        
+    def at_object_delete(self):
+        """
+        Called just before object deletion. Remove character from any places.
+        """
+        # Clean up places in current location
+        if self.location and hasattr(self.location, 'db') and self.location.db.places:
+            self._cleanup_places(self.location)
+            
+        # Call parent
+        super().at_object_delete()
+            
+    def _cleanup_places(self, room):
+        """
+        Remove this character from any places in the given room.
+        
+        Args:
+            room: The room to clean up places in
+        """
+        places = room.db.places or {}
+        
+        for place_key, place_data in places.items():
+            characters = place_data.get("characters", [])
+            if self in characters:
+                characters.remove(self)
+                place_data["characters"] = characters
+                
+                # Announce to others at the place
+                place_name = place_data.get("name", place_key)
+                for char in characters:
+                    if hasattr(char, 'msg'):
+                        char.msg(f"{self.name} leaves {place_name}.")
+                        
+        # Save the updated places
+        room.db.places = places
 
     def add_resource(self, name, die_size):
         """
