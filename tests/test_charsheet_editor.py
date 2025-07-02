@@ -39,8 +39,8 @@ class TestCharSheetEditor(EvenniaTest):
         self.cmd_setdist.msg = MagicMock()
         
         # Add test traits
-        self.char1.character_attributes.add("strength", "Strength", trait_type="static", base=8, desc="Strong and tough")
-        self.char1.skills.add("fighting", "Fighting", trait_type="static", base=6, desc="Combat training")
+        self.char1.character_attributes.add("strength", "Strength", trait_type="static", base=8)
+        self.char1.skills.add("fighting", "Fighting", trait_type="static", base=6)
         self.char1.signature_assets.add("sword", "Sword", trait_type="static", base=8, desc="Magic blade")
         self.char1.powers.add("test_power", "Test Power", trait_type="static", base=8, desc="A test power")
         
@@ -65,29 +65,37 @@ class TestCharSheetEditor(EvenniaTest):
     
     def test_set_trait(self):
         """Test setting traits."""
-        # Test setting an attribute
-        self.cmd_settrait.args = "self = attributes strength d8 Strong and tough"
+        # Test setting an attribute (no description allowed)
+        self.cmd_settrait.args = "self = attributes strength d8"
         self.cmd_settrait.func()
         trait = self.char1.character_attributes.get("strength")
         self.assertIsNotNone(trait)
         self.assertEqual(trait.value, 8)  # Trait values are stored as integers
-        self.assertEqual(trait.desc, "Strong and tough")
         
-        # Test setting a skill
-        self.cmd_settrait.args = "self = skills fighting d6 Combat training"
+        # Test setting a skill (no description allowed)
+        self.cmd_settrait.args = "self = skills fighting d6"
         self.cmd_settrait.func()
         trait = self.char1.skills.get("fighting")
         self.assertIsNotNone(trait)
         self.assertEqual(trait.value, 6)  # Trait values are stored as integers
-        self.assertEqual(trait.desc, "Combat training")
         
-        # Test setting a signature asset
-        self.cmd_settrait.args = "self = signature_assets sword d8 Magic blade"
+        # Test setting a signature asset (description allowed)
+        self.cmd_settrait.args = "self = signature_assets sword d8 \"Magic blade\""
         self.cmd_settrait.func()
         trait = self.char1.signature_assets.get("sword")
         self.assertIsNotNone(trait)
         self.assertEqual(trait.value, 8)  # Trait values are stored as integers
         self.assertEqual(trait.desc, "Magic blade")
+        
+        # Test that descriptions are rejected for attributes
+        self.cmd_settrait.args = "self = attributes strength d8 \"Some description\""
+        self.cmd_settrait.func()
+        self.assertIn("Descriptions are not allowed for attributes", self.cmd_settrait.msg.mock_calls[-1][1][0])
+        
+        # Test that descriptions are rejected for skills
+        self.cmd_settrait.args = "self = skills fighting d6 \"Some description\""
+        self.cmd_settrait.func()
+        self.assertIn("Descriptions are not allowed for skills", self.cmd_settrait.msg.mock_calls[-1][1][0])
         
         # Test invalid category
         self.cmd_settrait.args = "self = invalid strength d8"
@@ -115,7 +123,7 @@ class TestCharSheetEditor(EvenniaTest):
         self.assertIsNone(self.char1.signature_assets.get("test_armor"))
         
         # Test trying to delete protected attributes (should fail)
-        self.char1.character_attributes.add("test_str", "Test Strength", trait_type="static", base=8, desc="Strong and tough")
+        self.char1.character_attributes.add("test_str", "Test Strength", trait_type="static", base=8)
         self.cmd_deltrait.args = "self = attributes test_str"
         self.cmd_deltrait.func()
         # The trait should still exist since it's protected

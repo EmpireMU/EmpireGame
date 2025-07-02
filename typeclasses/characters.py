@@ -148,7 +148,6 @@ class Character(ObjectParent, DefaultCharacter):
                 self.character_attributes.add(
                     trait.key,
                     value=trait.default_value,
-                    desc=trait.description,
                     name=trait.name
                 )
                 # Ensure .base is set correctly
@@ -163,7 +162,6 @@ class Character(ObjectParent, DefaultCharacter):
                 self.skills.add(
                     trait.key,
                     value=trait.default_value,
-                    desc=trait.description,
                     name=trait.name
                 )
                 # Ensure .base is set correctly

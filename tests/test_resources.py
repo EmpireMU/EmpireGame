@@ -4,7 +4,7 @@ Tests for resource system functionality.
 
 from unittest.mock import MagicMock, patch
 from evennia.utils.test_resources import EvenniaTest
-from commands.organisations import CmdResource
+from commands.resources import CmdResource
 from utils.resource_utils import get_unique_resource_name, validate_resource_owner
 from utils.org_utils import get_org, get_char
 from typeclasses.characters import Character
@@ -135,7 +135,7 @@ class TestResources(EvenniaTest):
         
         # Test transfer
         self.cmd.switches = ["transfer"]
-        self.cmd.args = f"{self.char1.name}:armory = {target.name}"  # source:resource = target
+        self.cmd.args = f"{self.char1.name},{target.name},armory"  # source,target,resource
         self.cmd.func()
         output = self.cmd.msg.mock_calls[-1][1][0]
         self.assertIn("Transferred", output)
@@ -143,6 +143,40 @@ class TestResources(EvenniaTest):
         # Verify transfer
         self.assertIsNone(self.char1.char_resources.get("armory"))
         self.assertIsNotNone(target.char_resources.get("armory"))
+        
+    def test_transfer_resource_with_die_size(self):
+        """Test transferring a specific die size when multiple exist."""
+        # Create multiple resources with the same name but different die sizes
+        self.cmd.switches = ["char"]
+        self.cmd.args = "self,wealth=6"
+        self.cmd.func()
+        
+        self.cmd.switches = ["char"]
+        self.cmd.args = "self,wealth=8"
+        self.cmd.func()
+        
+        # Create target character and initialize trait handler
+        target = self.char2
+        if not hasattr(target, 'char_resources'):
+            target.char_resources = TraitHandler(target, db_attribute_key="char_resources")
+        
+        # Test transfer with specific die size
+        self.cmd.switches = ["transfer"]
+        self.cmd.args = f"{self.char1.name},{target.name},wealth=8"  # Transfer the d8 wealth specifically
+        self.cmd.func()
+        output = self.cmd.msg.mock_calls[-1][1][0]
+        self.assertIn("Transferred", output)
+        self.assertIn("d8", output)
+        
+        # Verify the d8 wealth was transferred and d6 wealth remains
+        transferred_wealth = target.char_resources.get("wealth")
+        self.assertIsNotNone(transferred_wealth)
+        self.assertEqual(transferred_wealth.value, 8)
+        
+        # Check that some wealth still exists on the source (the d6 one)
+        remaining_resources = [resources for resources in self.char1.char_resources.all() 
+                             if "wealth" in resources.lower()]
+        self.assertTrue(len(remaining_resources) > 0, "Should still have d6 wealth resource")
     
     def test_delete_resource(self):
         """Test deleting resources."""

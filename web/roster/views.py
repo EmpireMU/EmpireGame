@@ -233,7 +233,6 @@ def character_detail_view(request, char_name, char_id):
             trait = character.character_attributes.get(key)
             attributes[trait.name or key] = {
                 'key': key,
-                'description': trait.desc or "No description",
                 'value': f"d{int(trait.value)}"
             }
         
@@ -243,7 +242,6 @@ def character_detail_view(request, char_name, char_id):
             trait = character.skills.get(key)
             skills[trait.name or key] = {
                 'key': key,
-                'description': trait.desc or "No description",
                 'value': f"d{int(trait.value)}"
             }
         

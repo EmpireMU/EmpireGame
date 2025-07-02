@@ -38,12 +38,12 @@ class TestCharSheet(EvenniaTest):
             self.char1.powers = TraitHandler(self.char1, db_attribute_key="powers")
         
         # Add test traits
-        self.char1.character_attributes.add("prowess", "Prowess", trait_type="static", base=8, desc="Physical power")
-        self.char1.character_attributes.add("finesse", "Finesse", trait_type="static", base=6, desc="Agility")
+        self.char1.character_attributes.add("prowess", "Prowess", trait_type="static", base=8)
+        self.char1.character_attributes.add("finesse", "Finesse", trait_type="static", base=6)
         
         # Add skills
-        self.char1.skills.add("fighting", "Fighting", trait_type="static", base=8, desc="Combat ability")
-        self.char1.skills.add("stealth", "Stealth", trait_type="static", base=6, desc="Moving quietly")
+        self.char1.skills.add("fighting", "Fighting", trait_type="static", base=8)
+        self.char1.skills.add("stealth", "Stealth", trait_type="static", base=6)
         
         # Add distinctions
         self.char1.distinctions.add("warrior", "Warrior", trait_type="static", base=8, desc="Born fighter")

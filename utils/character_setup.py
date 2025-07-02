@@ -28,12 +28,20 @@ def initialize_trait_group(
                 existing.base = trait.default_value
                 changes.append(f"Updated {handler_name[:-1]}: {trait.name}")
         else:
-            handler.add(
-                trait.key,
-                value=trait.default_value,
-                desc=trait.description,
-                name=trait.name
-            )
+            # Only set descriptions for distinctions, not for attributes/skills
+            if handler_name == "distinctions":
+                handler.add(
+                    trait.key,
+                    value=trait.default_value,
+                    desc=trait.description,
+                    name=trait.name
+                )
+            else:
+                handler.add(
+                    trait.key,
+                    value=trait.default_value,
+                    name=trait.name
+                )
             # Ensure .base is set correctly
             handler.get(trait.key).base = trait.default_value
             changes.append(f"Added {handler_name[:-1]}: {trait.name}")

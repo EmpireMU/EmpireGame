@@ -2,6 +2,10 @@
 {% load static %}
 {% block content %}
 
+<script>
+document.title = "Empire - {{ basic_info.name }}";
+</script>
+
 {% if request.user.is_staff %}
 <script>
 const editField = function(fieldName, currentValue) {
@@ -738,15 +742,12 @@ const cancelDistinctionEdit = function(slot, field) {
                                     <div>
                                         <span class="badge bg-primary me-1" id="attributes_{{ trait.key }}_badge">{{ trait.value }}</span>
                                         {% if request.user.is_staff %}
-                                            <button onclick="editTrait('attributes', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link" title="{{ trait.description }}">
+                                            <button onclick="editTrait('attributes', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link">
                                                 Edit
                                             </button>
                                         {% endif %}
                                     </div>
                                 </div>
-                                {% if trait.description and trait.description != "No description" %}
-                                    <small class="text-muted d-block">{{ trait.description }}</small>
-                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
@@ -771,15 +772,12 @@ const cancelDistinctionEdit = function(slot, field) {
                                     <div>
                                         <span class="badge bg-success me-1" id="skills_{{ trait.key }}_badge">{{ trait.value }}</span>
                                         {% if request.user.is_staff %}
-                                            <button onclick="editTrait('skills', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link" title="{{ trait.description }}">
+                                            <button onclick="editTrait('skills', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link">
                                                 Edit
                                             </button>
                                         {% endif %}
                                     </div>
                                 </div>
-                                {% if trait.description and trait.description != "No description" %}
-                                    <small class="text-muted d-block">{{ trait.description }}</small>
-                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>

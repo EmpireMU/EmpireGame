@@ -297,7 +297,7 @@ class TestResource(EvenniaTest):
         
         # Transfer to a character
         self.cmd.switches = ["transfer"]
-        self.cmd.args = f"Test House:gold={self.char1.name}"
+        self.cmd.args = f"Test House,{self.char1.name},gold"
         self.cmd.func()
         
         # Verify resource was transferred

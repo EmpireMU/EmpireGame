@@ -20,13 +20,13 @@ class CmdSetTrait(CharacterLookupMixin, MuxCommand):
 
     Categories:
       attributes   - Core attributes (d4-d12, default d6)
-        Represent innate capabilities like Strength, Agility, etc.
+        Represent innate capabilities. No custom descriptions allowed.
       skills       - Skills (d4-d12, default d4)
-        Represent learned abilities and training
+        Represent learned abilities. No custom descriptions allowed.
       signature_assets - Signature assets (d4-d12)
-        Represent important items or companions
+        Represent important items or companions. Custom descriptions allowed.
       powers      - Powers (d4-d12)
-        Represent supernatural or extraordinary abilities
+        Represent supernatural abilities. Custom descriptions allowed.
 
     Die Sizes:
       d4  - Untrained/Weak
@@ -38,17 +38,16 @@ class CmdSetTrait(CharacterLookupMixin, MuxCommand):
     Examples:
       settrait Tom = attributes strength d8
         Sets Tom's Strength attribute to d8
-      settrait Tom = skills fighting d6 "Expert in hand-to-hand combat"
-        Sets Tom's Fighting skill to d6 with description
+      settrait Tom = skills fighting d6
+        Sets Tom's Fighting skill to d6
       settrait Tom = signature_assets "Magic Sword" d8 "Family heirloom blade"
-        Creates a d8 Signature Asset representing Tom's magic sword
+        Creates a d8 Signature Asset with description
       settrait Tom = powers "Divine Blessing" d10 "Blessed by the gods"
-        Creates a d10 Power representing divine power
-      settrait Jane = attributes agility d10 "Years of acrobatic training"
-        Sets Jane's Agility to d10 with explanation of high rating
+        Creates a d10 Power with description
 
     Notes:
     - Setting a trait that already exists will overwrite it
+    - Descriptions not allowed for attributes and skills (standardized traits)
     - For signature_assets and powers, enclose multi-word names in quotes
     """
     key = "settrait"
@@ -90,6 +89,11 @@ class CmdSetTrait(CharacterLookupMixin, MuxCommand):
         die_size = parts[2]
         description = " ".join(parts[3:]) if len(parts) > 3 else ""
 
+        # Check if description provided for attributes/skills (not allowed)
+        if category in ['attributes', 'skills'] and description:
+            self.msg(f"Descriptions are not allowed for {category}. These are standardized traits.")
+            return
+
         # Validate die size
         if not die_size.startswith('d') or not die_size[1:].isdigit():
             self.msg("Die size must be in the format dN where N is a number (e.g., d4, d6, d8, d10, d12)")
@@ -103,11 +107,11 @@ class CmdSetTrait(CharacterLookupMixin, MuxCommand):
         # Convert spaces to underscores for the key
         key = name.lower().replace(' ', '_')
 
-        # Set the trait
+        # Set the trait (only add description for signature_assets and powers)
         if category == 'attributes':
-            char.character_attributes.add(key, name, trait_type="static", base=die_size, desc=description)
+            char.character_attributes.add(key, name, trait_type="static", base=die_size)
         elif category == 'skills':
-            char.skills.add(key, name, trait_type="static", base=die_size, desc=description)
+            char.skills.add(key, name, trait_type="static", base=die_size)
         elif category == 'signature_assets':
             char.signature_assets.add(key, name, trait_type="static", base=die_size, desc=description)
         elif category == 'powers':
