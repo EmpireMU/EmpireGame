@@ -25,12 +25,12 @@ class CmdInitTraits(CharacterLookupMixin, MuxCommand):
        - Used for special actions and dice manipulation
     
     2. Attributes (all start at d6)
+       - Mind: Intelligence, perception and mental processing
+       - Spirit: Willpower, intuition and spiritual strength
+       - Social: Charisma and social navigation
+       - Leadership: Capacity as a leader
        - Prowess: Strength, endurance and ability to fight
        - Finesse: Dexterity and agility
-       - Leadership: Capacity as a leader
-       - Social: Charisma and social navigation
-       - Acuity: Perception and information processing
-       - Erudition: Learning and recall ability
     
     3. Skills (all start at d4)
        - Administration: Organizing affairs of large groups
@@ -142,31 +142,43 @@ class CmdWipeTraits(CharacterLookupMixin, MuxCommand):
        - Skills (all start at d4)
        - Distinction slots (all d8)
     
-    Only administrators can use this command.
+    Only superusers can use this command.
     """
     
     key = "wipetraits"
-    locks = "cmd:perm(Admin)"  # Admin and above can use this
+    locks = "cmd:perm(Developer)"  # Superuser only
     help_category = "Building"
     switch_options = ("all",)  # Define valid switches
     
     def func(self):
         """Handle trait wiping and reinitialization."""
         if "all" in self.switches:
-            # Wipe all characters
-            from evennia.objects.models import ObjectDB
-            from typeclasses.characters import Character
-            chars = ObjectDB.objects.filter(db_typeclass_path__contains="characters.Character")
-            count = 0
-            for char in chars:
-                if hasattr(char, 'traits'):  # Verify it's actually a character
-                    success, msg = self._wipe_and_init(char)
-                    if success:
-                        count += 1
-                        self.caller.msg(f"{char.name}: {msg}")
-            self.caller.msg(f"\nWiped and reinitialized traits for {count} character{'s' if count != 1 else ''}.")
+            # Check if this is a confirmation for wiping all characters
+            confirming = self.caller.db.wipe_all_traits_confirming
+            
+            if confirming:
+                # Wipe all characters
+                from evennia.objects.models import ObjectDB
+                from typeclasses.characters import Character
+                chars = ObjectDB.objects.filter(db_typeclass_path__contains="characters.Character")
+                count = 0
+                for char in chars:
+                    if hasattr(char, 'traits'):  # Verify it's actually a character
+                        success, msg = self._wipe_and_init(char)
+                        if success:
+                            count += 1
+                            self.caller.msg(f"{char.name}: {msg}")
+                self.caller.msg(f"\nWiped and reinitialized traits for {count} character{'s' if count != 1 else ''}.")
+                del self.caller.db.wipe_all_traits_confirming
+                return
+            
+            # First time through - ask for confirmation
+            self.caller.msg("|yWARNING: This will wipe and reinitialize ALL character traits.|n")
+            self.caller.msg("|yThis action cannot be undone. Type 'wipetraits/all' again to confirm.|n")
+            self.caller.db.wipe_all_traits_confirming = True
             return
-              # Wipe specific character
+              
+        # Wipe specific character
         if not self.args:
             self.caller.msg("Usage: wipetraits <character> or wipetraits/all")
             return
@@ -179,8 +191,22 @@ class CmdWipeTraits(CharacterLookupMixin, MuxCommand):
             self.caller.msg(f"{char.name} does not support traits (wrong typeclass?).")
             return
             
-        success, msg = self._wipe_and_init(char)
-        self.caller.msg(msg)
+        # Check if this is a confirmation for wiping specific character
+        confirming = self.caller.db.wipe_traits_confirming
+        target_char = self.caller.db.wipe_traits_target
+        
+        if confirming and target_char and target_char == char.id:
+            success, msg = self._wipe_and_init(char)
+            self.caller.msg(msg)
+            del self.caller.db.wipe_traits_confirming
+            del self.caller.db.wipe_traits_target
+            return
+            
+        # First time through - ask for confirmation
+        self.caller.msg(f"|yWARNING: This will wipe and reinitialize all traits for {char.name}.|n")
+        self.caller.msg("|yThis action cannot be undone. Type 'wipetraits {self.args}' again to confirm.|n")
+        self.caller.db.wipe_traits_confirming = True
+        self.caller.db.wipe_traits_target = char.id
         
     def _wipe_and_init(self, char):
         """Helper method to wipe and reinitialize traits for a character."""

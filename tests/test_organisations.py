@@ -7,7 +7,7 @@ from evennia.utils.test_resources import EvenniaTest
 from commands.organisations import CmdOrg, CmdResource
 from typeclasses.organisations import Organisation
 from evennia import create_object
-from utils.org_utils import validate_rank, parse_equals, parse_comma, get_org, get_char, get_org_and_char
+from utils.org_utils import validate_rank, get_org, get_char, get_org_and_char
 import unittest
 
 class TestOrganisation(EvenniaTest):
@@ -59,8 +59,6 @@ class TestOrganisation(EvenniaTest):
         
         # Add helper methods to command
         self.cmd._validate_rank = lambda rank_str, default=None: validate_rank(rank_str, default, self.caller)
-        self.cmd._parse_equals = lambda usage_msg: parse_equals(self.cmd.args)
-        self.cmd._parse_comma = lambda text, expected_parts=2, usage_msg=None: parse_comma(text, expected_parts)
         self.cmd._get_org = lambda org_name: get_org(org_name, self.caller)
         self.cmd._get_character = lambda char_name: get_char(char_name, self.caller)
         self.cmd._get_org_and_char = lambda org_name, char_name: get_org_and_char(org_name, char_name, self.caller)
@@ -85,6 +83,38 @@ class TestOrganisation(EvenniaTest):
         self.assertEqual(org.db.description, "No description set.")
         self.assertEqual(len(org.db.rank_names), 10)  # Should have 10 ranks
         self.assertEqual(len(org.db.members), 0)  # Should start with no members
+        
+    def test_duplicate_org_creation(self):
+        """Test that duplicate organization names are prevented."""
+        # Create first organization
+        self.cmd.switches = ["create"]
+        self.cmd.args = "Duplicate House"
+        self.cmd.func()
+        
+        # Verify first organization was created
+        orgs = Organisation.objects.filter(db_key="Duplicate House")
+        self.assertEqual(len(orgs), 1)
+        
+        # Try to create second organization with same name
+        self.cmd.caller.msg.reset_mock()  # Reset mock to check new calls
+        self.cmd.func()
+        
+        # Verify error message was sent
+        self.cmd.caller.msg.assert_called_with("An organisation with the name 'Duplicate House' already exists.")
+        
+        # Verify still only one organization exists
+        orgs = Organisation.objects.filter(db_key="Duplicate House")
+        self.assertEqual(len(orgs), 1)
+        
+        # Test case insensitive duplicate check
+        self.cmd.args = "duplicate house"  # Different case
+        self.cmd.caller.msg.reset_mock()
+        self.cmd.func()
+        
+        # Should still be prevented
+        self.cmd.caller.msg.assert_called_with("An organisation with the name 'duplicate house' already exists.")
+        orgs = Organisation.objects.filter(db_key__iexact="Duplicate House")
+        self.assertEqual(len(orgs), 1)
         
     def test_member_management(self):
         """Test adding and removing members."""
@@ -149,14 +179,14 @@ class TestOrganisation(EvenniaTest):
         """Test setting and getting rank names."""
         # Test setting a rank name
         self.cmd.switches = ["rankname"]
-        self.cmd.args = "Test House=5,Servant"  # Changed format to match command
+        self.cmd.args = "Test House,5=Servant"  # Updated format to match new command
         self.cmd.func()
         
         # Verify rank name was set
         self.assertEqual(self.org.db.rank_names[5], "Servant")
         
         # Test invalid rank number
-        self.cmd.args = "Test House=11,Invalid"  # Rank 11 doesn't exist
+        self.cmd.args = "Test House,11=Invalid"  # Rank 11 doesn't exist
         self.cmd.func()
         
         # Verify rank name wasn't set

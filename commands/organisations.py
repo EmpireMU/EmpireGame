@@ -10,7 +10,7 @@ from typeclasses.organisations import Organisation
 from utils.command_mixins import CharacterLookupMixin
 from utils.org_utils import (
     validate_rank, get_org, get_char,
-    get_org_and_char, parse_equals, parse_comma
+    get_org_and_char
 )
 
 
@@ -30,10 +30,10 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
     Examples:
         org House Otrese                   - View House Otrese's info
         org/create House Anadun            - Create new noble house
-        org/member House Otrese = Koline,3 - Add Koline as Senior Member
-        org/member House Otrese = Koline,2 - Promote Koline to Deputy
-        org/remove House Otrese = Koline   - Remove Koline from house
-        org/rankname House Otrese = 5,Knight - Set rank 5 name to Knight
+        org/member House Otrese,Koline,3   - Add Koline as Senior Member
+        org/member House Otrese,Koline,2   - Promote Koline to Deputy
+        org/remove House Otrese,Koline     - Remove Koline from house
+        org/rankname House Otrese,5=Knight - Set rank 5 name to Knight
         org/delete House Otrese            - Delete the organization
         
     Organisations represent formal groups like guilds, companies,
@@ -69,17 +69,7 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
         """Helper method to find both an organisation and a character."""
         return get_org_and_char(org_name, char_name, self.caller)
         
-    def _parse_equals(self, usage_msg):
-        """Helper method to parse = separated arguments."""
-        parts = parse_equals(self.args)
-        if not parts:
-            self.msg(f"Usage: {usage_msg}")
-            return None
-        return parts
-        
-    def _parse_comma(self, text, expected_parts=2, usage_msg=None):
-        """Helper method to parse comma-separated arguments."""
-        return parse_comma(text, expected_parts, usage_msg, self.caller)
+
         
     def _validate_rank(self, rank_str, default=None):
         """Helper method to validate rank numbers."""
@@ -140,11 +130,16 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
     def create_org(self):
         """Create a new organisation."""
         if not self.args:
-            self.msg("Usage: org/create <name>")
+            self.msg("Usage: org/create <n>")
             return
             
         if not self.access(self.caller, "create"):
             self.msg("You don't have permission to create organisations.")
+            return
+            
+        # Check if an organization with this name already exists
+        if self._get_org(self.args):
+            self.msg(f"An organisation with the name '{self.args}' already exists.")
             return
             
         # Create the organization
@@ -191,20 +186,15 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             self.msg("You don't have permission to manage members.")
             return
             
-        # Parse arguments
-        parts = self._parse_equals("org/member <organisation>,<character>,<rank>")
-        if not parts:
-            return
-        org_name, rest = parts
-        
-        # Parse character and optional rank - split on comma with more robust handling
-        parts = [p.strip() for p in rest.split(',')]
-        if not parts:
-            self.msg("Unable to parse character name and rank.")
+        # Parse arguments - format: org,char[,rank]
+        parts = [p.strip() for p in self.args.split(',') if p.strip()]
+        if len(parts) < 2:
+            self.msg("Usage: org/member <organisation>,<character>[,<rank>]")
             return
             
-        char_name = parts[0]
-        rank = self._validate_rank(parts[1] if len(parts) > 1 else "4", default=4)
+        org_name = parts[0]
+        char_name = parts[1]
+        rank = self._validate_rank(parts[2] if len(parts) > 2 else "4", default=4)
         if rank is None:
             return
             
@@ -225,9 +215,10 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             self.msg("You don't have permission to remove members.")
             return
             
-        # Parse arguments
-        parts = self._parse_equals("org/remove <organisation>,<character>")
-        if not parts:
+        # Parse arguments - format: org,char
+        parts = [p.strip() for p in self.args.split(',') if p.strip()]
+        if len(parts) != 2:
+            self.msg("Usage: org/remove <organisation>,<character>")
             return
         org_name, char_name = parts
         
@@ -253,18 +244,26 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             self.msg("You don't have permission to set rank names.")
             return
             
-        # Parse arguments
-        parts = self._parse_equals("org/rankname <organisation>,<rank>=<name>")
-        if not parts:
+        # Parse arguments - format: org,rank=name
+        if "," not in self.args or "=" not in self.args:
+            self.msg("Usage: org/rankname <organisation>,<rank>=<name>")
             return
-        org_name, rest = parts
         
-        # Parse rank and name
-        rank_parts = self._parse_comma(rest, 2, "org/rankname <organisation>,<rank>=<name>")
-        if not rank_parts:
+        parts = [p.strip() for p in self.args.split(",", 1)]
+        if len(parts) != 2:
+            self.msg("Usage: org/rankname <organisation>,<rank>=<name>")
             return
             
-        rank = self._validate_rank(rank_parts[0])
+        org_name = parts[0]
+        rank_name_part = parts[1]
+        
+        # Parse rank=name
+        if "=" not in rank_name_part:
+            self.msg("Usage: org/rankname <organisation>,<rank>=<name>")
+            return
+        rank_str, rank_name = [p.strip() for p in rank_name_part.split("=", 1)]
+        
+        rank = self._validate_rank(rank_str)
         if rank is None:
             return
             
@@ -274,8 +273,8 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             return
             
         # Set the rank name
-        org.db.rank_names[rank] = rank_parts[1]
-        self.msg(f"Set rank {rank} name to '{rank_parts[1]}'.")
+        org.db.rank_names[rank] = rank_name
+        self.msg(f"Set rank {rank} name to '{rank_name}'.")
         
     def show_org_info(self):
         """Show organisation information."""

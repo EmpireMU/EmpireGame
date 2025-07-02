@@ -3,7 +3,6 @@ Base command classes with common functionality.
 """
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.commands.command import Command
-from utils.command_utils import parse_equals
 from utils.trait_validation import TraitValidator
 
 class CharacterLookupMixin(MuxCommand):
@@ -31,29 +30,7 @@ class CharacterLookupMixin(MuxCommand):
             
         return char
     
-    def parse_character_command(self, usage_msg: str):
-        """
-        Parse commands in format: <character> = <rest>
-        
-        Args:
-            usage_msg: Usage message to show on error
-            
-        Returns:
-            Tuple of (character, rest_of_args) or (None, None) on error
-        """
-        if not self.args or "=" not in self.args:
-            self.msg(f"Usage: {usage_msg}")
-            return None, None
-            
-        char_name, rest = parse_equals(self.args, usage_msg, self)
-        if not char_name or not rest:
-            return None, None
-            
-        char = self.find_character(char_name, require_traits=True)
-        if not char:
-            return None, None
-            
-        return char, rest
+
 
 class TraitCommand(CharacterLookupMixin):
     """Base class for trait manipulation commands."""
