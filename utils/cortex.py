@@ -2,6 +2,7 @@
 Cortex Prime game system utilities.
 """
 
+import re
 from typing import List, Tuple, Optional, Dict, NamedTuple, Any
 from collections import defaultdict
 from random import randint
@@ -65,14 +66,21 @@ def get_trait_die(character, trait_spec: str) -> Optional[Tuple[str, str, str, b
     trait_key = trait_spec
     step_mod = None
     doubled = False
-    if '(' in trait_spec and ')' in trait_spec:
-        trait_key, mod = trait_spec.split('(', 1)
-        mod = mod.rstrip(')').upper()  # Convert to uppercase for comparison
-        if mod in ('U', 'D'):
-            step_mod = mod
-        elif mod.lower() == 'double':
-            doubled = True
-        trait_key = trait_key.strip()
+    
+    # Extract all modifiers in parentheses using regex
+    modifiers = re.findall(r'\(([^)]+)\)', trait_spec)
+    
+    if modifiers:
+        # Remove all modifier patterns from the trait key
+        trait_key = re.sub(r'\([^)]+\)', '', trait_spec).strip()
+        
+        # Process each modifier
+        for mod in modifiers:
+            mod = mod.upper()  # Convert to uppercase for comparison
+            if mod in ('U', 'D'):
+                step_mod = mod
+            elif mod.upper() == 'DOUBLE':
+                doubled = True
     
     # Try each trait category in order
     categories = [
@@ -112,7 +120,7 @@ def get_trait_die(character, trait_spec: str) -> Optional[Tuple[str, str, str, b
                     break
             
         if trait:
-            # For distinctions, always use d8 unless stepped down
+            # For distinctions, always start with d8
             if category_name == 'distinctions':
                 die_size = '8'
             else:
@@ -120,7 +128,11 @@ def get_trait_die(character, trait_spec: str) -> Optional[Tuple[str, str, str, b
                 
             # Apply step modification if present
             if step_mod:
-                die_size = step_die(die_size, 1 if step_mod == 'U' else -1)
+                if category_name == 'distinctions' and step_mod == 'D':
+                    # Stepping down a distinction goes to d4
+                    die_size = '4'
+                else:
+                    die_size = step_die(die_size, 1 if step_mod == 'U' else -1)
             return die_size, category_name, step_mod, doubled
             
     return None

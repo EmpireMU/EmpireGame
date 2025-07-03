@@ -115,4 +115,43 @@ class Channel(DefaultChannel):
 
     """
 
-    pass
+    def channel_prefix(self):
+        """
+        How the channel should be prefixed when returning to user. Returns a string.
+        
+        This method is called whenever the channel needs to display its prefix to users.
+        We override it to support custom colours per channel.
+        """
+        # Get the custom colour for this channel
+        colour_code = self.db.channel_colour or "w"  # Default to white if no colour set
+        
+        # Return the coloured channel name in brackets
+        return f"|{colour_code}[{self.key}]|n "
+    
+    def set_channel_colour(self, colour_code):
+        """
+        Set the colour code for this channel.
+        
+        Args:
+            colour_code (str): Single letter colour code (e.g., 'r', 'g', 'b', 'c', 'y', 'm', 'w')
+        
+        Returns:
+            bool: True if successful, False if invalid colour code
+        """
+        # Valid Evennia colour codes
+        valid_colours = ['r', 'g', 'b', 'c', 'y', 'm', 'w', 'x', 'R', 'G', 'B', 'C', 'Y', 'M', 'W', 'X']
+        
+        if colour_code not in valid_colours:
+            return False
+            
+        self.db.channel_colour = colour_code
+        return True
+    
+    def get_channel_colour(self):
+        """
+        Get the current colour code for this channel.
+        
+        Returns:
+            str: The colour code, or 'w' (white) if none is set
+        """
+        return self.db.channel_colour or "w"

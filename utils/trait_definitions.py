@@ -14,35 +14,35 @@ class TraitDefinition:
 
 # Attribute definitions (all start at d6 - "typical person")
 ATTRIBUTES: List[TraitDefinition] = [
-    TraitDefinition("mind", "Mind", "Intelligence, perception and mental processing", 6),
-    TraitDefinition("spirit", "Spirit", "Willpower, intuition and spiritual strength", 6),
-    TraitDefinition("social", "Social", "Charisma and social navigation", 6),
-    TraitDefinition("leadership", "Leadership", "Capacity as a leader", 6),
-    TraitDefinition("prowess", "Prowess", "Strength, endurance and ability to fight", 6),
-    TraitDefinition("finesse", "Finesse", "Dexterity and agility", 6)
+    TraitDefinition("mind", "Mind", "", 6),
+    TraitDefinition("spirit", "Spirit", "", 6),
+    TraitDefinition("social", "Social", "", 6),
+    TraitDefinition("leadership", "Leadership", "", 6),
+    TraitDefinition("prowess", "Prowess", "", 6),
+    TraitDefinition("finesse", "Finesse", "", 6)
 ]
 
 # Skill definitions (all start at d4 - "untrained")
 SKILLS: List[TraitDefinition] = [
-    TraitDefinition("administration", "Administration", "Organizing affairs of large groups", 4),
-    TraitDefinition("arcana", "Arcana", "Knowledge of magic", 4),
-    TraitDefinition("athletics", "Athletics", "General physical feats", 4),
-    TraitDefinition("dexterity", "Dexterity", "Precision physical feats", 4),
-    TraitDefinition("diplomacy", "Diplomacy", "Protocol and high politics", 4),
-    TraitDefinition("direction", "Direction", "Leading in non-combat", 4),
-    TraitDefinition("exploration", "Exploration", "Wilderness and ruins", 4),
-    TraitDefinition("fighting", "Fighting", "Melee combat", 4),
-    TraitDefinition("influence", "Influence", "Personal persuasion", 4),
-    TraitDefinition("learning", "Learning", "Education and research", 4),
-    TraitDefinition("making", "Making", "Crafting and building", 4),
-    TraitDefinition("medicine", "Medicine", "Healing and medical knowledge", 4),
-    TraitDefinition("perception", "Perception", "Awareness and searching", 4),
-    TraitDefinition("performance", "Performance", "Entertainment arts", 4),
-    TraitDefinition("presentation", "Presentation", "Style and bearing", 4),
-    TraitDefinition("rhetoric", "Rhetoric", "Public speaking", 4),
-    TraitDefinition("seafaring", "Seafaring", "Sailing and navigation", 4),
-    TraitDefinition("shooting", "Shooting", "Ranged combat", 4),
-    TraitDefinition("warfare", "Warfare", "Military leadership and strategy", 4)
+    TraitDefinition("administration", "Administration", "", 4),
+    TraitDefinition("arcana", "Arcana", "", 4),
+    TraitDefinition("athletics", "Athletics", "", 4),
+    TraitDefinition("composure", "Composure", "", 4),
+    TraitDefinition("dexterity", "Dexterity", "", 4),
+    TraitDefinition("espionage", "Espionage", "", 4),
+    TraitDefinition("exploration", "Exploration", "", 4),
+    TraitDefinition("fighting", "Fighting", "", 4),
+    TraitDefinition("influence", "Influence", "", 4),
+    TraitDefinition("learning", "Learning", "", 4),
+    TraitDefinition("making", "Making", "", 4),
+    TraitDefinition("medicine", "Medicine", "", 4),
+    TraitDefinition("perception", "Perception", "", 4),
+    TraitDefinition("performance", "Performance", "", 4),
+    TraitDefinition("politics", "Politics", "", 4),
+    TraitDefinition("rhetoric", "Rhetoric", "", 4),
+    TraitDefinition("seafaring", "Seafaring", "", 4),
+    TraitDefinition("survival", "Survival", "", 4),
+    TraitDefinition("warfare", "Warfare", "", 4)
 ]
 
 # Distinction definitions (all start at d8)

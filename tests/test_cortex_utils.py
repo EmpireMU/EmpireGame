@@ -11,7 +11,8 @@ from utils.cortex import (
     roll_die,
     process_results,
     get_success_level,
-    validate_dice_pool
+    validate_dice_pool,
+    get_trait_die
 )
 
 class TestCortexUtils(EvenniaTest):
@@ -134,3 +135,64 @@ class TestCortexUtils(EvenniaTest):
         self.assertIsNotNone(validate_dice_pool([attribute, skill]))  # Missing distinction
         self.assertIsNotNone(validate_dice_pool([asset]))  # Asset without prime set
         self.assertIsNotNone(validate_dice_pool([attribute, distinction, asset]))  # Missing skill
+    
+    def test_get_trait_die_parsing(self):
+        """Test trait specification parsing with multiple modifiers."""
+        # Create a mock character with minimal trait handlers
+        class MockTrait:
+            def __init__(self, base):
+                self.base = base
+                
+        class MockTraitHandler:
+            def __init__(self, traits):
+                self.traits = traits
+                
+            def get(self, key):
+                return self.traits.get(key)
+                
+            def all(self):
+                return list(self.traits.keys())
+        
+        class MockCharacter:
+            def __init__(self):
+                self.character_attributes = MockTraitHandler({'strength': MockTrait(8)})
+                self.skills = MockTraitHandler({'fighting': MockTrait(6)})
+                self.distinctions = MockTraitHandler({'warrior': MockTrait(8)})
+                self.char_resources = MockTraitHandler({})
+                self.signature_assets = MockTraitHandler({})
+                self.powers = MockTraitHandler({})
+                self.temporary_assets = MockTraitHandler({})
+        
+        char = MockCharacter()
+        
+        # Test simple trait lookup
+        result = get_trait_die(char, 'strength')
+        self.assertEqual(result, ('8', 'character_attributes', None, False))
+        
+        # Test single modifiers
+        result = get_trait_die(char, 'strength(U)')
+        self.assertEqual(result, ('10', 'character_attributes', 'U', False))
+        
+        result = get_trait_die(char, 'strength(D)')
+        self.assertEqual(result, ('6', 'character_attributes', 'D', False))
+        
+        result = get_trait_die(char, 'strength(double)')
+        self.assertEqual(result, ('8', 'character_attributes', None, True))
+        
+        # Test combined modifiers (the new functionality)
+        result = get_trait_die(char, 'strength(U)(double)')
+        self.assertEqual(result, ('10', 'character_attributes', 'U', True))
+        
+        result = get_trait_die(char, 'strength(double)(U)')
+        self.assertEqual(result, ('10', 'character_attributes', 'U', True))
+        
+        result = get_trait_die(char, 'strength(D)(double)')
+        self.assertEqual(result, ('6', 'character_attributes', 'D', True))
+        
+        # Test with distinctions (special case where D modifier goes to d4)
+        result = get_trait_die(char, 'warrior(D)(double)')
+        self.assertEqual(result, ('4', 'distinctions', 'D', True))
+        
+        # Test case insensitivity for double modifier
+        result = get_trait_die(char, 'strength(DOUBLE)(u)')
+        self.assertEqual(result, ('10', 'character_attributes', 'U', True))

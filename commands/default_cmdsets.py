@@ -34,6 +34,7 @@ from commands import where
 from commands.account_admin import CmdCreatePlayerAccount
 from commands.roster import CmdRoster, CmdApplication
 from commands.places import PlaceCmdSet
+from commands.channel_admin import ChannelAdminCmdSet
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -103,6 +104,8 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
         # Add roster commands
         self.add(CmdRoster())
         self.add(CmdApplication())
+        # Add channel admin commands
+        self.add(ChannelAdminCmdSet)
 
 
 class UnloggedinCmdSet(default_cmds.UnloggedinCmdSet):

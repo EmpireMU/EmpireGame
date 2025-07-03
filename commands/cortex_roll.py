@@ -64,13 +64,14 @@ def format_colored_roll(value, die, trait_info, extra_value=None):
         elif trait_info.category == 'signature_assets':
             trait = trait_info.caller.signature_assets.get(trait_info.key)
             
-        # Use trait name if available, otherwise use key
+        # Use trait name if available, otherwise use key, and properly capitalize
         display_name = trait.name if trait and hasattr(trait, 'name') else trait_info.key
+        display_name = display_name.title() if display_name else ""
         
         # If we have an extra die from doubling, include both values
         if extra_value is not None:
-            return f"|c{value}, {extra_value}|n(d{die} {category_name}: {display_name}{mod_suffix} |c(Doubled)|n)"
-        return f"|c{value}|n(d{die} {category_name}: {display_name}{mod_suffix})"
+            return f"|c{value}, {extra_value}|n({display_name}: d{die}{mod_suffix} |c(Doubled)|n)"
+        return f"|c{value}|n({display_name}: d{die}{mod_suffix})"
     return f"|c{value}|n(d{die})"
 
 class CmdCortexRoll(Command):
@@ -96,7 +97,7 @@ class CmdCortexRoll(Command):
     - Each trait adds its die to the pool (e.g., d6, d8, d10, d12)
     - Roll all dice and sum the two highest
     - If rolling against difficulty, must beat the target number
-    - Distinctions can be used as d8 or d4 (d4 gives you a plot point)
+    - Distinctions can be used as d8 (default) or stepped down to d4 using (D)
     - Plot points can be spent to:
       * Step up or down a die by adding (U) or (D) after the trait name
       * Keep an additional die in the total
@@ -388,12 +389,24 @@ class CmdCortexRoll(Command):
                     i += 1            # Build output message
             result_msg = f"{self.caller.key} rolls: {', '.join(roll_results)}\n"
             
-            # Display effect die - show the actual die size or d4 default
+            # Build total line with difficulty and success result if applicable
             non_hitch_count = len([r for r in rolls if r[0] != 1])
+            effect_die_text = f"d{effect_die}"
             if effect_die == 4 and non_hitch_count < 3:
-                result_msg += f"Total: |w{total}|n | Effect Die: |wd{effect_die}|n |y(defaulted to d4)|n"
+                effect_die_text += " |y(defaulted to d4)|n"
+            
+            if self.difficulty is not None:
+                success, heroic = get_success_level(total, self.difficulty)
+                if success:
+                    if heroic:
+                        success_text = f"|g{self.caller.key} achieves a HEROIC SUCCESS!|n"
+                    else:
+                        success_text = "|gSuccess|n"
+                else:
+                    success_text = "|yFailure|n"
+                result_msg += f"Total: |w{total}|n (vs {self.difficulty}) - {success_text} | Effect Die: |w{effect_die_text}|n"
             else:
-                result_msg += f"Total: |w{total}|n | Effect Die: |wd{effect_die}|n"
+                result_msg += f"Total: |w{total}|n | Effect Die: |w{effect_die_text}|n"
             
             # Track traits used from each category for GM notification
             category_count = defaultdict(int)
@@ -413,18 +426,6 @@ class CmdCortexRoll(Command):
                     for obj in self.caller.location.contents:
                         if obj.check_permstring("Builder") and obj != self.caller:
                             obj.msg(f"|y{self.caller.name} is using multiple {category} traits ({', '.join(category_names[category])})|n")
-            
-            # Add difficulty check if applicable
-            if self.difficulty is not None:
-                success, heroic = get_success_level(total, self.difficulty)
-                result_msg += f"\nDifficulty: |w{self.difficulty}|n - "
-                if success:
-                    if heroic:
-                        result_msg += f"|g{self.caller.key} achieves a HEROIC SUCCESS!|n"
-                    else:
-                        result_msg += "Success"
-                else:
-                    result_msg += "|yFailure|n"
             
             if hitches:
                 result_msg += f"\n|yHitches: {len(hitches)} (rolled 1 on: d{', d'.join(hitches)})|n"
