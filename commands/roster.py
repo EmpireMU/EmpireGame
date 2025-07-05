@@ -9,7 +9,7 @@ from evennia.utils.search import search_object, search_script
 from django.conf import settings
 from typeclasses.applications import Application
 from evennia import create_object, create_script
-from typeclasses.characters import STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE, Character
+from typeclasses.characters import STATUS_UNFINISHED, STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE, Character
 from evennia.objects.models import ObjectDB
 from evennia.scripts.models import ScriptDB
 from evennia.accounts.models import AccountDB
@@ -132,6 +132,7 @@ class CmdRoster(MuxCommand):
     
     Usage:
         roster               - Show available characters
+        roster/unfinished   - Show unfinished characters
         roster/active       - Show active characters
         roster/gone        - Show gone characters
         roster <n>       - Filter available characters by name
@@ -140,13 +141,14 @@ class CmdRoster(MuxCommand):
         roster/apply <character>/<email>=<application text>
         
     Staff only:
+        roster/setunfinished <character> - Set character as Unfinished
         roster/setavailable <character>  - Set character as Available
         roster/setactive <character>     - Set character as Active
         roster/setgone <character>       - Set character as Gone
     """
     
     key = "roster"
-    aliases = ["roster/active", "roster/gone"]
+    aliases = ["roster/unfinished", "roster/active", "roster/gone"]
     locks = "cmd:all()"  # Base command available to all
     help_category = "General"
     
@@ -166,9 +168,9 @@ class CmdRoster(MuxCommand):
                 (char.account and char.account.check_permstring("Builder"))):
                 continue
                 
-            # If character has no status, set it to available
+            # If character has no status, set it to unfinished (new default)
             if not char.db.status:
-                char.db.status = STATUS_AVAILABLE
+                char.db.status = STATUS_UNFINISHED
             if char.db.status == status:
                 result.append(char)
         return result
@@ -293,7 +295,10 @@ class CmdRoster(MuxCommand):
             return
         char = char[0]
         
-        if "setavailable" in self.switches:
+        if "setunfinished" in self.switches:
+            char.db.status = STATUS_UNFINISHED
+            status = "Unfinished"
+        elif "setavailable" in self.switches:
             char.db.status = STATUS_AVAILABLE
             status = "Available"
         elif "setactive" in self.switches:
@@ -310,7 +315,7 @@ class CmdRoster(MuxCommand):
         Execute command.
         """
         # Handle admin commands first
-        if any(switch in ["setavailable", "setactive", "setgone"] for switch in self.switches):
+        if any(switch in ["setunfinished", "setavailable", "setactive", "setgone"] for switch in self.switches):
             self._handle_admin_command()
             return
             
@@ -323,7 +328,13 @@ class CmdRoster(MuxCommand):
         caller = self.caller
         
         # Determine which status to show
-        if "roster/active" in self.cmdstring:
+        if "roster/unfinished" in self.cmdstring:
+            if not self.caller.check_permstring("Admin"):
+                self.caller.msg("You don't have permission to view unfinished characters.")
+                return
+            status = STATUS_UNFINISHED
+            status_text = "Unfinished"
+        elif "roster/active" in self.cmdstring:
             status = STATUS_ACTIVE
             status_text = "Active"
         elif "roster/gone" in self.cmdstring:

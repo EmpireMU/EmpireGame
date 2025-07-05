@@ -9,7 +9,7 @@ from django.conf import settings
 import os
 import uuid
 from evennia.objects.models import ObjectDB
-from typeclasses.characters import STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE
+from typeclasses.characters import STATUS_UNFINISHED, STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE
 from typeclasses.organisations import Organisation
 import logging
 
@@ -83,7 +83,11 @@ def roster_view(request):
     """
     Main view for the character roster.
     Shows available, active, and retired characters.
+    Staff can also see unfinished characters.
     """
+    # Check if user is staff
+    is_staff = request.user.is_staff
+    
     # Get characters by status
     available_chars = ObjectDB.objects.filter(db_attributes__db_key='status', 
                                            db_attributes__db_value=STATUS_AVAILABLE).order_by('db_key')
@@ -92,10 +96,20 @@ def roster_view(request):
     gone_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
                                       db_attributes__db_value=STATUS_GONE).order_by('db_key')
     
+    # Get unfinished characters (only if user is staff)
+    unfinished_chars = []
+    if is_staff:
+        unfinished_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
+                                                db_attributes__db_value=STATUS_UNFINISHED).order_by('db_key')
+    
     # Filter out guest characters and staff accounts
     available_chars = [char for char in available_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
     active_chars = [char for char in active_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
     gone_chars = [char for char in gone_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+    
+    # Filter unfinished characters too (only if we have them)
+    if is_staff:
+        unfinished_chars = [char for char in unfinished_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
     
     # Get all organizations
     organizations = ObjectDB.objects.filter(db_typeclass_path='typeclasses.organisations.Organisation').order_by('db_key')
@@ -140,9 +154,15 @@ def roster_view(request):
 
     # Prepare organization data for each status
     org_data = {}
-    for status, char_list in [('available', available_chars), 
-                            ('active', active_chars), 
-                            ('gone', gone_chars)]:
+    status_lists = [('available', available_chars), 
+                   ('active', active_chars), 
+                   ('gone', gone_chars)]
+    
+    # Add unfinished characters if user is staff
+    if is_staff:
+        status_lists.append(('unfinished', unfinished_chars))
+    
+    for status, char_list in status_lists:
         status_orgs = []
         for org in organizations:
             org_chars = get_org_data(char_list, org)
@@ -161,8 +181,13 @@ def roster_view(request):
         'available_chars': [(char, get_concept(char), get_display_name(char)) for char in available_chars],
         'active_chars': [(char, get_concept(char), get_display_name(char)) for char in active_chars],
         'gone_chars': [(char, get_concept(char), get_display_name(char)) for char in gone_chars],
-        'organizations': org_data
+        'organizations': org_data,
+        'is_staff': is_staff
     }
+    
+    # Add unfinished characters if user is staff
+    if is_staff:
+        context['unfinished_chars'] = [(char, get_concept(char), get_display_name(char)) for char in unfinished_chars]
     
     return render(request, 'roster/roster.html', context)
 

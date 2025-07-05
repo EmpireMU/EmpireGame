@@ -17,6 +17,7 @@ from utils.resource_utils import get_unique_resource_name, validate_die_size
 from evennia.comms.models import Msg
 
 # Character status constants
+STATUS_UNFINISHED = "unfinished"
 STATUS_AVAILABLE = "available"
 STATUS_ACTIVE = "active"
 STATUS_GONE = "gone"
@@ -149,7 +150,7 @@ class Character(ObjectParent, DefaultCharacter):
         self.db.realm = "No realm has been set."
 
         # Initialize character status (for roster system)
-        self.db.status = STATUS_AVAILABLE
+        self.db.status = STATUS_UNFINISHED
 
         # Initialize organization memberships
         self.attributes.add('organisations', {}, category='organisations')
