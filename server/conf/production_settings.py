@@ -68,3 +68,14 @@ DEBUG = False
 IN_GAME_ERRORS = False
 
 ALLOWED_HOSTS = ['178.62.90.58', 'localhost', 'empiremush.org']
+
+# Security settings for website
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+# Session timeout for website login
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+TIME_ZONE = 'UTC'

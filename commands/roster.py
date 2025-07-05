@@ -161,6 +161,10 @@ class CmdRoster(MuxCommand):
         chars = list(Character.objects.all())
         result = []
         for char in chars:
+            # Skip guest characters - they shouldn't appear in roster
+            if char.account and char.account.key.lower().startswith('guest'):
+                continue
+                
             # If character has no status, set it to available
             if not char.db.status:
                 char.db.status = STATUS_AVAILABLE
