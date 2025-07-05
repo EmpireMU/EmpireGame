@@ -39,6 +39,7 @@ GUEST_ENABLED = True  # Allow guest accounts
 CREATE_ACCOUNT_ON_CONNECT = False  # Disable automatic account creation
 RESTRICTED_CREATION = True  # Restrict account creation to staff only
 AUTO_PUPPET_ON_LOGIN = True  # Auto-puppet the last character on login
+AUTO_CREATE_CHARACTER_WITH_ACCOUNT = False  # Don't auto-create characters
 
 # Disable website registration
 NEW_ACCOUNT_REGISTRATION_ENABLED = False

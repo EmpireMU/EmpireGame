@@ -78,6 +78,11 @@ class CmdCreatePlayerAccount(MuxCommand):
             # Set this as the default puppet for the account
             account.db._last_puppet = char
             
+            # Put character in same state as after normal logout
+            char.at_post_unpuppet()
+            
+
+            
             # Set proper locks for the character
             # This matches the format from the working character:
             # call:false(); control:perm(Developer); delete:id(X) or perm(Admin);
