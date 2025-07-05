@@ -92,10 +92,10 @@ def roster_view(request):
     gone_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
                                       db_attributes__db_value=STATUS_GONE).order_by('db_key')
     
-    # Filter out guest characters
-    available_chars = [char for char in available_chars if not (char.account and char.account.key.lower().startswith('guest'))]
-    active_chars = [char for char in active_chars if not (char.account and char.account.key.lower().startswith('guest'))]
-    gone_chars = [char for char in gone_chars if not (char.account and char.account.key.lower().startswith('guest'))]
+    # Filter out guest characters and staff accounts
+    available_chars = [char for char in available_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+    active_chars = [char for char in active_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+    gone_chars = [char for char in gone_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
     
     # Get all organizations
     organizations = ObjectDB.objects.filter(db_typeclass_path='typeclasses.organisations.Organisation').order_by('db_key')
