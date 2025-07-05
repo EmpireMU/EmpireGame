@@ -115,6 +115,21 @@ class Character(ObjectParent, DefaultCharacter):
         Returns a dict of {org_id: rank_number}
         """
         return self.attributes.get('organisations', default={}, category='organisations')
+
+    @property
+    def notes(self):
+        """
+        Get all notes for this character.
+        Returns a list of note dictionaries.
+        """
+        return self.db.notes or []
+
+    @notes.setter
+    def notes(self, value):
+        """
+        Set the notes list for this character.
+        """
+        self.db.notes = value
         
     def at_object_creation(self):
         """
@@ -208,6 +223,9 @@ class Character(ObjectParent, DefaultCharacter):
         
         # Initialize secret information (staff/owner-only text field)
         self.db.secret_information = ""
+        
+        # Initialize notes list
+        self.db.notes = []
 
     def at_init(self):
         """

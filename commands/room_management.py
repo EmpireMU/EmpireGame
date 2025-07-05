@@ -17,13 +17,15 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
     Manage rooms and their exits
     
     Usage:
-        room/owner <character/org>     - Add owner to current room
-        room/unowner <character/org>   - Remove owner from current room
+        room/owner <character/org>     - Add owner to current room (Builder+ only)
+        room/unowner <character/org>   - Remove owner from current room (Builder+ only)
         room/owners                    - List current room's owners
         room/givekey <character>       - Give a key to current room
         room/removekey <character>     - Remove key from current room
         room/lock <exit>              - Lock an exit (must be owner)
         room/unlock <exit>            - Unlock an exit (must have key or be owner)
+        room/invisible                 - Make room invisible in 'where' command (Builder+ only)
+        room/visible                   - Make room visible in 'where' command (Builder+ only)
     """
     
     key = "room"
@@ -85,6 +87,11 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
         switch = self.switches[0]
         
         if switch in ["owner", "unowner"]:
+            # Check for Builder permissions
+            if not self.caller.check_permstring("Builder"):
+                self.msg("You don't have permission to manage room ownership.")
+                return
+                
             if not self.args:
                 self.msg(f"Usage: room/{switch} <type>:<n>")
                 return
@@ -258,4 +265,37 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
                     dest_room.msg_contents(
                         f"{self.caller.name} unlocks the {return_exit.name} exit from the other side.",
                         exclude=[self.caller]
-                    ) 
+                    )
+                    
+        elif switch in ["invisible", "visible"]:
+            room = self.caller.location
+            
+            # Check if caller is an owner or has sufficient rank in an owning organization
+            has_permission = False
+            
+            # Check if staff
+            if self.caller.check_permstring("Builder"):
+                has_permission = True
+            else:
+                # Check if character owner
+                char_owners = room.attributes.get("character_owners", default={})
+                if self.caller.id in char_owners:
+                    has_permission = True
+                else:
+                    # Check if has sufficient rank in owning organization
+                    org_owners = room.attributes.get("org_owners", default={})
+                    for org_id in org_owners.keys():
+                        if org_id in self.caller.organisations and self.caller.organisations[org_id] <= 2:
+                            has_permission = True
+                            break
+            
+            if not has_permission:
+                self.msg("You must be an owner or have rank 1 or 2 in an owning organization to change room visibility.")
+                return
+            
+            if switch == "invisible":
+                room.db.invisible = True
+                self.msg(f"Room '{room.name}' is now invisible in the 'where' command.")
+            else:  # visible
+                room.db.invisible = False
+                self.msg(f"Room '{room.name}' is now visible in the 'where' command.") 

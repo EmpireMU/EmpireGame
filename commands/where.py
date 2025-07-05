@@ -36,14 +36,21 @@ class CmdWhere(MuxCommand):
         
         # Check each room
         for room in rooms:
+            # Skip invisible rooms
+            if room.db.invisible:
+                continue
+                
             # Get all puppeted characters in the room
             online_chars = [obj for obj in room.contents 
                           if hasattr(obj, 'sessions') and obj.sessions.count()]
             
-            # If room has online characters, add it to output
-            if online_chars:
+            # Filter out invisible characters
+            visible_chars = [char for char in online_chars if not char.db.invisible]
+            
+            # If room has visible online characters, add it to output
+            if visible_chars:
                 found_occupied = True
-                char_names = list_to_string([char.name for char in online_chars])
+                char_names = list_to_string([char.name for char in visible_chars])
                 output_lines.append(f"|w{room.name}|n: {char_names}")
         
         if not found_occupied:

@@ -35,6 +35,9 @@ from commands.account_admin import CmdCreatePlayerAccount
 from commands.roster import CmdRoster, CmdApplication
 from commands.places import PlaceCmdSet
 from commands.channel_admin import ChannelAdminCmdSet
+from commands.info import CmdInfo
+from commands.notes import NotesCmdSet
+from commands.visibility import CmdInvisible, CmdVisible
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -75,6 +78,10 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(where.CmdWhere())
         self.add(CmdMailCharacterOOC())
         self.add(PlaceCmdSet)
+        self.add(CmdInfo())
+        self.add(NotesCmdSet)
+        self.add(CmdInvisible())
+        self.add(CmdVisible())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):
