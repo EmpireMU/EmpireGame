@@ -55,7 +55,7 @@ nosetests.xml
 # VSCode config
 .vscode
 
-# Development utilities (contains passwords - DO NOT COMMIT!)
+# Development utilities
 generate_players*.py
 player_creation_commands*.txt
 duplicate_replacements.txt
