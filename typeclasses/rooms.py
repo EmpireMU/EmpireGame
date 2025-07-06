@@ -50,16 +50,36 @@ class Room(ObjectParent, DefaultRoom):
             # Get the exit's display name (key)
             exit_name = ex.get_display_name(looker)
             
-            # Get the first alias if available, force uppercase
+            # Get preferred alias - prioritize location names over cardinal directions
             if ex.aliases.all():
-                first_alias = ex.aliases.all()[0].upper()
-                exit_display = f"{exit_name} <{first_alias}>"
+                aliases = list(ex.aliases.all())
+                
+                # Cardinal directions and generic exits to deprioritize
+                cardinal_directions = {
+                    'N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW', 'U', 'D', 'O',
+                    'NORTH', 'SOUTH', 'EAST', 'WEST', 'UP', 'DOWN', 'OUT',
+                    'NORTHEAST', 'NORTHWEST', 'SOUTHEAST', 'SOUTHWEST'
+                }
+                
+                # Separate location aliases from cardinal directions
+                location_aliases = [alias for alias in aliases 
+                                  if alias.upper() not in cardinal_directions]
+                cardinal_aliases = [alias for alias in aliases 
+                                  if alias.upper() in cardinal_directions]
+                
+                # Prefer shortest location alias, otherwise shortest cardinal
+                if location_aliases:
+                    preferred_alias = min(location_aliases, key=len).upper()
+                else:
+                    preferred_alias = min(cardinal_aliases, key=len).upper()
+                    
+                exit_display = f"{exit_name} <{preferred_alias}>"
             else:
                 exit_display = exit_name
                 
             exit_names.append(exit_display)
         
-        return ", ".join(exit_names)
+        return f"Exits: {', '.join(exit_names)}"
 
     @property
     def org_owners(self):
@@ -99,37 +119,6 @@ class Room(ObjectParent, DefaultRoom):
                 return True
                 
         return False
-
-    def get_display_exits(self, looker, **kwargs):
-        """
-        Get exits for display in room description with aliases in angle brackets.
-        
-        Args:
-            looker: The character looking at the room
-            **kwargs: Additional keyword arguments
-            
-        Returns:
-            str: Formatted exit string showing "Exits: Exit <Alias>"
-        """
-        exits = [ex for ex in self.contents if ex.destination]
-        if not exits:
-            return ""
-            
-        exit_names = []
-        for ex in exits:
-            # Get the exit's display name (key)
-            exit_name = ex.get_display_name(looker)
-            
-            # Get the first alias if available, force uppercase
-            if ex.aliases.all():
-                first_alias = ex.aliases.all()[0].upper()
-                exit_display = f"{exit_name} <{first_alias}>"
-            else:
-                exit_display = exit_name
-                
-            exit_names.append(exit_display)
-        
-        return f"Exits: {', '.join(exit_names)}"
 
     def return_appearance(self, looker, **kwargs):
         """
