@@ -58,3 +58,4 @@ nosetests.xml
 # Development utilities (contains passwords - DO NOT COMMIT!)
 generate_players*.py
 player_creation_commands*.txt
+duplicate_replacements.txt

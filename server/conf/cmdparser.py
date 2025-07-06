@@ -58,7 +58,7 @@ def cmdparser(raw_string, cmdset, caller, match_index=None):
     # Preprocess text substitutions
     # Preprocesses %r and %t substitutions. 
     # Then delegates to Evennia's default command parser.
-    processed_string = raw_string.replace('%r', '|/').replace('%t', "    ")
+    processed_string = raw_string.replace('%r', '|/').replace('%t', "{_")
     
     # Delegate to Evennia's default command parser
     return default_cmdparser.cmdparser(processed_string, cmdset, caller, match_index)
