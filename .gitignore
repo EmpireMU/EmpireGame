@@ -25,6 +25,9 @@ __pycache__
 *.pid
 *.restart
 *.db3
+*.db3-journal
+*.db3-wal
+*.db3-shm
 
 # Installation-specific.
 # For group efforts, comment out some or all of these.
