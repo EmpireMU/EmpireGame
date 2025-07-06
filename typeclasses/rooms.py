@@ -100,6 +100,37 @@ class Room(ObjectParent, DefaultRoom):
                 
         return False
 
+    def get_display_exits(self, looker, **kwargs):
+        """
+        Get exits for display in room description with aliases in angle brackets.
+        
+        Args:
+            looker: The character looking at the room
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            str: Formatted exit string showing "Exits: Exit <Alias>"
+        """
+        exits = [ex for ex in self.contents if ex.destination]
+        if not exits:
+            return ""
+            
+        exit_names = []
+        for ex in exits:
+            # Get the exit's display name (key)
+            exit_name = ex.get_display_name(looker)
+            
+            # Get the first alias if available, force uppercase
+            if ex.aliases.all():
+                first_alias = ex.aliases.all()[0].upper()
+                exit_display = f"{exit_name} <{first_alias}>"
+            else:
+                exit_display = exit_name
+                
+            exit_names.append(exit_display)
+        
+        return f"Exits: {', '.join(exit_names)}"
+
     def return_appearance(self, looker, **kwargs):
         """
         This formats a description. It is the hook a 'look' command
