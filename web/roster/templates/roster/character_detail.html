@@ -477,7 +477,7 @@ const cancelDistinctionEdit = function(slot, field) {
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h2 class="h5 mb-0">Character Gallery</h2>
                         <div>
-                            {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                            {% if is_staff or request.user.username.lower == character.name.lower %}
                                 <button class="btn btn-success btn-sm" onclick="showUploadModal()">
                                     ➕ Add Image
                                 </button>
@@ -498,7 +498,7 @@ const cancelDistinctionEdit = function(slot, field) {
                                         <small class="text-muted">{{ image.caption }}</small>
                                     </div>
                                     {% endif %}
-                                    {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                                    {% if is_staff or request.user.username.lower == character.name.lower %}
                                     <div class="card-footer p-2">
                                         <div class="btn-group w-100 mb-2" role="group">
                                             <button class="btn btn-primary btn-sm" onclick="setMainImage('{{ image.id }}', '{{ image.url }}')" title="Set as main character image">
@@ -523,7 +523,7 @@ const cancelDistinctionEdit = function(slot, field) {
                                 <div class="text-center py-5 text-muted">
                                     <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
                                     <p>No images in gallery yet</p>
-                                    {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                                    {% if is_staff or request.user.username.lower == character.name.lower %}
                                         <button class="btn btn-primary" onclick="showUploadModal()">Add First Image</button>
                                     {% endif %}
                                 </div>
@@ -1046,7 +1046,7 @@ function deleteImage(imageId) {
                          <div class="text-center py-5 text-muted">
                              <div style="font-size: 3rem; margin-bottom: 1rem;">📸</div>
                              <p>No images in gallery yet</p>
-                             {% if request.user.is_staff or request.user.username.lower == character.name.lower %}
+                             {% if is_staff or request.user.username.lower == character.name.lower %}
                                  <button class="btn btn-primary" onclick="showUploadModal()">Add First Image</button>
                              {% endif %}
                          </div>
