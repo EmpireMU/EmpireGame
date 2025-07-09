@@ -212,51 +212,51 @@ def roster_view(request):
     def get_display_name(char):
         return char.db.full_name or char.name
 
-    # Helper function to get organization data for a character list
-    def get_org_data(chars, org):
-        org_chars = []
-        for char in chars:
-            try:
-                # Get character's organizations safely
-                char_orgs = char.attributes.get('organisations', default={}, category='organisations')
-                if org.id in char_orgs:
-                    rank = char_orgs[org.id]
-                    rank_name = org.db.rank_names.get(rank, f"Rank {rank}")
-                    org_chars.append({
-                        'char': char,
-                        'concept': get_concept(char),
-                        'display_name': get_display_name(char),
-                        'rank_name': rank_name,
-                        'rank': rank  # Store rank for sorting
-                    })
-            except Exception:
-                continue
-                
-        # Sort by rank (lower numbers first) then name
-        return sorted(org_chars, key=lambda x: (x['rank'], x['char'].key.lower()))
-
-    # Prepare organization data for each status
-    org_data = {}
+    # Build organization data efficiently - loop through characters once
+    org_data = {status: [] for status in ['available', 'active', 'gone']}
+    if is_staff:
+        org_data['unfinished'] = []
+    
+    # Create org buckets for each status
+    org_buckets = {}
+    for status in org_data.keys():
+        org_buckets[status] = {}
+        for org in organizations:
+            org_buckets[status][org.id] = []
+    
+    # Process all character lists once
     status_lists = [('available', available_chars), 
                    ('active', active_chars), 
                    ('gone', gone_chars)]
-    
-    # Add unfinished characters if user is staff
     if is_staff:
         status_lists.append(('unfinished', unfinished_chars))
     
     for status, char_list in status_lists:
+        for char in char_list:
+            try:
+                # Get character's organizations once
+                char_orgs = char.attributes.get('organisations', default={}, category='organisations')
+                
+                for org_id, rank in char_orgs.items():
+                    if org_id in org_buckets[status]:
+                        # Find the org object for rank names
+                        org = next((o for o in organizations if o.id == org_id), None)
+                        if org:
+                            rank_name = org.db.rank_names.get(rank, f"Rank {rank}")
+                            char_data = (char, get_concept(char), get_display_name(char), rank_name)
+                            org_buckets[status][org_id].append((char_data, rank))
+            except Exception:
+                continue
+    
+    # Sort and format the organization data
+    for status in org_data.keys():
         status_orgs = []
         for org in organizations:
-            org_chars = get_org_data(char_list, org)
-            if org_chars:  # Only include organizations with members
-                status_orgs.append((org, [
-                    (char_data['char'], 
-                     char_data['concept'], 
-                     char_data['display_name'], 
-                     char_data['rank_name']) 
-                    for char_data in org_chars
-                ]))
+            if org_buckets[status][org.id]:
+                # Sort by rank then name
+                sorted_chars = sorted(org_buckets[status][org.id], key=lambda x: (x[1], x[0][0].key.lower()))
+                char_tuples = [char_data for char_data, rank in sorted_chars]
+                status_orgs.append((org, char_tuples))
         org_data[status] = status_orgs
 
     # Prepare context with character data
