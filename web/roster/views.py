@@ -35,6 +35,10 @@ def is_staff_user(user):
     Returns:
         bool: True if user has staff privileges
     """
+    # Anonymous users are not staff
+    if not user.is_authenticated:
+        return False
+    
     return user.is_staff or user.check_permstring("Admin") or user.check_permstring("Builder")
 
 def get_character_images(character):
