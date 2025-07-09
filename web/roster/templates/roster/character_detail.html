@@ -342,7 +342,7 @@ const cancelDistinctionEdit = function(slot, field) {
                     
                     <h1 class="h3 mb-3" id="full_name-container">
                         <span id="full_name-display">{{ basic_info.name|default:'' }}</span>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('full_name', '{{ basic_info.name|default:'' }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>
@@ -362,7 +362,7 @@ const cancelDistinctionEdit = function(slot, field) {
                         <p id="gender-container">
                             <strong>Gender:</strong> 
                             <span id="gender-display">{{ basic_info.gender|default:'' }}</span>
-                            {% if request.user.is_staff %}
+                            {% if is_staff %}
                                 <button onclick="editField('gender', '{{ basic_info.gender|default:'' }}')" class="btn btn-sm btn-link">
                                     Edit
                                 </button>
@@ -377,7 +377,7 @@ const cancelDistinctionEdit = function(slot, field) {
                         <p id="age-container">
                             <strong>Age:</strong> 
                             <span id="age-display">{{ basic_info.age|default:'' }}</span>
-                            {% if request.user.is_staff %}
+                            {% if is_staff %}
                                 <button onclick="editField('age', '{{ basic_info.age|default:'' }}')" class="btn btn-sm btn-link">
                                     Edit
                                 </button>
@@ -392,7 +392,7 @@ const cancelDistinctionEdit = function(slot, field) {
                         <p id="birthday-container">
                             <strong>Birthday:</strong> 
                             <span id="birthday-display">{{ basic_info.birthday|default:'' }}</span>
-                            {% if request.user.is_staff %}
+                            {% if is_staff %}
                                 <button onclick="editField('birthday', '{{ basic_info.birthday|default:'' }}')" class="btn btn-sm btn-link">
                                     Edit
                                 </button>
@@ -407,7 +407,7 @@ const cancelDistinctionEdit = function(slot, field) {
                         <p id="realm-container">
                             <strong>Realm:</strong> 
                             <span id="realm-display">{{ basic_info.realm|default:'' }}</span>
-                            {% if request.user.is_staff %}
+                            {% if is_staff %}
                                 <button onclick="editField('realm', '{{ basic_info.realm|default:'' }}')" class="btn btn-sm btn-link">
                                     Edit
                                 </button>
@@ -567,7 +567,7 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     <div id="background-container">
                         <p class="card-text" id="background-display">{{ basic_info.background|default:''|linebreaks }}</p>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('background', '{{ basic_info.background|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>
@@ -589,7 +589,7 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     <div id="personality-container">
                         <p class="card-text" id="personality-display">{{ basic_info.personality|default:''|linebreaks }}</p>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('personality', '{{ basic_info.personality|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>
@@ -611,7 +611,7 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     <div id="notable_traits-container">
                         <p class="card-text" id="notable_traits-display">{{ basic_info.notable_traits|default:''|linebreaks }}</p>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('notable_traits', '{{ basic_info.notable_traits|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>
@@ -634,7 +634,7 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     <div id="secret_information-container">
                         <p class="card-text" id="secret_information-display">{{ basic_info.secret_information|default:'No secret information recorded.'|linebreaks }}</p>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('secret_information', '{{ basic_info.secret_information|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>
@@ -658,7 +658,7 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     <div id="special_effects-container">
                         <p class="card-text" id="special_effects-display">{{ basic_info.special_effects|default:'No special effects recorded.'|linebreaks }}</p>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('special_effects', '{{ basic_info.special_effects|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>
@@ -693,7 +693,7 @@ const cancelDistinctionEdit = function(slot, field) {
                             <!-- Name editing -->
                             <div id="distinction_{{ trait.key }}_name_container" class="mb-2">
                                 <span id="distinction_{{ trait.key }}_name_display" class="fw-bold">{{ name }}</span>
-                                {% if request.user.is_staff %}
+                                {% if is_staff %}
                                     <button onclick="editDistinction('{{ trait.key }}', 'name', '{{ name|escapejs }}')" class="btn btn-sm btn-link">
                                         Edit Name
                                     </button>
@@ -708,7 +708,7 @@ const cancelDistinctionEdit = function(slot, field) {
                             <!-- Description editing -->
                             <div id="distinction_{{ trait.key }}_description_container">
                                 <div id="distinction_{{ trait.key }}_description_display" class="text-muted">{{ trait.description|default:'No description'|linebreaks }}</div>
-                                {% if request.user.is_staff %}
+                                {% if is_staff %}
                                     <button onclick="editDistinction('{{ trait.key }}', 'description', '{{ trait.description|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                         Edit Description
                                     </button>
@@ -741,7 +741,7 @@ const cancelDistinctionEdit = function(slot, field) {
                                     <span class="fw-bold">{{ name }}</span>
                                     <div>
                                         <span class="badge bg-primary me-1" id="attributes_{{ trait.key }}_badge">{{ trait.value }}</span>
-                                        {% if request.user.is_staff %}
+                                        {% if is_staff %}
                                             <button onclick="editTrait('attributes', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link">
                                                 Edit
                                             </button>
@@ -771,7 +771,7 @@ const cancelDistinctionEdit = function(slot, field) {
                                     <span class="fw-bold">{{ name }}</span>
                                     <div>
                                         <span class="badge bg-success me-1" id="skills_{{ trait.key }}_badge">{{ trait.value }}</span>
-                                        {% if request.user.is_staff %}
+                                        {% if is_staff %}
                                             <button onclick="editTrait('skills', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link">
                                                 Edit
                                             </button>
@@ -801,7 +801,7 @@ const cancelDistinctionEdit = function(slot, field) {
                                     <span class="fw-bold">{{ name }}</span>
                                     <div>
                                         <span class="badge bg-warning me-1" id="signature_assets_{{ trait.key }}_badge">{{ trait.value }}</span>
-                                        {% if request.user.is_staff %}
+                                        {% if is_staff %}
                                             <button onclick="editTrait('signature_assets', '{{ trait.key }}', '{{ trait.value }}')" class="btn btn-sm btn-link" title="{{ trait.description }}">
                                                 Edit
                                             </button>
