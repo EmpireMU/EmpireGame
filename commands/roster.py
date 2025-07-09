@@ -184,7 +184,12 @@ class CmdRoster(MuxCommand):
             tuple: (name, concept, gender, age, realm)
         """
         name = char.db.full_name or char.key
-        concept = char.db.concept or "No concept set"
+        # Get concept from distinctions system (same as website)
+        try:
+            concept_distinction = char.distinctions.get("concept")
+            concept = concept_distinction.name if concept_distinction else "No concept set"
+        except (AttributeError, Exception):
+            concept = "No concept set"
         gender = char.db.gender or "Not set"
         age = char.db.age or "Not set"
         realm = char.db.realm or "Not set"
