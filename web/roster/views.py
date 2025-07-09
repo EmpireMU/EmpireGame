@@ -10,6 +10,14 @@ import os
 import uuid
 import io
 from PIL import Image
+
+# Handle different Pillow versions
+try:
+    from PIL.Image import Resampling
+    LANCZOS = Resampling.LANCZOS
+except ImportError:
+    # Older Pillow versions
+    LANCZOS = Image.LANCZOS
 from evennia.objects.models import ObjectDB
 from typeclasses.characters import STATUS_UNFINISHED, STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE
 from typeclasses.organisations import Organisation
@@ -65,7 +73,7 @@ def resize_image(image_file, max_size, good_quality=True):
         img = img.convert('RGB')
     
     # Resize it
-    img.thumbnail((max_size, max_size), Image.Lanczos)
+    img.thumbnail((max_size, max_size), LANCZOS)
     
     # Save it
     buffer = io.BytesIO()
