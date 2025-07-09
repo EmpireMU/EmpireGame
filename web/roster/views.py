@@ -15,6 +15,18 @@ import logging
 
 logger = logging.getLogger('web')
 
+def is_staff_user(user):
+    """
+    Check if a user has staff privileges (either Django staff or Evennia Admin/Builder).
+    
+    Args:
+        user: Django User object
+        
+    Returns:
+        bool: True if user has staff privileges
+    """
+    return user.is_staff or user.check_permstring("Admin") or user.check_permstring("Builder")
+
 def get_character_images(character):
     """
     Get all images for a character from their image_gallery attribute.
@@ -85,8 +97,8 @@ def roster_view(request):
     Shows available, active, and retired characters.
     Staff can also see unfinished characters.
     """
-    # Check if user is staff
-    is_staff = request.user.is_staff
+    # Check if user is staff (either Django staff or Evennia Admin/Builder)
+    is_staff = is_staff_user(request.user)
     
     # Get characters by status
     available_chars = ObjectDB.objects.filter(db_attributes__db_key='status', 
@@ -201,7 +213,7 @@ def character_detail_view(request, char_name, char_id):
     
     # Check if user can see traits (staff or character owner)
     # Since account names match character names, check username against character name
-    can_see_traits = request.user.is_staff or (request.user.username.lower() == character.name.lower())
+    can_see_traits = is_staff_user(request.user) or (request.user.username.lower() == character.name.lower())
     
     # Get character's basic info
     basic_info = {
@@ -303,7 +315,7 @@ def update_character_field(request, char_name, char_id):
     Only accessible by staff members.
     """
     try:
-        if not request.user.is_staff:
+        if not is_staff_user(request.user):
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         character = get_object_or_404(ObjectDB, id=char_id, db_key__iexact=char_name)
@@ -446,7 +458,7 @@ def upload_character_image(request, char_name, char_id):
         character = get_object_or_404(ObjectDB, id=char_id, db_key__iexact=char_name)
         
         # Check permissions (staff or character owner)
-        can_edit = request.user.is_staff or (request.user.username.lower() == character.name.lower())
+        can_edit = is_staff_user(request.user) or (request.user.username.lower() == character.name.lower())
         if not can_edit:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
@@ -500,7 +512,7 @@ def delete_character_image(request, char_name, char_id):
         character = get_object_or_404(ObjectDB, id=char_id, db_key__iexact=char_name)
         
         # Check permissions (staff or character owner)
-        can_edit = request.user.is_staff or (request.user.username.lower() == character.name.lower())
+        can_edit = is_staff_user(request.user) or (request.user.username.lower() == character.name.lower())
         if not can_edit:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
@@ -538,7 +550,7 @@ def set_main_character_image(request, char_name, char_id):
         character = get_object_or_404(ObjectDB, id=char_id, db_key__iexact=char_name)
         
         # Check permissions (staff or character owner)
-        can_edit = request.user.is_staff or (request.user.username.lower() == character.name.lower())
+        can_edit = is_staff_user(request.user) or (request.user.username.lower() == character.name.lower())
         if not can_edit:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
@@ -587,7 +599,7 @@ def set_secondary_character_image(request, char_name, char_id):
         character = get_object_or_404(ObjectDB, id=char_id, db_key__iexact=char_name)
         
         # Check permissions (staff or character owner)
-        can_edit = request.user.is_staff or (request.user.username.lower() == character.name.lower())
+        can_edit = is_staff_user(request.user) or (request.user.username.lower() == character.name.lower())
         if not can_edit:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
@@ -636,7 +648,7 @@ def set_tertiary_character_image(request, char_name, char_id):
         character = get_object_or_404(ObjectDB, id=char_id, db_key__iexact=char_name)
         
         # Check permissions (staff or character owner)
-        can_edit = request.user.is_staff or (request.user.username.lower() == character.name.lower())
+        can_edit = is_staff_user(request.user) or (request.user.username.lower() == character.name.lower())
         if not can_edit:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
