@@ -6,7 +6,7 @@
 document.title = "Empire - {{ basic_info.name }}";
 </script>
 
-{% if request.user.is_staff %}
+{% if is_staff %}
 <script>
 const editField = function(fieldName, currentValue) {
     const container = document.getElementById(`${fieldName}-container`);
@@ -545,7 +545,7 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     <div id="desc-container">
                         <p class="card-text" id="desc-display">{{ basic_info.description|default:''|linebreaks }}</p>
-                        {% if request.user.is_staff %}
+                        {% if is_staff %}
                             <button onclick="editField('desc', '{{ basic_info.description|default:''|escapejs }}')" class="btn btn-sm btn-link">
                                 Edit
                             </button>

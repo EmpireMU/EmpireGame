@@ -255,6 +255,7 @@ def character_detail_view(request, char_name, char_id):
         'organizations': organizations,
         'can_see_traits': can_see_traits,
         'gallery_images': gallery_images,
+        'is_staff': is_staff_user(request.user),
     }
     
     # Only include traits if user has permission
