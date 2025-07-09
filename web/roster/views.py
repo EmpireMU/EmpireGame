@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.conf import settings
 import os
 import uuid
+import io
+from PIL import Image
 from evennia.objects.models import ObjectDB
 from typeclasses.characters import STATUS_UNFINISHED, STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE
 from typeclasses.organisations import Organisation
@@ -35,29 +37,82 @@ def get_character_images(character):
     gallery = character.attributes.get('image_gallery', default=[], category='gallery')
     return gallery
 
+def validate_image_upload(image_file):
+    """
+    Check if uploaded file is a reasonable image before processing.
+    Catches edge cases early.
+    """
+    # Check file size (reject if over 15MB - bigger than any reasonable character image)
+    if image_file.size > 15 * 1024 * 1024:
+        raise ValueError("Image too large (max 15MB)")
+    
+    # Check if it's actually an image
+    try:
+        img = Image.open(image_file)
+        img.verify()
+        image_file.seek(0)  # Reset for later use
+    except Exception:
+        raise ValueError("File is not a valid image")
+    
+    return True
+
+def resize_image(image_file, max_size, good_quality=True):
+    """Simple resize. That's it."""
+    img = Image.open(image_file)
+    
+    # Make it RGB (handles transparency)
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+    
+    # Resize it
+    img.thumbnail((max_size, max_size), Image.Lanczos)
+    
+    # Save it
+    buffer = io.BytesIO()
+    quality = 85 if good_quality else 75
+    img.save(buffer, format='JPEG', quality=quality, optimize=True)
+    buffer.seek(0)
+    return buffer
+
 def save_character_image(character, image_file, caption=""):
     """
     Save an uploaded image to the character's gallery.
+    Creates full-size image (800px) and thumbnail (150px).
     Returns the image info dictionary.
     """
-    # Create character images directory if it doesn't exist
+    # Validate upload first - catch problems early
+    validate_image_upload(image_file)
+    
     char_dir = f"character_images/{character.id}"
+    image_id = str(uuid.uuid4())
     
-    # Generate unique filename
-    ext = os.path.splitext(image_file.name)[1]
-    filename = f"{uuid.uuid4()}{ext}"
-    file_path = f"{char_dir}/{filename}"
-    
-    # Save the file
-    saved_path = default_storage.save(file_path, ContentFile(image_file.read()))
+    try:
+        # Create full-size image (800px, good quality)
+        full_buffer = resize_image(image_file, 800, good_quality=True)
+        full_filename = f"{image_id}_full.jpg"
+        full_path = f"{char_dir}/{full_filename}"
+        full_saved = default_storage.save(full_path, ContentFile(full_buffer.read()))
+        
+        # Create thumbnail (150px, lower quality for smaller size)
+        image_file.seek(0)
+        thumb_buffer = resize_image(image_file, 150, good_quality=False)
+        thumb_filename = f"{image_id}_thumb.jpg"
+        thumb_path = f"{char_dir}/{thumb_filename}"
+        thumb_saved = default_storage.save(thumb_path, ContentFile(thumb_buffer.read()))
+        
+    except Exception as e:
+        logger.error(f"Error saving character image: {e}")
+        raise ValueError(f"Could not save image: {e}")
     
     # Create image info
     image_info = {
-        'id': str(uuid.uuid4()),
-        'filename': filename,
-        'path': saved_path,
+        'id': image_id,
+        'filename': full_filename,
+        'path': full_saved,
+        'thumbnail_path': thumb_saved,
         'caption': caption,
-        'url': default_storage.url(saved_path) if hasattr(default_storage, 'url') else f"/media/{saved_path}",
+        'url': default_storage.url(full_saved) if hasattr(default_storage, 'url') else f"/media/{full_saved}",
+        'thumbnail_url': default_storage.url(thumb_saved) if hasattr(default_storage, 'url') else f"/media/{thumb_saved}",
         'uploaded_at': str(timezone.now())
     }
     
@@ -71,18 +126,26 @@ def save_character_image(character, image_file, caption=""):
 def remove_character_image(character, image_id):
     """
     Delete an image from the character's gallery.
+    Removes both full-size image and thumbnail.
     """
     gallery = character.attributes.get('image_gallery', default=[], category='gallery')
     
     # Find and remove the image
     for i, img in enumerate(gallery):
         if img.get('id') == image_id:
-            # Delete the file
+            # Delete the full-size image file
             try:
                 if default_storage.exists(img['path']):
                     default_storage.delete(img['path'])
             except Exception as e:
-                logger.warning(f"Could not delete image file {img['path']}: {e}")
+                logger.warning(f"Could not delete full-size image file {img['path']}: {e}")
+            
+            # Delete the thumbnail file if it exists
+            try:
+                if 'thumbnail_path' in img and default_storage.exists(img['thumbnail_path']):
+                    default_storage.delete(img['thumbnail_path'])
+            except Exception as e:
+                logger.warning(f"Could not delete thumbnail file {img.get('thumbnail_path', 'unknown')}: {e}")
             
             # Remove from gallery
             gallery.pop(i)
@@ -475,9 +538,11 @@ def upload_character_image(request, char_name, char_id):
         if ext not in valid_extensions:
             return JsonResponse({'error': 'Invalid file type. Allowed: JPG, PNG, GIF, WebP'}, status=400)
         
-        # Validate file size (max 1MB)
-        if image_file.size > 1 * 1024 * 1024:
-            return JsonResponse({'error': 'File too large. Maximum size is 1MB'}, status=400)
+        # Use our new validation function (handles up to 15MB)
+        try:
+            validate_image_upload(image_file)
+        except ValueError as e:
+            return JsonResponse({'error': str(e)}, status=400)
         
         # Check maximum images limit (20 per character)
         current_gallery = character.attributes.get('image_gallery', default=[], category='gallery')
