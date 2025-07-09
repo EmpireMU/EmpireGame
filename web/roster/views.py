@@ -171,19 +171,19 @@ def roster_view(request):
     # Check if user is staff (either Django staff or Evennia Admin/Builder)
     is_staff = is_staff_user(request.user)
     
-    # Get characters by status
+    # Get characters by status (with attributes pre-loaded)
     available_chars = ObjectDB.objects.filter(db_attributes__db_key='status', 
-                                           db_attributes__db_value=STATUS_AVAILABLE).order_by('db_key')
+                                           db_attributes__db_value=STATUS_AVAILABLE).prefetch_related('db_attributes').order_by('db_key')
     active_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
-                                        db_attributes__db_value=STATUS_ACTIVE).order_by('db_key')
+                                        db_attributes__db_value=STATUS_ACTIVE).prefetch_related('db_attributes').order_by('db_key')
     gone_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
-                                      db_attributes__db_value=STATUS_GONE).order_by('db_key')
+                                      db_attributes__db_value=STATUS_GONE).prefetch_related('db_attributes').order_by('db_key')
     
     # Get unfinished characters (only if user is staff)
     unfinished_chars = []
     if is_staff:
         unfinished_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
-                                                db_attributes__db_value=STATUS_UNFINISHED).order_by('db_key')
+                                                db_attributes__db_value=STATUS_UNFINISHED).prefetch_related('db_attributes').order_by('db_key')
     
     # Filter out guest characters and staff accounts
     available_chars = [char for char in available_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
