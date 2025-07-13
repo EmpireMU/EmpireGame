@@ -32,6 +32,23 @@ def worldinfo_index(request):
     else:
         pages = WorldInfoPage.objects.filter(is_public=True)
     
+    # Define custom category ordering
+    CATEGORY_ORDER = [
+        'Introduction',
+        'World Overview',
+        'Houses of the Empire',
+        'Non-House Organisations',
+        'The City of Sanctuary',
+        'Lands Beyond the Empire'
+    ]
+    
+    def get_category_order(category):
+        """Return the sort order for a category. Unknown categories get sorted to the end."""
+        try:
+            return CATEGORY_ORDER.index(category)
+        except ValueError:
+            return len(CATEGORY_ORDER)  # Unknown categories go to the end
+    
     # Group pages by category and subcategory
     categories = {}
     for page in pages:
@@ -46,8 +63,16 @@ def worldinfo_index(request):
         
         categories[category][subcategory].append(page)
     
+    # Sort categories by custom order, then subcategories alphabetically
+    sorted_categories = {}
+    for category in sorted(categories.keys(), key=get_category_order):
+        sorted_subcategories = {}
+        for subcategory in sorted(categories[category].keys()):
+            sorted_subcategories[subcategory] = categories[category][subcategory]
+        sorted_categories[category] = sorted_subcategories
+    
     context = {
-        'categories': categories,
+        'categories': sorted_categories,
         'is_staff': is_staff,
         'page_count': pages.count(),
     }
