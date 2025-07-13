@@ -12,27 +12,53 @@
     </div>
 
     {% if categories %}
+        <div class="mb-3">
+            <button class="btn btn-outline-secondary btn-sm" id="expand-all-btn">
+                <i class="fas fa-expand-arrows-alt"></i> Expand All Categories
+            </button>
+            <button class="btn btn-outline-secondary btn-sm ml-2" id="collapse-all-btn" style="display: none;">
+                <i class="fas fa-compress-arrows-alt"></i> Collapse All Categories
+            </button>
+        </div>
+        
         {% for category, subcategories in categories.items %}
         <div class="mb-4">
-            <h3 class="text-primary mb-2">{{ category }}</h3>
-            {% for subcategory, pages in subcategories.items %}
-            <div class="ml-3 mb-3">
-                <h5 class="text-secondary mb-2">{{ subcategory }}</h5>
-                <div class="ml-3 d-flex flex-wrap">
-                    {% for page in pages %}
-                    <div class="mr-4 mb-2 d-flex align-items-center">
-                        <a href="{% url 'worldinfo:page' slug=page.slug %}" class="text-decoration-none mr-1">{{ page.title }}</a>
-                        {% if not page.is_public %}
-                        <span class="badge badge-warning badge-sm mr-1">GM</span>
-                        {% endif %}
-                        {% if is_staff %}
-                        <a href="{% url 'worldinfo:edit' slug=page.slug %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.6rem; padding: 0.1rem 0.2rem;">E</a>
-                        {% endif %}
+            <h3 class="text-primary mb-2">
+                <button class="btn btn-link text-primary p-0 text-decoration-none category-toggle" 
+                        type="button" data-toggle="collapse" 
+                        data-target="#category-{{ forloop.counter }}" 
+                        aria-expanded="false" 
+                        aria-controls="category-{{ forloop.counter }}">
+                    <i class="fas fa-chevron-right toggle-icon"></i>
+                    {{ category }}
+                    <span class="badge badge-secondary ml-2">
+                        {% for subcategory, pages in subcategories.items %}
+                            {{ pages|length }}{% if not forloop.last %} + {% endif %}
+                        {% endfor %}
+                    </span>
+                </button>
+            </h3>
+            
+            <div class="collapse" id="category-{{ forloop.counter }}">
+                {% for subcategory, pages in subcategories.items %}
+                <div class="ml-3 mb-3">
+                    <h5 class="text-secondary mb-2">{{ subcategory }}</h5>
+                    <div class="ml-3 d-flex flex-wrap">
+                        {% for page in pages %}
+                        <div class="mr-4 mb-2 d-flex align-items-center">
+                            <a href="{% url 'worldinfo:page' slug=page.slug %}" class="text-decoration-none mr-1">{{ page.title }}</a>
+                            {% if not page.is_public %}
+                            <span class="badge badge-warning badge-sm mr-1">GM</span>
+                            {% endif %}
+                            {% if is_staff %}
+                            <a href="{% url 'worldinfo:edit' slug=page.slug %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.6rem; padding: 0.1rem 0.2rem;">E</a>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
         {% endfor %}
     {% else %}
@@ -50,5 +76,62 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+$(document).ready(function() {
+    // Handle individual category toggle
+    $('.category-toggle').on('click', function() {
+        var icon = $(this).find('.toggle-icon');
+        var target = $(this).attr('data-target');
+        
+        // Toggle icon when collapse state changes
+        $(target).on('shown.bs.collapse', function() {
+            icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+        });
+        
+        $(target).on('hidden.bs.collapse', function() {
+            icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+        });
+    });
+    
+    // Expand all categories
+    $('#expand-all-btn').on('click', function() {
+        $('.collapse').collapse('show');
+        $('.toggle-icon').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+        $(this).hide();
+        $('#collapse-all-btn').show();
+    });
+    
+    // Collapse all categories
+    $('#collapse-all-btn').on('click', function() {
+        $('.collapse').collapse('hide');
+        $('.toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-right');
+        $(this).hide();
+        $('#expand-all-btn').show();
+    });
+});
+</script>
+
+<style>
+.category-toggle {
+    border: none !important;
+    font-size: 1.75rem;
+    font-weight: 500;
+}
+
+.category-toggle:hover {
+    text-decoration: none !important;
+}
+
+.toggle-icon {
+    font-size: 1rem;
+    margin-right: 0.5rem;
+    transition: transform 0.2s ease;
+}
+
+.category-toggle:focus {
+    box-shadow: none !important;
+}
+</style>
 
 {% endblock %} 

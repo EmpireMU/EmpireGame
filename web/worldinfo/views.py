@@ -37,7 +37,7 @@ def worldinfo_index(request):
         'Introduction',
         'World Overview',
         'Houses of the Empire',
-        'Non-House Organisations',
+        'Other Organisations',
         'The City of Sanctuary',
         'Lands Beyond the Empire'
     ]
