@@ -29,13 +29,8 @@
                         data-target="#category-{{ forloop.counter }}" 
                         aria-expanded="false" 
                         aria-controls="category-{{ forloop.counter }}">
-                    <i class="fas fa-chevron-right toggle-icon"></i>
+                    <span class="toggle-icon">▶</span>
                     {{ category }}
-                    <span class="badge badge-secondary ml-2">
-                        {% for subcategory, pages in subcategories.items %}
-                            {{ pages|length }}{% if not forloop.last %} + {% endif %}
-                        {% endfor %}
-                    </span>
                 </button>
             </h3>
             
@@ -86,18 +81,18 @@ $(document).ready(function() {
         
         // Toggle icon when collapse state changes
         $(target).on('shown.bs.collapse', function() {
-            icon.removeClass('fa-chevron-right').addClass('fa-chevron-down');
+            icon.text('▼');
         });
         
         $(target).on('hidden.bs.collapse', function() {
-            icon.removeClass('fa-chevron-down').addClass('fa-chevron-right');
+            icon.text('▶');
         });
     });
     
     // Expand all categories
     $('#expand-all-btn').on('click', function() {
         $('.collapse').collapse('show');
-        $('.toggle-icon').removeClass('fa-chevron-right').addClass('fa-chevron-down');
+        $('.toggle-icon').text('▼');
         $(this).hide();
         $('#collapse-all-btn').show();
     });
@@ -105,7 +100,7 @@ $(document).ready(function() {
     // Collapse all categories
     $('#collapse-all-btn').on('click', function() {
         $('.collapse').collapse('hide');
-        $('.toggle-icon').removeClass('fa-chevron-down').addClass('fa-chevron-right');
+        $('.toggle-icon').text('▶');
         $(this).hide();
         $('#expand-all-btn').show();
     });
@@ -127,6 +122,9 @@ $(document).ready(function() {
     font-size: 1rem;
     margin-right: 0.5rem;
     transition: transform 0.2s ease;
+    display: inline-block;
+    width: 1rem;
+    text-align: center;
 }
 
 .category-toggle:focus {
