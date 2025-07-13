@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>World Information</h1>
+        {% if is_staff %}
+        <a href="{% url 'worldinfo:create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Page
+        </a>
+        {% endif %}
+    </div>
+
+    {% if categories %}
+        {% for category, subcategories in categories.items %}
+        <div class="mb-4">
+            <h3 class="text-primary mb-2">{{ category }}</h3>
+            {% for subcategory, pages in subcategories.items %}
+            <div class="ml-3 mb-3">
+                <h5 class="text-secondary mb-2">{{ subcategory }}</h5>
+                <div class="ml-3 d-flex flex-wrap">
+                    {% for page in pages %}
+                    <div class="mr-4 mb-2 d-flex align-items-center">
+                        <a href="{% url 'worldinfo:page' slug=page.slug %}" class="text-decoration-none mr-1">{{ page.title }}</a>
+                        {% if not page.is_public %}
+                        <span class="badge badge-warning badge-sm mr-1">GM</span>
+                        {% endif %}
+                        {% if is_staff %}
+                        <a href="{% url 'worldinfo:edit' slug=page.slug %}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.6rem; padding: 0.1rem 0.2rem;">E</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <h3 class="text-muted">No information pages yet.</h3>
+            {% if is_staff %}
+            <p>Get started by <a href="{% url 'worldinfo:create' %}">creating your first page</a>!</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% if page_count > 0 %}
+    <div class="mt-4 text-center text-muted">
+        <small>{{ page_count }} page{{ page_count|pluralize }} total</small>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %} 

@@ -47,6 +47,7 @@ NEW_ACCOUNT_REGISTRATION_ENABLED = False
 # Add our custom apps
 INSTALLED_APPS += (
     'web.roster',
+    'web.worldinfo',
 )
 
 ######################################################################

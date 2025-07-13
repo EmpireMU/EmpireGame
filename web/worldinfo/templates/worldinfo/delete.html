@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'worldinfo:index' %}">World</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'worldinfo:page' slug=page.slug %}">{{ page.title }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Delete Page
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <h4>Are you sure you want to delete "{{ page.title }}"?</h4>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action cannot be undone. The page and all its content will be permanently deleted.
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Page Details:</strong>
+                        <ul class="list-unstyled mt-2">
+                            <li><strong>Title:</strong> {{ page.title }}</li>
+                            {% if page.category %}
+                            <li><strong>Category:</strong> {{ page.category }}</li>
+                            {% endif %}
+                            <li><strong>Visibility:</strong> 
+                                {% if page.is_public %}Public{% else %}GM Only{% endif %}
+                            </li>
+                            <li><strong>Created:</strong> {{ page.created_at|date:"F d, Y" }}</li>
+                            <li><strong>Last Updated:</strong> {{ page.updated_at|date:"F d, Y" }}</li>
+                        </ul>
+                    </div>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="confirm" value="yes">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Yes, Delete This Page
+                        </button>
+                    </form>
+                    
+                    <form method="post" class="d-inline ml-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="confirm" value="no">
+                        <button type="submit" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </form>
+                    
+                    <a href="{% url 'worldinfo:page' slug=page.slug %}" class="btn btn-outline-secondary ml-2">
+                        <i class="fas fa-arrow-left"></i> Back to Page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %} 

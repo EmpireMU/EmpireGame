@@ -14,6 +14,7 @@ from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
 urlpatterns = [
     # path("url-pattern", imported_python_view),
     path('characters/', include('web.roster.urls')),
+    path('world/', include('web.worldinfo.urls')),
 ]
 
 # read by Django

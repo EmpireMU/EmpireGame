@@ -6,4 +6,5 @@ evennia>=4.0.0
 # mysqlclient>=2.0.0      # For MySQL
 
 # Additional dependencies for specific features
-Pillow>=9.0.0           # For image handling in roster system 
+Pillow>=9.0.0           # For image handling in roster system
+markdown>=3.0.0         # For markdown formatting in world info pages 
