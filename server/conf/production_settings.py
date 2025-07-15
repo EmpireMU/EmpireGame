@@ -92,7 +92,11 @@ WEBSOCKET_CLIENT_URL = "wss://empiremush.org/"
 
 # Django HTTPS settings for reverse proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
 CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']
 USE_TLS = True
+
+# Additional settings for reverse proxy HTTPS recognition
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
