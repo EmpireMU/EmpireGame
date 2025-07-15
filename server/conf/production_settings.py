@@ -66,7 +66,7 @@ except ImportError:
     print("secret_settings.py file not found or failed to import.")
 
 #Remove debug and error output for production
-DEBUG = False
+DEBUG = True
 IN_GAME_ERRORS = False
 
 ALLOWED_HOSTS = ['178.62.90.58', 'localhost', 'empiremush.org']
