@@ -81,3 +81,11 @@ SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 TIME_ZONE = 'UTC'
+
+# Security settings for reverse proxy (Caddy)
+# Restrict Evennia to only listen on localhost since Caddy handles external connections
+WEBSERVER_INTERFACES = ['127.0.0.1']
+WEBSOCKET_CLIENT_INTERFACE = '127.0.0.1'
+
+# Websocket URL for secure connections through Caddy
+WEBSOCKET_CLIENT_URL = "wss://empiremush.org/"
