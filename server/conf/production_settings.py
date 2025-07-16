@@ -91,7 +91,7 @@ WEBSOCKET_CLIENT_INTERFACE = '127.0.0.1'
 # WEBSOCKET_CLIENT_URL = "wss://empiremush.org/"
 
 # Django HTTPS settings for reverse proxy
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Trust Caddy's headers
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
 CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']  # Just allow HTTPS origins for CSRF
