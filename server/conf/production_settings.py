@@ -88,15 +88,20 @@ WEBSERVER_INTERFACES = ['127.0.0.1']
 WEBSOCKET_CLIENT_INTERFACE = '127.0.0.1'
 
 # Websocket URL for secure connections through Caddy
-WEBSOCKET_CLIENT_URL = "wss://empiremush.org/"
+# WEBSOCKET_CLIENT_URL = "wss://empiremush.org/"
 
 # Django HTTPS settings for reverse proxy
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # SESSION_COOKIE_SECURE = True
 # CSRF_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']
-USE_TLS = True
+# CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']
+# USE_TLS = True
+
+# Additional CSRF settings for debugging
+# CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF token
+# CSRF_USE_SESSIONS = False     # Use cookie-based CSRF tokens
+# CSRF_COOKIE_SAMESITE = 'Lax'  # Allow cross-site requests from same site
 
 # Additional settings for reverse proxy HTTPS recognition
-SECURE_REFERRER_POLICY = 'same-origin'
-SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+# SECURE_REFERRER_POLICY = 'same-origin'
+# SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
