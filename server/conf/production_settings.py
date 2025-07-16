@@ -97,6 +97,9 @@ WEBSOCKET_CLIENT_INTERFACE = '127.0.0.1'
 CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']  # Just allow HTTPS origins for CSRF
 # USE_TLS = True
 
+# Test to verify this settings file is being used
+print("*** PRODUCTION SETTINGS LOADED - INTERFACE:", WEBSERVER_INTERFACES, "***")
+
 # Additional CSRF settings for debugging
 # CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to CSRF token
 # CSRF_USE_SESSIONS = False     # Use cookie-based CSRF tokens
