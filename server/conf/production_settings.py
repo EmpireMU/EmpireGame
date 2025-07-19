@@ -87,6 +87,16 @@ TIME_ZONE = 'UTC'
 WEBSERVER_INTERFACES = ['127.0.0.1']
 WEBSOCKET_CLIENT_INTERFACE = '127.0.0.1'
 
-# Django HTTPS settings for reverse proxy (Caddy)
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Testing if we need this
+# HTTPS Configuration for Reverse Proxy Setup
+# 
+# The game runs behind Caddy reverse proxy for HTTPS termination:
+# - Caddy handles SSL certificates and serves HTTPS on port 443
+# - Caddy forwards requests to Evennia on localhost:4001 as HTTP
+# - Django needs to trust HTTPS origins from browsers even though it receives HTTP internally
+#
+# To use these settings: evennia start --settings=production_settings
+# 
+# Required for CSRF validation with HTTPS frontend + HTTP backend:
 CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']
+#
+# Only enable if you need Django to detect requests as "secure" for other features.

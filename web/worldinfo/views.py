@@ -11,15 +11,8 @@ def is_staff_user(user):
     """Check if user has staff permissions (either Django staff or Evennia Builder+)"""
     if not user.is_authenticated:
         return False
-    if user.is_staff:
-        return True
-    # Check if user has an Evennia account with Builder+ permissions
-    try:
-        if hasattr(user, 'evennia_account') and user.evennia_account:
-            return user.evennia_account.check_permstring("Builder")
-    except:
-        pass
-    return False
+    
+    return user.is_staff or user.check_permstring("Admin") or user.check_permstring("Builder")
 
 
 def worldinfo_index(request):
