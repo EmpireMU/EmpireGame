@@ -170,10 +170,17 @@ class Guest(DefaultGuest):
         """
         super().at_post_create()
         
+        # Clear any stale puppet references first
+        self.db._last_puppet = None
+        
         # Always create a character for guests (like AUTO_CREATE_CHARACTER_WITH_ACCOUNT = True)
         character, errors = self.create_character(key=self.key)
         if character:
             self.db._last_puppet = character
+        else:
+            # Log the error for debugging
+            from evennia import logger
+            logger.log_err(f"Failed to create character for guest {self.key}: {errors}")
 
     def at_post_disconnect(self, **kwargs):
         """
@@ -191,6 +198,10 @@ class Guest(DefaultGuest):
         for character in characters:
             logger.log_info(f"Deleting character {character.key} (#{character.id})")
             character.delete()
+            logger.log_info(f"Character {character.key} deletion completed")
+        
+        # Clear any stale puppet references to prevent issues with reused guest names
+        self.db._last_puppet = None
         
         # Then call parent cleanup to delete the account
         logger.log_info(f"Calling parent cleanup for guest {self.key}")
