@@ -3,22 +3,22 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Character Search</h1>
-        <a href="{% url 'roster:index' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Roster
+        <h1>World Information Search</h1>
+        <a href="{% url 'worldinfo:index' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to World Info
         </a>
     </div>
 
     <!-- Search Form -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" action="{% url 'roster:search' %}" class="mb-0">
+            <form method="GET" action="{% url 'worldinfo:search' %}" class="mb-0">
                 <div class="input-group">
                     <input type="text" 
                            class="form-control" 
                            name="q" 
                            value="{{ query }}" 
-                           placeholder="Search characters by name, concept, or description..." 
+                           placeholder="Search world information by title, content, or category..." 
                            minlength="2"
                            required>
                     <div class="input-group-append">
@@ -28,7 +28,7 @@
                     </div>
                 </div>
                 <small class="form-text text-muted">
-                    Search requires at least 2 characters. Searches names, concepts, descriptions, backgrounds, and personalities.
+                    Search requires at least 2 characters. Searches page titles, content, categories, and subcategories.
                 </small>
             </form>
         </div>
@@ -39,9 +39,9 @@
         <div class="mb-3">
             <h4>
                 {% if result_count > 0 %}
-                    Found {{ result_count }} character{{ result_count|pluralize }} for "{{ query }}"
+                    Found {{ result_count }} page{{ result_count|pluralize }} for "{{ query }}"
                 {% else %}
-                    No characters found for "{{ query }}"
+                    No pages found for "{{ query }}"
                 {% endif %}
             </h4>
         </div>
@@ -53,22 +53,20 @@
                     <div class="card h-100">
                         <div class="card-body">
                             <h5 class="card-title">
-                                <a href="{% url 'roster:character_detail' char_name=result.character.key char_id=result.character.id %}" 
+                                <a href="{% url 'worldinfo:page' slug=result.page.slug %}" 
                                    class="text-decoration-none">
-                                    {{ result.name }}
+                                    {{ result.title }}
                                 </a>
                             </h5>
                             
                             <div class="mb-2">
-                                <span class="badge badge-info">{{ result.concept }}</span>
-                                <span class="badge 
-                                    {% if result.status == 'Available' %}badge-success
-                                    {% elif result.status == 'Active' %}badge-primary
-                                    {% elif result.status == 'Gone' %}badge-secondary
-                                    {% elif result.status == 'Unfinished' %}badge-warning
-                                    {% else %}badge-light{% endif %}">
-                                    {{ result.status }}
-                                </span>
+                                <span class="badge badge-primary">{{ result.category }}</span>
+                                {% if result.subcategory != 'General' %}
+                                <span class="badge badge-secondary">{{ result.subcategory }}</span>
+                                {% endif %}
+                                {% if not result.is_public %}
+                                <span class="badge badge-warning">GM Only</span>
+                                {% endif %}
                             </div>
 
                             {% if result.matched_fields %}
@@ -84,6 +82,15 @@
                                 <small class="text-muted">{{ result.snippet }}</small>
                             </div>
                             {% endif %}
+
+                            {% if is_staff %}
+                            <div class="mt-2">
+                                <a href="{% url 'worldinfo:edit' slug=result.page.slug %}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -93,7 +100,14 @@
             <div class="card">
                 <div class="card-body text-center text-muted">
                     <i class="fas fa-search fa-3x mb-3"></i>
-                    <p>No characters match your search criteria.</p>
+                    <p>No world information pages match your search criteria.</p>
+                    <p>Try searching for:</p>
+                    <ul class="list-unstyled">
+                        <li>• Page titles or categories</li>
+                        <li>• Locations or organizations</li>
+                        <li>• Names mentioned in content</li>
+                        <li>• Historical events or concepts</li>
+                    </ul>
                 </div>
             </div>
         {% endif %}
@@ -101,11 +115,11 @@
         <!-- No search performed yet -->
         <div class="card">
             <div class="card-body text-center text-muted">
-                <i class="fas fa-users fa-3x mb-3"></i>
-                <h5>Search Characters</h5>
-                <p>Enter a search term above to find characters by name, concept, or descriptive text.</p>
+                <i class="fas fa-globe fa-3x mb-3"></i>
+                <h5>Search World Information</h5>
+                <p>Enter a search term above to find world information pages by title, content, or category.</p>
                 <p class="mb-0">
-                    <small>The search will look through character names, concepts, descriptions, backgrounds, and personalities.</small>
+                    <small>The search will look through page titles, content, categories, and subcategories.</small>
                 </p>
             </div>
         </div>

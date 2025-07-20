@@ -211,3 +211,93 @@ def process_character_links(content):
     
     # Replace [[Character Name]] with links
     return re.sub(r'\[\[([^\]]+)\]\]', replace_character_link, html_content) 
+
+
+def worldinfo_search_view(request):
+    """
+    Search worldinfo pages by title and content.
+    Standalone search functionality that doesn't interfere with existing worldinfo.
+    """
+    query = request.GET.get('q', '').strip()
+    results = []
+    
+    if query and len(query) >= 2:  # Minimum 2 characters to search
+        # Check if user is staff (same pattern as other worldinfo views)
+        is_staff = is_staff_user(request.user)
+        
+        # Get pages based on permissions (same pattern as worldinfo_index)
+        if is_staff:
+            pages = WorldInfoPage.objects.all()
+        else:
+            pages = WorldInfoPage.objects.filter(is_public=True)
+        
+        # Search through pages
+        query_lower = query.lower()
+        
+        for page in pages:
+            match_score = 0
+            matched_fields = []
+            
+            # Search page title (highest priority)
+            if query_lower in page.title.lower():
+                match_score += 10
+                matched_fields.append('title')
+            
+            # Search page content
+            if query_lower in page.content.lower():
+                match_score += 5
+                matched_fields.append('content')
+            
+            # Search category and subcategory
+            if page.category and query_lower in page.category.lower():
+                match_score += 3
+                matched_fields.append('category')
+            
+            if page.subcategory and query_lower in page.subcategory.lower():
+                match_score += 3
+                matched_fields.append('subcategory')
+            
+            # If we found any matches, add to results
+            if match_score > 0:
+                # Create a snippet from content showing relevant context
+                snippet = ""
+                if 'content' in matched_fields:
+                    # Find the first occurrence of the query in content
+                    content_lower = page.content.lower()
+                    query_pos = content_lower.find(query_lower)
+                    if query_pos >= 0:
+                        # Get context around the match (50 characters before and after)
+                        start = max(0, query_pos - 50)
+                        end = min(len(page.content), query_pos + len(query) + 50)
+                        snippet = page.content[start:end].strip()
+                        if start > 0:
+                            snippet = "..." + snippet
+                        if end < len(page.content):
+                            snippet = snippet + "..."
+                
+                # If no content snippet, use beginning of content
+                if not snippet and page.content:
+                    snippet = page.content[:150] + "..." if len(page.content) > 150 else page.content
+                
+                results.append({
+                    'page': page,
+                    'title': page.title,
+                    'category': page.category or 'General',
+                    'subcategory': page.subcategory or 'General',
+                    'score': match_score,
+                    'matched_fields': matched_fields,
+                    'snippet': snippet,
+                    'is_public': page.is_public
+                })
+        
+        # Sort results by score (highest first), then by title
+        results.sort(key=lambda x: (-x['score'], x['title'].lower()))
+    
+    context = {
+        'query': query,
+        'results': results,
+        'result_count': len(results),
+        'is_staff': is_staff_user(request.user),
+    }
+    
+    return render(request, 'worldinfo/search.html', context) 
