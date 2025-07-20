@@ -196,9 +196,44 @@ class Guest(DefaultGuest):
         
         # Delete characters first
         for character in characters:
-            logger.log_info(f"Deleting character {character.key} (#{character.id})")
-            character.delete()
-            logger.log_info(f"Character {character.key} deletion completed")
+            char_id = character.id
+            char_key = character.key
+            logger.log_info(f"Deleting character {char_key} (#{char_id})")
+            
+            # Check if character exists before deletion
+            from evennia.objects.models import ObjectDB
+            exists_before = ObjectDB.objects.filter(id=char_id).exists()
+            logger.log_info(f"Character {char_key} exists before deletion: {exists_before}")
+            
+            # Check what might be referencing this character
+            try:
+                # Check if character is still connected/sessioned
+                if hasattr(character, 'sessions') and character.sessions.all():
+                    logger.log_info(f"Character {char_key} has active sessions: {[s for s in character.sessions.all()]}")
+                
+                # Check if account still references this character
+                if hasattr(character, 'account') and character.account:
+                    logger.log_info(f"Character {char_key} still has account: {character.account}")
+                    if hasattr(character.account, 'db') and character.account.db._last_puppet == character:
+                        logger.log_info(f"Account {character.account} has this character as _last_puppet")
+                        
+            except Exception as ref_e:
+                logger.log_err(f"Error checking character references: {ref_e}")
+            
+            try:
+                result = character.delete()
+                logger.log_info(f"Character deletion returned: {result}")
+            except Exception as e:
+                logger.log_err(f"Character deletion failed with exception: {e}")
+                import traceback
+                logger.log_err(f"Traceback: {traceback.format_exc()}")
+            
+            # Check if character exists after deletion
+            exists_after = ObjectDB.objects.filter(id=char_id).exists()
+            logger.log_info(f"Character {char_key} exists after deletion: {exists_after}")
+            
+            if exists_after:
+                logger.log_err(f"Character {char_key} still exists after delete() call!")
         
         # Clear any stale puppet references to prevent issues with reused guest names
         self.db._last_puppet = None
