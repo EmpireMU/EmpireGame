@@ -59,9 +59,6 @@ folder and edit it to add/remove links to the menu.
                 {% endif %}
               </a>
               <div class="dropdown-menu" aria-labelledby="user_options">
-                <a class="dropdown-item" href="{% url 'character-create' %}">Create Character</a>
-                <a class="dropdown-item" href="{% url 'character-manage' %}">Manage Characters</a>
-                <div class="dropdown-divider"></div>
                 {% for character in account.characters|slice:"10" %}
                   <a class="dropdown-item" href="{{ character.web_get_puppet_url }}?next={{ request.path }}">{{ character }}</a>
                 {% empty %}
