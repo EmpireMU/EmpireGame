@@ -222,15 +222,23 @@ class Guest(DefaultGuest):
                 from evennia.objects.models import ObjectDB
                 related_objects = []
                 
-                # Specifically check what ObjectDB objects reference this character
+                # Check ALL ObjectDB objects that reference this character through any field
                 referencing_objects = ObjectDB.objects.filter(db_destination=character) | \
                                     ObjectDB.objects.filter(db_location=character) | \
                                     ObjectDB.objects.filter(db_home=character)
                 
                 if referencing_objects.exists():
-                    logger.log_info(f"ObjectDB objects referencing character {char_key}:")
+                    logger.log_info(f"ObjectDB objects referencing character {char_key} via standard fields:")
                     for obj in referencing_objects:
                         logger.log_info(f"  - {obj.db_key} (#{obj.id}) as destination={obj.db_destination==character}, location={obj.db_location==character}, home={obj.db_home==character}")
+                else:
+                    logger.log_info(f"No ObjectDB objects reference character {char_key} via standard fields")
+                
+                # Check if character itself has problematic references
+                if character.db_home:
+                    logger.log_info(f"Character {char_key} has home: {character.db_home} (#{character.db_home.id})")
+                if character.db_location:
+                    logger.log_info(f"Character {char_key} has location: {character.db_location} (#{character.db_location.id})")
                 
                 # General check for all related objects
                 for field in character._meta.get_fields():
@@ -238,6 +246,11 @@ class Guest(DefaultGuest):
                         related_count = field.related_model.objects.filter(**{field.related_query_name(): character}).count()
                         if related_count > 0:
                             related_objects.append(f"{field.related_model.__name__}: {related_count}")
+                            # If it's ObjectDB, show which objects
+                            if field.related_model == ObjectDB and related_count <= 5:
+                                refs = field.related_model.objects.filter(**{field.related_query_name(): character})
+                                for ref in refs:
+                                    logger.log_info(f"  - ObjectDB reference: {ref.db_key} (#{ref.id}) via field {field.related_query_name()}")
                 
                 if related_objects:
                     logger.log_info(f"Character {char_key} has related objects: {related_objects}")
