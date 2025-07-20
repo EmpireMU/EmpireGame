@@ -87,6 +87,9 @@ TIME_ZONE = 'UTC'
 WEBSERVER_INTERFACES = ['127.0.0.1']
 WEBSOCKET_CLIENT_INTERFACE = '127.0.0.1'
 
+# Tell webclient to connect via Caddy's websocket proxy
+WEBSOCKET_CLIENT_URL = "wss://empiremush.org/ws/"
+
 # HTTPS Configuration for Reverse Proxy Setup
 # 
 # The game runs behind Caddy reverse proxy for HTTPS termination:
