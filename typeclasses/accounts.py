@@ -219,7 +219,20 @@ class Guest(DefaultGuest):
                 
                 # Check for related objects that might prevent deletion
                 from django.db import models
+                from evennia.objects.models import ObjectDB
                 related_objects = []
+                
+                # Specifically check what ObjectDB objects reference this character
+                referencing_objects = ObjectDB.objects.filter(db_destination=character) | \
+                                    ObjectDB.objects.filter(db_location=character) | \
+                                    ObjectDB.objects.filter(db_home=character)
+                
+                if referencing_objects.exists():
+                    logger.log_info(f"ObjectDB objects referencing character {char_key}:")
+                    for obj in referencing_objects:
+                        logger.log_info(f"  - {obj.db_key} (#{obj.id}) as destination={obj.db_destination==character}, location={obj.db_location==character}, home={obj.db_home==character}")
+                
+                # General check for all related objects
                 for field in character._meta.get_fields():
                     if isinstance(field, models.ForeignKey) and field.related_model:
                         related_count = field.related_model.objects.filter(**{field.related_query_name(): character}).count()
@@ -246,8 +259,10 @@ class Guest(DefaultGuest):
                 logger.log_info(f"Deletion would affect: {dict(collector.data)}")
                 
                 # Check for protected relationships
-                if collector.protected:
+                if hasattr(collector, 'protected') and collector.protected:
                     logger.log_err(f"Character {char_key} has protected relationships: {collector.protected}")
+                elif hasattr(collector, 'dependencies') and collector.dependencies:
+                    logger.log_info(f"Character {char_key} has dependencies: {collector.dependencies}")
                 
             except Exception as collector_e:
                 logger.log_err(f"Error analyzing deletion: {collector_e}")
