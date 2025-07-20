@@ -71,13 +71,7 @@
                                 </span>
                             </div>
 
-                            {% if result.matched_fields %}
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-search"></i> Matched: {{ result.matched_fields|join:", " }}
-                                </small>
-                            </div>
-                            {% endif %}
+
 
                             {% if result.snippet %}
                             <div class="card-text">

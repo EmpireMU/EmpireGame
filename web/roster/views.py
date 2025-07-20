@@ -189,14 +189,14 @@ def roster_view(request):
         unfinished_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
                                                 db_attributes__db_value=STATUS_UNFINISHED).prefetch_related('db_attributes').order_by('db_key')
     
-    # Filter out guest characters and staff accounts
-    available_chars = [char for char in available_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
-    active_chars = [char for char in active_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
-    gone_chars = [char for char in gone_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+    # Filter out staff accounts
+    available_chars = [char for char in available_chars if not (char.account and char.account.check_permstring("Builder"))]
+    active_chars = [char for char in active_chars if not (char.account and char.account.check_permstring("Builder"))]
+    gone_chars = [char for char in gone_chars if not (char.account and char.account.check_permstring("Builder"))]
     
     # Filter unfinished characters too (only if we have them)
     if is_staff:
-        unfinished_chars = [char for char in unfinished_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+        unfinished_chars = [char for char in unfinished_chars if not (char.account and char.account.check_permstring("Builder"))]
     
     # Get all organizations
     organizations = ObjectDB.objects.filter(db_typeclass_path='typeclasses.organisations.Organisation').order_by('db_key')
@@ -795,8 +795,8 @@ def character_search_view(request):
         if is_staff:
             all_chars.extend(list(unfinished_chars))
         
-        # Filter out guest characters and staff accounts (same pattern as roster_view)
-        characters = [char for char in all_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+        # Filter out staff accounts (same pattern as roster_view)
+        characters = [char for char in all_chars if not (char.account and char.account.check_permstring("Builder"))]
         
         # Search through characters
         query_lower = query.lower()
