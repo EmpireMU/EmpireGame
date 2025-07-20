@@ -174,3 +174,15 @@ class Guest(DefaultGuest):
         character, errors = self.create_character(key=self.key)
         if character:
             self.db._last_puppet = character
+
+    def at_post_disconnect(self, **kwargs):
+        """
+        Called just after user disconnects from this account.
+        For guests, ensure both account and character are properly deleted.
+        """
+        # Delete all characters belonging to this guest
+        for character in self.characters:
+            character.delete()
+        
+        # Call parent cleanup (which should delete the account)
+        super().at_post_disconnect(**kwargs)
