@@ -347,10 +347,13 @@ class Character(ObjectParent, DefaultCharacter):
             # Don't let place cleanup prevent deletion
             from evennia import logger
             logger.log_warn(f"Failed to cleanup places for {self.key} during deletion: {e}")
-            pass
             
         # Call parent
-        super().at_object_delete()
+        parent_result = super().at_object_delete()
+        
+        # Explicitly return True to allow deletion to proceed
+        # If parent returned False, respect that, otherwise allow deletion
+        return parent_result if parent_result is False else True
             
     def _cleanup_places(self, room):
         """

@@ -194,12 +194,12 @@ class Guest(DefaultGuest):
         characters = list(self.characters)
         logger.log_info(f"Found {len(characters)} characters to delete: {[c.key for c in characters]}")
         
-        # Delete characters using the same method as @destroy command
+        # Delete characters using proper Evennia method
         for character in characters:
             char_name = character.name
             logger.log_info(f"Deleting character {char_name}")
             
-            # Use the object's own delete() method like @destroy does
+            # Use the object's own delete() method 
             okay = character.delete()
             if not okay:
                 logger.log_err(f"ERROR: {char_name} not deleted, probably because delete() returned False.")
