@@ -216,9 +216,41 @@ class Guest(DefaultGuest):
                     logger.log_info(f"Character {char_key} still has account: {character.account}")
                     if hasattr(character.account, 'db') and character.account.db._last_puppet == character:
                         logger.log_info(f"Account {character.account} has this character as _last_puppet")
+                
+                # Check for related objects that might prevent deletion
+                from django.db import models
+                related_objects = []
+                for field in character._meta.get_fields():
+                    if isinstance(field, models.ForeignKey) and field.related_model:
+                        related_count = field.related_model.objects.filter(**{field.related_query_name(): character}).count()
+                        if related_count > 0:
+                            related_objects.append(f"{field.related_model.__name__}: {related_count}")
+                
+                if related_objects:
+                    logger.log_info(f"Character {char_key} has related objects: {related_objects}")
+                else:
+                    logger.log_info(f"Character {char_key} has no related objects")
                         
             except Exception as ref_e:
                 logger.log_err(f"Error checking character references: {ref_e}")
+                import traceback
+                logger.log_err(f"Reference check traceback: {traceback.format_exc()}")
+            
+            # Try to understand what would be deleted
+            try:
+                from django.db.models.deletion import Collector
+                from django.db import DEFAULT_DB_ALIAS
+                
+                collector = Collector(using=DEFAULT_DB_ALIAS)
+                collector.collect([character])
+                logger.log_info(f"Deletion would affect: {dict(collector.data)}")
+                
+                # Check for protected relationships
+                if collector.protected:
+                    logger.log_err(f"Character {char_key} has protected relationships: {collector.protected}")
+                
+            except Exception as collector_e:
+                logger.log_err(f"Error analyzing deletion: {collector_e}")
             
             try:
                 result = character.delete()
