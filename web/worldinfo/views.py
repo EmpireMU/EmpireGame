@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from evennia.objects.models import ObjectDB
 from .models import WorldInfoPage
 import re
 import markdown
@@ -204,13 +205,33 @@ def process_character_links(content):
     
     # Then process character links
     def replace_character_link(match):
-        char_name = match.group(1)
-        # Create a link to the character roster search
-        # You can modify this to link directly to specific characters if you have that data
-        return f'<a href="/characters/" title="Find {char_name} in character roster">{char_name}</a>'
+        char_name = match.group(1).strip()
+        
+        # Try to find a character with this name (case-insensitive)
+        try:
+            # Look for characters by key (case-insensitive) and full_name
+            characters = ObjectDB.objects.filter(
+                Q(db_key__iexact=char_name) | 
+                Q(db_attributes__db_key='full_name', db_attributes__db_value__iexact=char_name)
+            ).distinct()
+            
+            if characters.exists():
+                # If we found character(s), use the first one
+                char = characters.first()
+                # Create link to character detail page
+                detail_url = f"/characters/detail/{char.db_key.lower()}/{char.id}/"
+                return f'<a href="{detail_url}" title="View {char_name}\'s character sheet">{char_name}</a>'
+            else:
+                # Character not found - link to roster search with the character name
+                search_url = f"/characters/search/?q={char_name.replace(' ', '+')}"
+                return f'<a href="{search_url}" title="Search for {char_name} in character roster" class="text-muted">{char_name}</a>'
+                
+        except Exception:
+            # If anything goes wrong, just return the name as plain text
+            return char_name
     
     # Replace [[Character Name]] with links
-    return re.sub(r'\[\[([^\]]+)\]\]', replace_character_link, html_content) 
+    return re.sub(r'\[\[([^\]]+)\]\]', replace_character_link, html_content)
 
 
 def worldinfo_search_view(request):
