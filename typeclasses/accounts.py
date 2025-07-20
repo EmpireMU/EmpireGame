@@ -190,117 +190,21 @@ class Guest(DefaultGuest):
         from evennia import logger
         logger.log_info(f"Guest {self.key} disconnecting, cleaning up characters...")
         
-        # Get characters BEFORE calling parent cleanup (which might delete the account)
+        # Get characters before calling parent cleanup
         characters = list(self.characters)
         logger.log_info(f"Found {len(characters)} characters to delete: {[c.key for c in characters]}")
         
-        # Delete characters first
+        # Delete characters using the same method as @destroy command
         for character in characters:
-            char_id = character.id
-            char_key = character.key
-            logger.log_info(f"Deleting character {char_key} (#{char_id})")
+            char_name = character.name
+            logger.log_info(f"Deleting character {char_name}")
             
-            # Check if character exists before deletion
-            from evennia.objects.models import ObjectDB
-            exists_before = ObjectDB.objects.filter(id=char_id).exists()
-            logger.log_info(f"Character {char_key} exists before deletion: {exists_before}")
-            
-            # Check what might be referencing this character
-            try:
-                # Check if character is still connected/sessioned
-                if hasattr(character, 'sessions') and character.sessions.all():
-                    logger.log_info(f"Character {char_key} has active sessions: {[s for s in character.sessions.all()]}")
-                
-                # Check if account still references this character
-                if hasattr(character, 'account') and character.account:
-                    logger.log_info(f"Character {char_key} still has account: {character.account}")
-                    if hasattr(character.account, 'db') and character.account.db._last_puppet == character:
-                        logger.log_info(f"Account {character.account} has this character as _last_puppet")
-                
-                # Check for related objects that might prevent deletion
-                from django.db import models
-                from evennia.objects.models import ObjectDB
-                related_objects = []
-                
-                # Check ALL ObjectDB objects that reference this character through any field
-                referencing_objects = ObjectDB.objects.filter(db_destination=character) | \
-                                    ObjectDB.objects.filter(db_location=character) | \
-                                    ObjectDB.objects.filter(db_home=character)
-                
-                if referencing_objects.exists():
-                    logger.log_info(f"ObjectDB objects referencing character {char_key} via standard fields:")
-                    for obj in referencing_objects:
-                        logger.log_info(f"  - {obj.db_key} (#{obj.id}) as destination={obj.db_destination==character}, location={obj.db_location==character}, home={obj.db_home==character}")
-                else:
-                    logger.log_info(f"No ObjectDB objects reference character {char_key} via standard fields")
-                
-                # Check if character itself has problematic references
-                if character.db_home:
-                    logger.log_info(f"Character {char_key} has home: {character.db_home} (#{character.db_home.id})")
-                if character.db_location:
-                    logger.log_info(f"Character {char_key} has location: {character.db_location} (#{character.db_location.id})")
-                
-                # General check for all related objects
-                for field in character._meta.get_fields():
-                    if isinstance(field, models.ForeignKey) and field.related_model:
-                        related_count = field.related_model.objects.filter(**{field.related_query_name(): character}).count()
-                        if related_count > 0:
-                            related_objects.append(f"{field.related_model.__name__}: {related_count}")
-                            # If it's ObjectDB, show which objects
-                            if field.related_model == ObjectDB and related_count <= 5:
-                                refs = field.related_model.objects.filter(**{field.related_query_name(): character})
-                                for ref in refs:
-                                    logger.log_info(f"  - ObjectDB reference: {ref.db_key} (#{ref.id}) via field {field.related_query_name()}")
-                
-                if related_objects:
-                    logger.log_info(f"Character {char_key} has related objects: {related_objects}")
-                else:
-                    logger.log_info(f"Character {char_key} has no related objects")
-                        
-            except Exception as ref_e:
-                logger.log_err(f"Error checking character references: {ref_e}")
-                import traceback
-                logger.log_err(f"Reference check traceback: {traceback.format_exc()}")
-            
-            # Try to understand what would be deleted
-            try:
-                from django.db.models.deletion import Collector
-                from django.db import DEFAULT_DB_ALIAS
-                
-                collector = Collector(using=DEFAULT_DB_ALIAS)
-                collector.collect([character])
-                logger.log_info(f"Deletion would affect: {dict(collector.data)}")
-                
-                # Check for protected relationships
-                if hasattr(collector, 'protected') and collector.protected:
-                    logger.log_err(f"Character {char_key} has protected relationships: {collector.protected}")
-                elif hasattr(collector, 'dependencies') and collector.dependencies:
-                    logger.log_info(f"Character {char_key} has dependencies: {collector.dependencies}")
-                
-            except Exception as collector_e:
-                logger.log_err(f"Error analyzing deletion: {collector_e}")
-            
-            try:
-                # Clear references that might prevent deletion (like Evennia's admin commands do)
-                logger.log_info(f"Clearing character {char_key} references before deletion")
-                character.db_home = None
-                character.db_location = None
-                character.account = None
-                character.save()
-                
-                result = character.delete()
-                logger.log_info(f"Character deletion returned: {result}")
-            except Exception as e:
-                logger.log_err(f"Character deletion failed with exception: {e}")
-                import traceback
-                logger.log_err(f"Traceback: {traceback.format_exc()}")
-            
-            # Check if character exists after deletion
-            exists_after = ObjectDB.objects.filter(id=char_id).exists()
-            logger.log_info(f"Character {char_key} exists after deletion: {exists_after}")
-            
-            if exists_after:
-                logger.log_err(f"Character {char_key} still exists after delete() call!")
+            # Use the object's own delete() method like @destroy does
+            okay = character.delete()
+            if not okay:
+                logger.log_err(f"ERROR: {char_name} not deleted, probably because delete() returned False.")
+            else:
+                logger.log_info(f"{char_name} was destroyed.")
         
         # Clear any stale puppet references to prevent issues with reused guest names
         self.db._last_puppet = None

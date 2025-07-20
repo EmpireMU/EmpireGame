@@ -343,8 +343,10 @@ class Character(ObjectParent, DefaultCharacter):
         try:
             if self.location and hasattr(self.location, 'db') and self.location.db.places:
                 self._cleanup_places(self.location)
-        except Exception:
+        except Exception as e:
             # Don't let place cleanup prevent deletion
+            from evennia import logger
+            logger.log_warn(f"Failed to cleanup places for {self.key} during deletion: {e}")
             pass
             
         # Call parent
