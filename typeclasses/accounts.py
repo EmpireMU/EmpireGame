@@ -281,6 +281,13 @@ class Guest(DefaultGuest):
                 logger.log_err(f"Error analyzing deletion: {collector_e}")
             
             try:
+                # Clear references that might prevent deletion (like Evennia's admin commands do)
+                logger.log_info(f"Clearing character {char_key} references before deletion")
+                character.db_home = None
+                character.db_location = None
+                character.account = None
+                character.save()
+                
                 result = character.delete()
                 logger.log_info(f"Character deletion returned: {result}")
             except Exception as e:
