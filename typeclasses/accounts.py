@@ -180,9 +180,18 @@ class Guest(DefaultGuest):
         Called just after user disconnects from this account.
         For guests, ensure both account and character are properly deleted.
         """
-        # Delete all characters belonging to this guest
-        for character in self.characters:
+        from evennia import logger
+        logger.log_info(f"Guest {self.key} disconnecting, cleaning up characters...")
+        
+        # Get characters BEFORE calling parent cleanup (which might delete the account)
+        characters = list(self.characters)
+        logger.log_info(f"Found {len(characters)} characters to delete: {[c.key for c in characters]}")
+        
+        # Delete characters first
+        for character in characters:
+            logger.log_info(f"Deleting character {character.key} (#{character.id})")
             character.delete()
         
-        # Call parent cleanup (which should delete the account)
+        # Then call parent cleanup to delete the account
+        logger.log_info(f"Calling parent cleanup for guest {self.key}")
         super().at_post_disconnect(**kwargs)
