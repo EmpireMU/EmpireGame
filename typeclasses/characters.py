@@ -336,24 +336,14 @@ class Character(ObjectParent, DefaultCharacter):
         return result
         
     def at_object_delete(self):
-        """
-        Called just before object deletion. Remove character from any places.
-        """
-        # Clean up places in current location, but be safe about it
+        """Called just before object deletion. Remove character from any places."""
         try:
-            if self.location and hasattr(self.location, 'db') and self.location.db.places:
+            if self.location and getattr(self.location, 'db', None) and self.location.db.places:
                 self._cleanup_places(self.location)
-        except Exception as e:
-            # Don't let place cleanup prevent deletion
-            from evennia import logger
-            logger.log_warn(f"Failed to cleanup places for {self.key} during deletion: {e}")
-            
-        # Call parent
-        parent_result = super().at_object_delete()
-        
-        # Explicitly return True to allow deletion to proceed
-        # If parent returned False, respect that, otherwise allow deletion
-        return parent_result if parent_result is False else True
+        except Exception:
+            pass  # Don't let place cleanup prevent deletion
+        super().at_object_delete()
+        return True
             
     def _cleanup_places(self, room):
         """
