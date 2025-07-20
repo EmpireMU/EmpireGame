@@ -339,9 +339,13 @@ class Character(ObjectParent, DefaultCharacter):
         """
         Called just before object deletion. Remove character from any places.
         """
-        # Clean up places in current location
-        if self.location and hasattr(self.location, 'db') and self.location.db.places:
-            self._cleanup_places(self.location)
+        # Clean up places in current location, but be safe about it
+        try:
+            if self.location and hasattr(self.location, 'db') and self.location.db.places:
+                self._cleanup_places(self.location)
+        except Exception:
+            # Don't let place cleanup prevent deletion
+            pass
             
         # Call parent
         super().at_object_delete()
