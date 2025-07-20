@@ -162,47 +162,15 @@ class Guest(DefaultGuest):
     characters are deleted after disconnection.
     """
 
-    def at_post_login(self, session=None, **kwargs):
+    def at_post_create(self):
         """
-        Called every time the user logs in, after they log in.
-        For guests, we need to ensure they have a character to puppet.
+        Called when the guest account is first created.
+        Guests always get a character created, regardless of AUTO_CREATE_CHARACTER_WITH_ACCOUNT setting.
+        This mimics the default Evennia behavior for guest accounts.
         """
-        # If guest has no characters, create one
-        if not self.db._playable_characters:
-            from evennia import create_object
-            from django.conf import settings
-            
-            # Create a guest character with the same name as the account
-            char = create_object(
-                settings.BASE_CHARACTER_TYPECLASS,
-                key=self.key,
-                location=settings.START_LOCATION,
-                home=settings.START_LOCATION,
-                permissions=["Player"],
-            )
-            
-            # Link character to this guest account
-            self.db._playable_characters = [char]
-            char.db.account = self
-            
-            # Set this as the puppet for the account
-            self.db._last_puppet = char
-            
-            # Set appropriate locks for guest character
-            char.locks.add(
-                f"call:false();"
-                f"control:perm(Developer);"
-                f"delete:perm(Developer);"
-                f"drop:holds();"
-                f"edit:perm(Admin);"
-                f"examine:perm(Builder);"
-                f"get:false();"
-                f"puppet:id({char.id}) or pid({self.id}) or perm(Developer) or pperm(Developer);"
-                f"teleport:perm(Admin);"
-                f"teleport_here:perm(Admin);"
-                f"tell:perm(Admin);"
-                f"view:all()"
-            )
+        super().at_post_create()
         
-        # Call parent to handle normal login process (including auto-puppet)
-        super().at_post_login(session=session, **kwargs)
+        # Always create a character for guests (like AUTO_CREATE_CHARACTER_WITH_ACCOUNT = True)
+        character, errors = self.create_character(key=self.key)
+        if character:
+            self.db._last_puppet = character
