@@ -763,3 +763,129 @@ def set_tertiary_character_image(request, char_name, char_id):
             'error': str(e),
             'message': 'Server error occurred'
         }, status=500)
+
+def character_search_view(request):
+    """
+    Search characters by name, concept, and descriptive text.
+    Standalone search functionality that doesn't interfere with existing roster.
+    """
+    query = request.GET.get('q', '').strip()
+    results = []
+    
+    if query and len(query) >= 2:  # Minimum 2 characters to search
+        # Check if user is staff (same pattern as roster_view)
+        is_staff = is_staff_user(request.user)
+        
+        # Get characters by status (same pattern as roster_view)
+        available_chars = ObjectDB.objects.filter(db_attributes__db_key='status', 
+                                               db_attributes__db_value=STATUS_AVAILABLE).prefetch_related('db_attributes')
+        active_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
+                                            db_attributes__db_value=STATUS_ACTIVE).prefetch_related('db_attributes')
+        gone_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
+                                          db_attributes__db_value=STATUS_GONE).prefetch_related('db_attributes')
+        
+        # Get unfinished characters (only if user is staff, same as roster_view)
+        unfinished_chars = []
+        if is_staff:
+            unfinished_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
+                                                    db_attributes__db_value=STATUS_UNFINISHED).prefetch_related('db_attributes')
+        
+        # Combine all character lists
+        all_chars = list(available_chars) + list(active_chars) + list(gone_chars)
+        if is_staff:
+            all_chars.extend(list(unfinished_chars))
+        
+        # Filter out guest characters and staff accounts (same pattern as roster_view)
+        characters = [char for char in all_chars if not (char.key.lower().startswith('guest') or (char.account and char.account.check_permstring("Builder")))]
+        
+        # Search through characters
+        query_lower = query.lower()
+        
+        for char in characters:
+            match_score = 0
+            matched_fields = []
+            
+            # Search character name (highest priority)
+            if query_lower in char.key.lower():
+                match_score += 10
+                matched_fields.append('name')
+            
+            # Search full name
+            full_name = char.db.full_name or ""
+            if query_lower in full_name.lower():
+                match_score += 8
+                matched_fields.append('full name')
+            
+            # Search concept
+            try:
+                concept = char.distinctions.get("concept")
+                if concept and query_lower in concept.name.lower():
+                    match_score += 6
+                    matched_fields.append('concept')
+            except:
+                pass
+            
+            # Search descriptive fields
+            descriptive_fields = [
+                ('desc', 'description'),
+                ('background', 'background'),
+                ('personality', 'personality'),
+                ('notable_traits', 'notable traits')
+            ]
+            
+            for field_name, display_name in descriptive_fields:
+                field_value = getattr(char.db, field_name, "") or ""
+                if query_lower in field_value.lower():
+                    match_score += 3
+                    matched_fields.append(display_name)
+            
+            # If we found any matches, add to results
+            if match_score > 0:
+                # Get character status
+                status = char.attributes.get('status', 'unknown')
+                status_display = {
+                    STATUS_AVAILABLE: 'Available',
+                    STATUS_ACTIVE: 'Active', 
+                    STATUS_GONE: 'Gone',
+                    STATUS_UNFINISHED: 'Unfinished'
+                }.get(status, 'Unknown')
+                
+                # Get concept for display
+                try:
+                    concept = char.distinctions.get("concept")
+                    concept_name = concept.name if concept else "No concept set"
+                except:
+                    concept_name = "No concept set"
+                
+                # Create a snippet showing relevant matched content
+                snippet_parts = []
+                if 'description' in matched_fields and char.db.desc:
+                    snippet_parts.append(f"Description: {char.db.desc[:100]}...")
+                elif 'background' in matched_fields and char.db.background:
+                    snippet_parts.append(f"Background: {char.db.background[:100]}...")
+                elif 'personality' in matched_fields and char.db.personality:
+                    snippet_parts.append(f"Personality: {char.db.personality[:100]}...")
+                
+                snippet = " | ".join(snippet_parts) if snippet_parts else ""
+                
+                results.append({
+                    'character': char,
+                    'name': char.db.full_name or char.key,
+                    'concept': concept_name,
+                    'status': status_display,
+                    'score': match_score,
+                    'matched_fields': matched_fields,
+                    'snippet': snippet
+                })
+        
+        # Sort results by score (highest first), then by name
+        results.sort(key=lambda x: (-x['score'], x['name'].lower()))
+    
+    context = {
+        'query': query,
+        'results': results,
+        'result_count': len(results),
+        'is_staff': is_staff_user(request.user),
+    }
+    
+    return render(request, 'roster/search.html', context)

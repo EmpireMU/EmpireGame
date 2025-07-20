@@ -2,7 +2,13 @@
 {% block content %}
 
 <div class="container mt-4">
-    <h1 class="mb-4">Character Roster</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Character Roster</h1>
+        <!-- Optional search link - remove this div to disable -->
+        <a href="{% url 'roster:search' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-search"></i> Search Characters
+        </a>
+    </div>
 
     <div class="nav nav-tabs mb-3">
         <a class="nav-link active" href="#" onclick="showTab('available', 'all'); return false;">Available</a>

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Character Search</h1>
+        <a href="{% url 'roster:index' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Roster
+        </a>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{% url 'roster:search' %}" class="mb-0">
+                <div class="input-group">
+                    <input type="text" 
+                           class="form-control" 
+                           name="q" 
+                           value="{{ query }}" 
+                           placeholder="Search characters by name, concept, or description..." 
+                           minlength="2"
+                           required>
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+                <small class="form-text text-muted">
+                    Search requires at least 2 characters. Searches names, concepts, descriptions, backgrounds, and personalities.
+                </small>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    {% if query %}
+        <div class="mb-3">
+            <h4>
+                {% if result_count > 0 %}
+                    Found {{ result_count }} character{{ result_count|pluralize }} for "{{ query }}"
+                {% else %}
+                    No characters found for "{{ query }}"
+                {% endif %}
+            </h4>
+        </div>
+
+        {% if results %}
+            <div class="row">
+                {% for result in results %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a href="{% url 'roster:character_detail' char_name=result.character.key char_id=result.character.id %}" 
+                                   class="text-decoration-none">
+                                    {{ result.name }}
+                                </a>
+                            </h5>
+                            
+                            <div class="mb-2">
+                                <span class="badge badge-info">{{ result.concept }}</span>
+                                <span class="badge 
+                                    {% if result.status == 'Available' %}badge-success
+                                    {% elif result.status == 'Active' %}badge-primary
+                                    {% elif result.status == 'Gone' %}badge-secondary
+                                    {% elif result.status == 'Unfinished' %}badge-warning
+                                    {% else %}badge-light{% endif %}">
+                                    {{ result.status }}
+                                </span>
+                            </div>
+
+                            {% if result.matched_fields %}
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-search"></i> Matched: {{ result.matched_fields|join:", " }}
+                                </small>
+                            </div>
+                            {% endif %}
+
+                            {% if result.snippet %}
+                            <div class="card-text">
+                                <small class="text-muted">{{ result.snippet }}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center text-muted">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <p>No characters match your search criteria.</p>
+                    <p>Try searching for:</p>
+                    <ul class="list-unstyled">
+                        <li>• Character names</li>
+                        <li>• Concepts (like "Noble" or "Merchant")</li>
+                        <li>• Description keywords</li>
+                        <li>• Background details</li>
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- No search performed yet -->
+        <div class="card">
+            <div class="card-body text-center text-muted">
+                <i class="fas fa-users fa-3x mb-3"></i>
+                <h5>Search Characters</h5>
+                <p>Enter a search term above to find characters by name, concept, or descriptive text.</p>
+                <p class="mb-0">
+                    <small>The search will look through character names, concepts, descriptions, backgrounds, and personalities.</small>
+                </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Auto-focus the search input when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput && !searchInput.value) {
+        searchInput.focus();
+    }
+});
+</script>
+
+{% endblock %} 

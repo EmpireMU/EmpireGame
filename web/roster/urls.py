@@ -7,13 +7,15 @@ from web.roster.views import (
     delete_character_image,
     set_main_character_image,
     set_secondary_character_image,
-    set_tertiary_character_image
+    set_tertiary_character_image,
+    character_search_view
 )
 
 app_name = 'roster'
 
 urlpatterns = [
     path('', roster_view, name='index'),
+    path('search/', character_search_view, name='search'),
     path('detail/<str:char_name>/<int:char_id>/', character_detail_view, name='character_detail'),
     path('detail/<str:char_name>/<int:char_id>/update/', update_character_field, name='update_character_field'),
     path('detail/<str:char_name>/<int:char_id>/upload-image/', upload_character_image, name='upload_character_image'),
