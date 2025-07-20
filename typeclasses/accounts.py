@@ -166,49 +166,26 @@ class Guest(DefaultGuest):
         """
         Called when the guest account is first created.
         Guests always get a character created, regardless of AUTO_CREATE_CHARACTER_WITH_ACCOUNT setting.
-        This mimics the default Evennia behavior for guest accounts.
         """
         super().at_post_create()
         
-        # Clear any stale puppet references first
+        # Clear any stale puppet references and create character
         self.db._last_puppet = None
-        
-        # Always create a character for guests (like AUTO_CREATE_CHARACTER_WITH_ACCOUNT = True)
         character, errors = self.create_character(key=self.key)
         if character:
             self.db._last_puppet = character
-        else:
-            # Log the error for debugging
-            from evennia import logger
-            logger.log_err(f"Failed to create character for guest {self.key}: {errors}")
 
     def at_post_disconnect(self, **kwargs):
         """
         Called just after user disconnects from this account.
         For guests, ensure both account and character are properly deleted.
         """
-        from evennia import logger
-        logger.log_info(f"Guest {self.key} disconnecting, cleaning up characters...")
-        
-        # Get characters before calling parent cleanup
-        characters = list(self.characters)
-        logger.log_info(f"Found {len(characters)} characters to delete: {[c.key for c in characters]}")
-        
-        # Delete characters using proper Evennia method
-        for character in characters:
-            char_name = character.name
-            logger.log_info(f"Deleting character {char_name}")
-            
-            # Use the object's own delete() method 
-            okay = character.delete()
-            if not okay:
-                logger.log_err(f"ERROR: {char_name} not deleted, probably because delete() returned False.")
-            else:
-                logger.log_info(f"{char_name} was destroyed.")
+        # Delete guest characters before account cleanup
+        for character in list(self.characters):
+            character.delete()
         
         # Clear any stale puppet references to prevent issues with reused guest names
         self.db._last_puppet = None
         
-        # Then call parent cleanup to delete the account
-        logger.log_info(f"Calling parent cleanup for guest {self.key}")
+        # Call parent cleanup to delete the account
         super().at_post_disconnect(**kwargs)
