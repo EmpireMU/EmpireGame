@@ -375,6 +375,16 @@ function showTab(tabName, orgId) {
 
     // Show the "all" organization tab by default
     showOrgTab(tabName, orgId || 'all');
+    
+    // Update URL to preserve state
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tabName);
+    if (orgId && orgId !== 'all') {
+        url.searchParams.set('org', orgId);
+    } else {
+        url.searchParams.delete('org');
+    }
+    window.history.replaceState({}, '', url);
 }
 
 function showOrgTab(status, orgId) {
@@ -393,6 +403,14 @@ function showOrgTab(status, orgId) {
         }
     });
 }
+
+// Restore state when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab') || 'available';
+    const org = urlParams.get('org') || 'all';
+    showTab(tab, org);
+});
 </script>
 
 {% endblock %} 
