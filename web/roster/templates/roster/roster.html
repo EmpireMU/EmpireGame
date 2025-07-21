@@ -403,7 +403,7 @@ function showOrgTab(status, orgId) {
                 <h5 class="modal-title" id="characterModalTitle">Character</h5>
                 <div>
                     <a href="#" id="fullPageLink" class="btn btn-outline-primary btn-sm me-2">🔗 View Full Page</a>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">✕</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('characterModal')).hide()">✕</button>
                 </div>
             </div>
             <div class="modal-body" id="characterModalBody">
