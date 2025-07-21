@@ -66,11 +66,11 @@ folder and edit it to add/remove links to the menu.
                 {% endfor %}
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item" href="{% url 'password_change' %}">Change Password</a>
-                <a class="dropdown-item" href="{% url 'logout' %}">Log Out</a>
+                <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Log Out</a>
               </div>
             </li>
             <li>
-                <a class="nav-link" href="{% url 'logout' %}">Log Out</a>
+                <a class="nav-link" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Log Out</a>
             </li>
             {% else %}
             <li>
@@ -86,3 +86,10 @@ folder and edit it to add/remove links to the menu.
         </ul>
     </div>
 </nav>
+
+<!-- Hidden logout form for POST request -->
+{% if account %}
+<form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+{% endif %}
