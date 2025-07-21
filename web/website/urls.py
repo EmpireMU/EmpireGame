@@ -29,7 +29,7 @@ urlpatterns = [
     path('accounts/characters/manage/', character_creation_disabled, name='character-manage'),
     
     # Custom logout that accepts GET requests
-    path('accounts/logout/', custom_logout, name='logout'),
+    path('auth/logout/', custom_logout, name='logout'),
     
     # Custom app URLs
     path('characters/', include('web.roster.urls')),
