@@ -114,6 +114,12 @@ document.addEventListener('DOMContentLoaded', function() {
         searchInput.focus();
     }
     
+    // Close button handler
+    document.getElementById('closeModalBtn').addEventListener('click', function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('characterModal'));
+        if (modal) modal.hide();
+    });
+    
     // Simple character modal - load existing pages in popup
     document.querySelectorAll('a[href*="/characters/detail/"]').forEach(link => {
         link.addEventListener('click', function(e) {
@@ -154,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h5 class="modal-title" id="characterModalTitle">Character</h5>
                 <div>
                     <a href="#" id="fullPageLink" class="btn btn-outline-primary btn-sm me-2">🔗 View Full Page</a>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="bootstrap.Modal.getInstance(document.getElementById('characterModal')).hide()">✕</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="closeModalBtn">✕</button>
                 </div>
             </div>
             <div class="modal-body" id="characterModalBody">
