@@ -403,7 +403,7 @@ function showOrgTab(status, orgId) {
                 <h5 class="modal-title" id="characterModalTitle">Character</h5>
                 <div>
                     <a href="#" id="fullPageLink" class="btn btn-outline-primary btn-sm me-2">🔗 View Full Page</a>
-                    <button type="button" class="btn btn-secondary btn-sm" id="closeModalBtn">✕</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.querySelector('.modal-backdrop').click()">Close</button>
                 </div>
             </div>
             <div class="modal-body" id="characterModalBody">
@@ -419,12 +419,6 @@ function showOrgTab(status, orgId) {
 <script>
 // Simple character modal - just load existing pages in popup
 document.addEventListener('DOMContentLoaded', function() {
-    // Close button handler
-    document.getElementById('closeModalBtn').addEventListener('click', function() {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('characterModal'));
-        if (modal) modal.hide();
-    });
-    
     document.querySelectorAll('a[href*="/characters/detail/"]').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
