@@ -3,9 +3,29 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from evennia.objects.models import ObjectDB
-from .models import WorldInfoPage
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_protect
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.utils import timezone
+from django.conf import settings
+import os
+import uuid
+import io
+from PIL import Image
+
+# Handle different Pillow versions - same approach as character images
+try:
+    from PIL.Image import Resampling
+    LANCZOS = Resampling.LANCZOS
+except ImportError:
+    # Older Pillow versions
+    LANCZOS = Image.LANCZOS
+
 import re
 import markdown
+from .models import WorldInfoPage
 
 
 def is_staff_user(user):
@@ -14,6 +34,53 @@ def is_staff_user(user):
         return False
     
     return user.is_staff or user.check_permstring("Admin") or user.check_permstring("Builder")
+
+
+def validate_emblem_image(image_file):
+    """
+    Validate uploaded emblem image - simpler than character images since these should be smaller.
+    """
+    # Check file size (max 5MB for emblems - smaller than character images)
+    if image_file.size > 5 * 1024 * 1024:
+        raise ValueError("Image too large (max 5MB)")
+    
+    # Check if it's actually an image
+    try:
+        img = Image.open(image_file)
+        img.verify()
+        image_file.seek(0)  # Reset for later use
+    except Exception:
+        raise ValueError("File is not a valid image")
+    
+    return True
+
+
+def process_emblem_image(image_file):
+    """
+    Process emblem image - resize to reasonable emblem size (max 200px).
+    Returns processed image buffer.
+    """
+    img = Image.open(image_file)
+    
+    # Handle transparency properly - use white background instead of black
+    if img.mode in ('RGBA', 'LA', 'P'):
+        # Create a white background
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+        img = background
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+    
+    # Resize to max 200px (good size for article emblems)
+    img.thumbnail((200, 200), LANCZOS)
+    
+    # Save as JPEG
+    buffer = io.BytesIO()
+    img.save(buffer, format='JPEG', quality=90, optimize=True)
+    buffer.seek(0)
+    return buffer
 
 
 def worldinfo_index(request):
@@ -106,6 +173,7 @@ def create_page(request):
         category = request.POST.get('category', '').strip()
         subcategory = request.POST.get('subcategory', '').strip()
         is_public = request.POST.get('is_public') == 'on'
+        emblem_image = request.FILES.get('emblem_image')
         
         if not title:
             messages.error(request, "Title is required.")
@@ -113,15 +181,29 @@ def create_page(request):
             messages.error(request, "Content is required.")
         else:
             try:
+                # Validate and process emblem image if provided
+                processed_image = None
+                if emblem_image:
+                    validate_emblem_image(emblem_image)
+                    processed_image_buffer = process_emblem_image(emblem_image)
+                    
+                    # Generate unique filename
+                    image_id = str(uuid.uuid4())
+                    filename = f"{image_id}_emblem.jpg"
+                    processed_image = ContentFile(processed_image_buffer.read(), name=filename)
+                
                 page = WorldInfoPage.objects.create(
                     title=title,
                     content=content,
                     category=category,
                     subcategory=subcategory,
-                    is_public=is_public
+                    is_public=is_public,
+                    emblem_image=processed_image
                 )
                 messages.success(request, f"Page '{title}' created successfully!")
                 return redirect('worldinfo:page', slug=page.slug)
+            except ValueError as e:
+                messages.error(request, f"Image error: {e}")
             except Exception as e:
                 messages.error(request, f"Error creating page: {e}")
     
@@ -146,6 +228,8 @@ def edit_page(request, slug):
         category = request.POST.get('category', '').strip()
         subcategory = request.POST.get('subcategory', '').strip()
         is_public = request.POST.get('is_public') == 'on'
+        emblem_image = request.FILES.get('emblem_image')
+        remove_image = request.POST.get('remove_image') == 'on'
         
         if not title:
             messages.error(request, "Title is required.")
@@ -153,6 +237,27 @@ def edit_page(request, slug):
             messages.error(request, "Content is required.")
         else:
             try:
+                # Handle image changes
+                if remove_image and page.emblem_image:
+                    # Delete old image file
+                    if default_storage.exists(page.emblem_image.name):
+                        default_storage.delete(page.emblem_image.name)
+                    page.emblem_image = None
+                elif emblem_image:
+                    # Delete old image if exists
+                    if page.emblem_image and default_storage.exists(page.emblem_image.name):
+                        default_storage.delete(page.emblem_image.name)
+                    
+                    # Validate and process new image
+                    validate_emblem_image(emblem_image)
+                    processed_image_buffer = process_emblem_image(emblem_image)
+                    
+                    # Generate unique filename
+                    image_id = str(uuid.uuid4())
+                    filename = f"{image_id}_emblem.jpg"
+                    processed_image = ContentFile(processed_image_buffer.read(), name=filename)
+                    page.emblem_image = processed_image
+                
                 page.title = title
                 page.content = content
                 page.category = category
@@ -161,6 +266,8 @@ def edit_page(request, slug):
                 page.save()
                 messages.success(request, f"Page '{title}' updated successfully!")
                 return redirect('worldinfo:page', slug=page.slug)
+            except ValueError as e:
+                messages.error(request, f"Image error: {e}")
             except Exception as e:
                 messages.error(request, f"Error updating page: {e}")
     

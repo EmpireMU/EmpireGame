@@ -37,7 +37,12 @@
 
     <div class="card">
         <div class="card-body">
-            <div class="worldinfo-content">
+            <div class="worldinfo-content position-relative">
+                {% if page.emblem_image %}
+                <img src="{{ page.emblem_image.url }}" 
+                     alt="{{ page.title }} emblem" 
+                     class="article-emblem">
+                {% endif %}
                 {{ content|safe }}
             </div>
         </div>
@@ -62,18 +67,36 @@
 </div>
 
 <style>
-    .worldinfo-content {
+.worldinfo-content {
     line-height: 1.6;
 }
 
-    .worldinfo-content a {
+.worldinfo-content a {
     color: #007bff;
     text-decoration: none;
     font-weight: 500;
 }
 
-    .worldinfo-content a:hover {
+.worldinfo-content a:hover {
     text-decoration: underline;
+}
+
+.article-emblem {
+    float: right;
+    margin: 0 0 15px 15px;
+    max-width: 200px;
+    max-height: 200px;
+}
+
+/* Ensure emblem doesn't overflow on small screens */
+@media (max-width: 576px) {
+    .article-emblem {
+        float: none;
+        display: block;
+        margin: 0 auto 15px auto;
+        max-width: 150px;
+        max-height: 150px;
+    }
 }
 </style>
 

@@ -38,6 +38,8 @@ from commands.channel_admin import ChannelAdminCmdSet
 from commands.info import CmdInfo
 from commands.notes import NotesCmdSet
 from commands.visibility import CmdInvisible, CmdVisible
+from commands.time import CmdTime
+from commands.story import CmdStory, CmdChapter
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -82,6 +84,9 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(NotesCmdSet)
         self.add(CmdInvisible())
         self.add(CmdVisible())
+        self.add(CmdTime())
+        self.add(CmdStory())
+        self.add(CmdChapter())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

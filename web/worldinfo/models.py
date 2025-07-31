@@ -13,6 +13,12 @@ class WorldInfoPage(models.Model):
     category = models.CharField(max_length=50, blank=True, help_text="e.g., Factions, History, Locations, NPCs")
     subcategory = models.CharField(max_length=50, blank=True, help_text="e.g., Realm of Dyria, Imperial Territories")
     is_public = models.BooleanField(default=True, help_text="Uncheck to make this page GM-only")
+    emblem_image = models.ImageField(
+        upload_to='worldinfo/emblems/', 
+        blank=True, 
+        null=True,
+        help_text="Optional emblem/heraldry image that appears in the upper right of the article"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

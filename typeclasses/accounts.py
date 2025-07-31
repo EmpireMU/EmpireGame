@@ -143,7 +143,7 @@ class Account(DefaultAccount):
         """
         super().at_post_login(session)
         
-        # Check for stored notifications
+        # Check for stored request notifications
         notifications = self.db.offline_request_notifications
         if notifications:
             # Show all stored notifications
@@ -154,6 +154,17 @@ class Account(DefaultAccount):
             
             # Clear the notifications
             self.db.offline_request_notifications = []
+            
+        # Check for stored story notifications
+        story_notifications = self.db.offline_story_notifications
+        if story_notifications:
+            self.msg("\n|yNew Story Updates:|n")
+            for notification in story_notifications:
+                self.msg(notification)
+            self.msg("\n")
+            
+            # Clear the story notifications
+            self.db.offline_story_notifications = []
 
 
 class Guest(DefaultGuest):

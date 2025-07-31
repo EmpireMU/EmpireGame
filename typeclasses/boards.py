@@ -47,7 +47,7 @@ class BulletinBoardScript(DefaultScript):
         
         # Make this script persistent and not repeating
         self.persistent = True
-        self.interval = 0
+        self.interval = -1
         self.start_delay = False
 
     def subscribe(self, subscriber):

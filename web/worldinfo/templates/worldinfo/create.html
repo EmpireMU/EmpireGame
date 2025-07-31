@@ -13,7 +13,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 
                 <div class="form-group">
@@ -34,6 +34,12 @@
                     <input type="text" class="form-control" id="subcategory" name="subcategory" 
                            placeholder="e.g., Realm of Dyria, Imperial Territories" maxlength="50">
                     <small class="form-text text-muted">Optional. Subcategory within the main category.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="emblem_image">Emblem/Heraldry Image</label>
+                    <input type="file" class="form-control-file" id="emblem_image" name="emblem_image" accept="image/*">
+                    <small class="form-text text-muted">Optional. Small emblem or heraldry that appears in the upper right of the article. Max 5MB. Will be automatically resized to 200px.</small>
                 </div>
 
                 <div class="form-group">

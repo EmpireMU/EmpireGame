@@ -72,8 +72,15 @@ def resize_image(image_file, max_size, good_quality=True):
     """Simple resize. That's it."""
     img = Image.open(image_file)
     
-    # Make it RGB (handles transparency)
-    if img.mode != 'RGB':
+    # Handle transparency properly - use white background instead of black
+    if img.mode in ('RGBA', 'LA', 'P'):
+        # Create a white background
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+        img = background
+    elif img.mode != 'RGB':
         img = img.convert('RGB')
     
     # Resize it
