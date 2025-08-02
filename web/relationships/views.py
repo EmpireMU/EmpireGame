@@ -142,21 +142,28 @@ def add_relationship(request):
     related_character_name = related_name
     
     if related_type == 'pc':
-        # Find PC by name (search both db_key and full_name)
+        # Find PC by name (search both db_key and full_name) - only among valid characters
         related_char = None
+        
+        # Get all valid characters (same filter as autocomplete)
+        valid_characters = ObjectDB.objects.filter(
+            db_attributes__db_key='status'
+        ).exclude(
+            db_attributes__db_value='gone'
+        )
         
         # First try exact match on db_key
         try:
-            related_char = ObjectDB.objects.get(db_key__iexact=related_name)
+            related_char = valid_characters.get(db_key__iexact=related_name)
         except ObjectDB.DoesNotExist:
-            # Then try exact match on full_name
-            try:
-                related_char = ObjectDB.objects.get(db_attributes__db_key='full_name', db_attributes__db_value__iexact=related_name)
-            except ObjectDB.DoesNotExist:
+            # Then try to find by full_name - need to check each character
+            for char in valid_characters:
+                if hasattr(char, 'db') and char.db.full_name and char.db.full_name.lower() == related_name.lower():
+                    related_char = char
+                    break
+            
+            if not related_char:
                 messages.error(request, f"No player character found with name '{related_name}'.")
-                return redirect('relationships:list')
-            except ObjectDB.MultipleObjectsReturned:
-                messages.error(request, f"Multiple characters found with name '{related_name}'. Please be more specific.")
                 return redirect('relationships:list')
         except ObjectDB.MultipleObjectsReturned:
             messages.error(request, f"Multiple characters found with name '{related_name}'. Please be more specific.")
