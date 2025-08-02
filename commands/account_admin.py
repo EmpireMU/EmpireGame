@@ -10,6 +10,9 @@ from django.conf import settings
 from evennia.utils.utils import make_iter
 from evennia.utils.evtable import EvTable
 from evennia.utils.search import search_object
+import random
+import string
+
 
 class CmdCreatePlayerAccount(MuxCommand):
     """
@@ -112,3 +115,68 @@ class CmdCreatePlayerAccount(MuxCommand):
             if 'char' in locals():
                 char.delete()
             return 
+
+class CmdSetPassword(MuxCommand):
+    """
+    Set a player account password.
+    
+    Usage:
+        @setpassword <account> = <password>
+        @setpassword/generate <account>    - Auto-generate and display password
+        
+    Sets the password for an existing account. Staff-only command for 
+    account management. Use /generate to create a random secure password.
+    """
+    
+    key = "@setpassword"
+    locks = "cmd:perm(Developer)"
+    help_category = "Admin"
+    
+    def func(self):
+        """
+        Execute the command.
+        """
+        caller = self.caller
+        
+        if not self.args:
+            caller.msg("Usage: @setpassword <account> = <password> or @setpassword/generate <account>")
+            return
+            
+        if "=" not in self.args and "generate" not in self.switches:
+            caller.msg("Usage: @setpassword <account> = <password> or @setpassword/generate <account>")
+            return
+            
+        # Determine account name
+        if "generate" in self.switches:
+            account_name = self.args.strip()
+        else:
+            if not self.lhs:
+                caller.msg("Usage: @setpassword <account> = <password>")
+                return
+            account_name = self.lhs.strip()
+            
+        # Find the account
+        try:
+            account = AccountDB.objects.get(username__iexact=account_name)
+        except AccountDB.DoesNotExist:
+            caller.msg(f"Account '{account_name}' not found.")
+            return
+        except AccountDB.MultipleObjectsReturned:
+            caller.msg(f"Multiple accounts found matching '{account_name}'.")
+            return
+            
+        # Set the password
+        if "generate" in self.switches:
+            # Auto-generate secure password
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+        else:
+            password = self.rhs.strip()
+            if not password:
+                caller.msg("Password cannot be empty.")
+                return
+                
+        # Update the account
+        account.set_password(password)
+        account.save()
+        
+        caller.msg(f"Password for account '{account.username}' set to: {password}") 
