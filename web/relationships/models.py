@@ -8,13 +8,18 @@ FAMILY_RELATIONSHIP_CHOICES = [
     ('great_grandparent', 'Great-Grandparent'),
     ('sibling', 'Sibling'),
     ('aunt_uncle', 'Aunt/Uncle'),
+    ('grand_aunt_uncle', 'Grand-Aunt/Uncle'),
     ('niece_nephew', 'Niece/Nephew'),
+    ('grand_niece_nephew', 'Grand-Niece/Nephew'),
     ('cousin', 'Cousin'),
     ('second_cousin', 'Second Cousin'),
     ('distant_cousin', 'Distant Cousin'),
     ('child', 'Child'),
     ('grandchild', 'Grandchild'),
     ('great_grandchild', 'Great-Grandchild'),
+    ('parent_in_law', 'Parent-in-Law'),
+    ('child_in_law', 'Child-in-Law'),
+    ('sibling_in_law', 'Sibling-in-Law'),
 ]
 
 # Reciprocal relationship mapping
@@ -28,9 +33,14 @@ RECIPROCAL_RELATIONSHIPS = {
     'sibling': 'sibling',
     'aunt_uncle': 'niece_nephew',
     'niece_nephew': 'aunt_uncle',
+    'grand_aunt_uncle': 'grand_niece_nephew',
+    'grand_niece_nephew': 'grand_aunt_uncle',
     'cousin': 'cousin',
     'second_cousin': 'second_cousin',
     'distant_cousin': 'distant_cousin',
+    'parent_in_law': 'child_in_law',
+    'child_in_law': 'parent_in_law',
+    'sibling_in_law': 'sibling_in_law',
 }
 
 

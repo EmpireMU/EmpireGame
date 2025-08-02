@@ -69,8 +69,11 @@ class CmdFamily(Command):
         # Define the order we want to display relationships
         relationship_order = [
             'Parent', 'Grandparent', 'Great-Grandparent',
-            'Sibling', 'Aunt/Uncle', 'Cousin', 'Second Cousin', 'Distant Cousin',
-            'Child', 'Grandchild', 'Great-Grandchild', 'Niece/Nephew'
+            'Sibling', 'Aunt/Uncle', 'Grand-Aunt/Uncle', 
+            'Cousin', 'Second Cousin', 'Distant Cousin',
+            'Child', 'Grandchild', 'Great-Grandchild', 
+            'Niece/Nephew', 'Grand-Niece/Nephew',
+            'Parent-in-Law', 'Child-in-Law', 'Sibling-in-Law'
         ]
         
         # Display relationships in order
@@ -89,10 +92,16 @@ class CmdFamily(Command):
                         header = 'Siblings'
                     elif relationship_type == 'Aunt/Uncle':
                         header = 'Aunts/Uncles'
+                    elif relationship_type == 'Grand-Aunt/Uncle':
+                        header = 'Grand-Aunts/Uncles'
                     elif relationship_type.endswith('Cousin'):
                         header = relationship_type + 's'
                     elif relationship_type == 'Niece/Nephew':
                         header = 'Nieces/Nephews'
+                    elif relationship_type == 'Grand-Niece/Nephew':
+                        header = 'Grand-Nieces/Nephews'
+                    elif relationship_type.endswith('-in-Law'):
+                        header = relationship_type.replace('-in-Law', 's-in-Law')
                     else:
                         header = relationship_type + 's'
                 
