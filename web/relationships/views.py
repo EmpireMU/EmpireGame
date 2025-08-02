@@ -142,17 +142,28 @@ def add_relationship(request):
     related_character_name = related_name
     
     if related_type == 'pc':
-        # Find PC by name
+        # Find PC by name (search both db_key and full_name)
+        related_char = None
+        
+        # First try exact match on db_key
         try:
             related_char = ObjectDB.objects.get(db_key__iexact=related_name)
-            related_character_id = related_char.id
-            related_character_name = ''  # Clear name since we have ID
         except ObjectDB.DoesNotExist:
-            messages.error(request, f"No player character found with name '{related_name}'.")
-            return redirect('relationships:list')
+            # Then try exact match on full_name
+            try:
+                related_char = ObjectDB.objects.get(db_attributes__db_key='full_name', db_attributes__db_value__iexact=related_name)
+            except ObjectDB.DoesNotExist:
+                messages.error(request, f"No player character found with name '{related_name}'.")
+                return redirect('relationships:list')
+            except ObjectDB.MultipleObjectsReturned:
+                messages.error(request, f"Multiple characters found with name '{related_name}'. Please be more specific.")
+                return redirect('relationships:list')
         except ObjectDB.MultipleObjectsReturned:
             messages.error(request, f"Multiple characters found with name '{related_name}'. Please be more specific.")
             return redirect('relationships:list')
+        
+        related_character_id = related_char.id
+        related_character_name = ''  # Clear name since we have ID
     
     # Create the main relationship
     try:
