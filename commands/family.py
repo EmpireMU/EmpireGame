@@ -113,8 +113,8 @@ class CmdFamily(Command):
                         # PC - make it stand out
                         lines.append(f"  {name}")
                     else:
-                        # NPC - mark as such
-                        lines.append(f"  {name} |K(NPC)|n")
+                        # NPC - mark as such  
+                        lines.append(f"  {name} (NPC)")
                 
                 lines.append("")  # Empty line between relationship types
         
