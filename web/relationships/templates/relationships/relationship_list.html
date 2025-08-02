@@ -62,7 +62,8 @@
                     <div class="col-md-3">
                         <label for="related_name" class="form-label">Related Character Name:</label>
                         <input type="text" name="related_name" id="related_name" class="form-control" required 
-                               placeholder="Enter character name">
+                               placeholder="Enter character name" autocomplete="off">
+                        <div id="related_character_results" class="dropdown-menu" style="display: none; max-height: 200px; overflow-y: auto;"></div>
                     </div>
                 </div>
                 
@@ -176,40 +177,54 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Character autocomplete functionality
-    function searchCharacters(query) {
-        if (query.length < 2) {
-            characterResults.style.display = 'none';
-            return;
-        }
+    // Generic autocomplete functionality  
+    function setupAutocomplete(inputEl, resultsEl, onSelect) {
+        let timeout;
         
-        fetch(`{% url 'relationships:character_search' %}?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                characterResults.innerHTML = '';
-                
-                if (data.length === 0) {
-                    characterResults.innerHTML = '<div class="dropdown-item-text text-muted">No characters found</div>';
-                } else {
-                    data.forEach(char => {
-                        const item = document.createElement('a');
-                        item.className = 'dropdown-item';
-                        item.href = '#';
-                        item.textContent = char.display_name;
-                        item.onclick = function(e) {
-                            e.preventDefault();
-                            selectCharacter(char);
-                        };
-                        characterResults.appendChild(item);
-                    });
+        inputEl.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(timeout);
+            
+            if (inputEl === nameInput && !pcRadio.checked) {
+                resultsEl.style.display = 'none';
+                return;
+            }
+            
+            timeout = setTimeout(() => {
+                if (query.length < 2) {
+                    resultsEl.style.display = 'none';
+                    return;
                 }
                 
-                characterResults.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Character search error:', error);
-                characterResults.style.display = 'none';
-            });
+                fetch(`{% url 'relationships:character_search' %}?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsEl.innerHTML = '';
+                        if (data.length === 0) {
+                            resultsEl.innerHTML = '<div class="dropdown-item-text text-muted">No characters found</div>';
+                        } else {
+                            data.forEach(char => {
+                                const item = document.createElement('a');
+                                item.className = 'dropdown-item';
+                                item.href = '#';
+                                item.textContent = char.display_name;
+                                item.onclick = function(e) {
+                                    e.preventDefault();
+                                    onSelect(char);
+                                };
+                                resultsEl.appendChild(item);
+                            });
+                        }
+                        resultsEl.style.display = 'block';
+                    })
+                    .catch(() => resultsEl.style.display = 'none');
+            }, 300);
+        });
+        
+        inputEl.addEventListener('blur', () => setTimeout(() => resultsEl.style.display = 'none', 200));
+        inputEl.addEventListener('focus', function() {
+            if (this.value.length >= 2) this.dispatchEvent(new Event('input'));
+        });
     }
     
     function selectCharacter(char) {
@@ -219,41 +234,18 @@ document.addEventListener('DOMContentLoaded', function() {
         characterResults.style.display = 'none';
     }
     
-    // Event listeners
+    function selectRelatedCharacter(char) {
+        nameInput.value = char.display_name;
+        document.getElementById('related_character_results').style.display = 'none';
+    }
+    
+    // Setup autocomplete for both fields
+    setupAutocomplete(characterSearch, characterResults, selectCharacter);
+    setupAutocomplete(nameInput, document.getElementById('related_character_results'), selectRelatedCharacter);
+    
+    // Event listeners  
     pcRadio.addEventListener('change', updatePlaceholder);
     npcRadio.addEventListener('change', updatePlaceholder);
-    
-    characterSearch.addEventListener('input', function() {
-        const query = this.value.trim();
-        clearTimeout(searchTimeout);
-        
-        if (selectedCharacter && this.value === selectedCharacter.display_name) {
-            // Don't search if current value matches selected character
-            return;
-        }
-        
-        // Clear selection if text changed
-        selectedCharacter = null;
-        characterId.value = '';
-        
-        // Debounce search
-        searchTimeout = setTimeout(() => {
-            searchCharacters(query);
-        }, 300);
-    });
-    
-    characterSearch.addEventListener('blur', function() {
-        // Hide results after a short delay to allow clicking
-        setTimeout(() => {
-            characterResults.style.display = 'none';
-        }, 200);
-    });
-    
-    characterSearch.addEventListener('focus', function() {
-        if (this.value.length >= 2) {
-            searchCharacters(this.value);
-        }
-    });
     
     // Load character names for existing relationships
     document.querySelectorAll('.character-name').forEach(function(element) {
