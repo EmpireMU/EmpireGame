@@ -331,12 +331,17 @@ def character_detail_view(request, char_name, char_id):
     # Get character's image gallery
     gallery_images = get_character_images(character)
     
+    # Get character's family relationships
+    from web.relationships.views import get_character_family
+    family_relationships = get_character_family(character.id)
+    
     context = {
         'character': character,
         'basic_info': basic_info,
         'organizations': organizations,
         'can_see_traits': can_see_traits,
         'gallery_images': gallery_images,
+        'family_relationships': family_relationships,
         'is_staff': is_staff_user(request.user),
     }
     

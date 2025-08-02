@@ -448,6 +448,33 @@ const cancelDistinctionEdit = function(slot, field) {
             </div>
             {% endif %}
             
+            <!-- Family Relationships -->
+            {% if family_relationships %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Family</h2>
+                </div>
+                <div class="card-body">
+                    {% for relationship_type, members in family_relationships.items %}
+                        <div class="mb-3">
+                            <strong>{{ relationship_type }}:</strong>
+                            <ul class="list-unstyled ms-3 mb-0">
+                            {% for member in members %}
+                                <li>
+                                    {% if member.is_pc and member.character_object %}
+                                        <a href="{% url 'roster:character_detail' member.character_object.name member.character_object.id %}">{{ member.name }}</a>
+                                    {% else %}
+                                        {{ member.name }} {% if not member.is_pc %}<span class="text-muted small">(NPC)</span>{% endif %}
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
             <!-- Secondary and Tertiary Images -->
             {% if character.db.secondary_image_url or character.db.tertiary_image_url %}
             <div class="card mb-4" id="additional-images-card">

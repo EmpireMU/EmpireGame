@@ -40,6 +40,7 @@ from commands.notes import NotesCmdSet
 from commands.visibility import CmdInvisible, CmdVisible
 from commands.time import CmdTime
 from commands.story import CmdStory, CmdChapter
+from commands.family import CmdFamily
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -87,6 +88,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdTime())
         self.add(CmdStory())
         self.add(CmdChapter())
+        self.add(CmdFamily())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

@@ -34,6 +34,7 @@ urlpatterns = [
     # Custom app URLs
     path('characters/', include('web.roster.urls')),
     path('world/', include('web.worldinfo.urls')),
+    path('family/', include('web.relationships.urls')),
 ]
 
 # read by Django

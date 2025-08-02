@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Family Relationships{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Family Relationships</h1>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Add New Relationship Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Add New Family Relationship</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'relationships:add' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="character_search" class="form-label">Character:</label>
+                        <input type="text" 
+                               id="character_search" 
+                               class="form-control" 
+                               placeholder="Type character name..." 
+                               autocomplete="off"
+                               required>
+                        <input type="hidden" name="character_id" id="character_id" required>
+                        <div id="character_results" class="dropdown-menu" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                        <small class="text-muted">Type at least 2 characters to search</small>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="relationship_type" class="form-label">Relationship:</label>
+                        <select name="relationship_type" id="relationship_type" class="form-select" required>
+                            <option value="">Select Relationship</option>
+                            {% for value, label in relationship_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Related Character Type:</label>
+                        <div>
+                            <input type="radio" id="type_pc" name="related_type" value="pc" checked>
+                            <label for="type_pc">Player Character</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="type_npc" name="related_type" value="npc">
+                            <label for="type_npc">NPC</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="related_name" class="form-label">Related Character Name:</label>
+                        <input type="text" name="related_name" id="related_name" class="form-control" required 
+                               placeholder="Enter character name">
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input type="checkbox" name="create_reciprocal" id="create_reciprocal" 
+                                   class="form-check-input" checked>
+                            <label for="create_reciprocal" class="form-check-label">
+                                Create reciprocal relationship (if PC)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-primary">Add Relationship</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Existing Relationships -->
+    <div class="card">
+        <div class="card-header">
+            <h3>All Family Relationships ({{ relationships.count }})</h3>
+        </div>
+        <div class="card-body">
+            {% if relationships %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Character</th>
+                                <th>Relationship</th>
+                                <th>Related To</th>
+                                <th>Type</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for relationship in relationships %}
+                                <tr>
+                                    <td>
+                                        <span data-character-id="{{ relationship.character_id }}" class="character-name">
+                                            Loading...
+                                        </span>
+                                    </td>
+                                    <td>{{ relationship.get_relationship_type_display }}</td>
+                                    <td>{{ relationship.get_related_character_display_name }}</td>
+                                    <td>
+                                        {% if relationship.is_related_to_pc %}
+                                            <span class="badge bg-primary">PC</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">NPC</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ relationship.created_at|date:"M j, Y" }}</td>
+                                    <td>
+                                        <form method="post" action="{% url 'relationships:delete' relationship.id %}" 
+                                              style="display: inline;" 
+                                              onsubmit="return confirm('Delete this relationship?')">
+                                            {% csrf_token %}
+                                            {% if relationship.is_related_to_pc %}
+                                                <div class="form-check form-check-inline">
+                                                    <input type="checkbox" name="delete_reciprocal" 
+                                                           id="delete_reciprocal_{{ relationship.id }}" 
+                                                           class="form-check-input" checked>
+                                                    <label for="delete_reciprocal_{{ relationship.id }}" 
+                                                           class="form-check-label small">Also delete reciprocal</label>
+                                                </div>
+                                            {% endif %}
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No family relationships have been created yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pcRadio = document.getElementById('type_pc');
+    const npcRadio = document.getElementById('type_npc');
+    const nameInput = document.getElementById('related_name');
+    const reciprocalCheck = document.getElementById('create_reciprocal');
+    const characterSearch = document.getElementById('character_search');
+    const characterId = document.getElementById('character_id');
+    const characterResults = document.getElementById('character_results');
+    
+    let searchTimeout;
+    let selectedCharacter = null;
+    
+    // Update placeholder text based on PC/NPC selection
+    function updatePlaceholder() {
+        if (pcRadio.checked) {
+            nameInput.placeholder = 'Enter PC character name';
+            reciprocalCheck.disabled = false;
+        } else {
+            nameInput.placeholder = 'Enter NPC name';
+            reciprocalCheck.disabled = true;
+            reciprocalCheck.checked = false;
+        }
+    }
+    
+    // Character autocomplete functionality
+    function searchCharacters(query) {
+        if (query.length < 2) {
+            characterResults.style.display = 'none';
+            return;
+        }
+        
+        fetch(`{% url 'relationships:character_search' %}?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                characterResults.innerHTML = '';
+                
+                if (data.length === 0) {
+                    characterResults.innerHTML = '<div class="dropdown-item-text text-muted">No characters found</div>';
+                } else {
+                    data.forEach(char => {
+                        const item = document.createElement('a');
+                        item.className = 'dropdown-item';
+                        item.href = '#';
+                        item.textContent = char.display_name;
+                        item.onclick = function(e) {
+                            e.preventDefault();
+                            selectCharacter(char);
+                        };
+                        characterResults.appendChild(item);
+                    });
+                }
+                
+                characterResults.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Character search error:', error);
+                characterResults.style.display = 'none';
+            });
+    }
+    
+    function selectCharacter(char) {
+        selectedCharacter = char;
+        characterSearch.value = char.display_name;
+        characterId.value = char.id;
+        characterResults.style.display = 'none';
+    }
+    
+    // Event listeners
+    pcRadio.addEventListener('change', updatePlaceholder);
+    npcRadio.addEventListener('change', updatePlaceholder);
+    
+    characterSearch.addEventListener('input', function() {
+        const query = this.value.trim();
+        clearTimeout(searchTimeout);
+        
+        if (selectedCharacter && this.value === selectedCharacter.display_name) {
+            // Don't search if current value matches selected character
+            return;
+        }
+        
+        // Clear selection if text changed
+        selectedCharacter = null;
+        characterId.value = '';
+        
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            searchCharacters(query);
+        }, 300);
+    });
+    
+    characterSearch.addEventListener('blur', function() {
+        // Hide results after a short delay to allow clicking
+        setTimeout(() => {
+            characterResults.style.display = 'none';
+        }, 200);
+    });
+    
+    characterSearch.addEventListener('focus', function() {
+        if (this.value.length >= 2) {
+            searchCharacters(this.value);
+        }
+    });
+    
+    // Load character names for existing relationships
+    document.querySelectorAll('.character-name').forEach(function(element) {
+        const characterId = element.getAttribute('data-character-id');
+        
+        fetch(`{% url 'relationships:get_character_name' %}?id=${characterId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.display_name) {
+                    element.textContent = data.display_name;
+                } else {
+                    element.textContent = `Character ID: ${characterId}`;
+                }
+            })
+            .catch(error => {
+                element.textContent = `Character ID: ${characterId}`;
+            });
+    });
+    
+    // Initialize placeholder
+    updatePlaceholder();
+});
+</script>
+{% endblock %} 

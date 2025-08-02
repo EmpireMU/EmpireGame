@@ -48,6 +48,7 @@ NEW_ACCOUNT_REGISTRATION_ENABLED = False
 INSTALLED_APPS += (
     'web.roster',
     'web.worldinfo',
+    'web.relationships',
 )
 
 ######################################################################
