@@ -51,6 +51,8 @@ INSTALLED_APPS += (
     'web.relationships',
 )
 
+MULTISESSION_MODE = 1  #Many sessions per account, with input and output being the same across all sessions.
+
 ######################################################################
 # Text processing settings
 ######################################################################
@@ -67,7 +69,7 @@ except ImportError:
     print("secret_settings.py file not found or failed to import.")
 
 #Remove debug and error output for production
-DEBUG = True  # Temporarily enable to see detailed CSRF errors
+DEBUG = True
 IN_GAME_ERRORS = False
 
 ALLOWED_HOSTS = ['178.62.90.58', 'localhost', 'empiremush.org']

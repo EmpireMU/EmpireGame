@@ -80,18 +80,38 @@
 
 <script>
 $(document).ready(function() {
+    // Restore saved state on page load
+    $('.collapse').each(function() {
+        var categoryId = this.id;
+        var isExpanded = localStorage.getItem('worldinfo_' + categoryId) === 'true';
+        var button = $('[data-target="#' + categoryId + '"]');
+        var icon = button.find('.toggle-icon');
+        
+        if (isExpanded) {
+            $(this).addClass('show');
+            button.attr('aria-expanded', 'true');
+            icon.text('▼');
+        } else {
+            button.attr('aria-expanded', 'false');
+            icon.text('▶');
+        }
+    });
+    
     // Handle individual category toggle
     $('.category-toggle').on('click', function() {
         var icon = $(this).find('.toggle-icon');
         var target = $(this).attr('data-target');
+        var categoryId = target.replace('#', '');
         
-        // Toggle icon when collapse state changes
+        // Toggle icon and save state when collapse state changes
         $(target).on('shown.bs.collapse', function() {
             icon.text('▼');
+            localStorage.setItem('worldinfo_' + categoryId, 'true');
         });
         
         $(target).on('hidden.bs.collapse', function() {
             icon.text('▶');
+            localStorage.setItem('worldinfo_' + categoryId, 'false');
         });
     });
     
@@ -99,6 +119,10 @@ $(document).ready(function() {
     $('#expand-all-btn').on('click', function() {
         $('.collapse').collapse('show');
         $('.toggle-icon').text('▼');
+        // Save all as expanded
+        $('.collapse').each(function() {
+            localStorage.setItem('worldinfo_' + this.id, 'true');
+        });
         $(this).hide();
         $('#collapse-all-btn').show();
     });
@@ -107,9 +131,23 @@ $(document).ready(function() {
     $('#collapse-all-btn').on('click', function() {
         $('.collapse').collapse('hide');
         $('.toggle-icon').text('▶');
+        // Save all as collapsed
+        $('.collapse').each(function() {
+            localStorage.setItem('worldinfo_' + this.id, 'false');
+        });
         $(this).hide();
         $('#expand-all-btn').show();
     });
+    
+    // Update expand/collapse all button visibility based on current state
+    var hasExpanded = $('.collapse.show').length > 0;
+    if (hasExpanded) {
+        $('#expand-all-btn').hide();
+        $('#collapse-all-btn').show();
+    } else {
+        $('#expand-all-btn').show();
+        $('#collapse-all-btn').hide();
+    }
 });
 </script>
 
