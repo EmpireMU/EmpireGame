@@ -107,10 +107,12 @@ class CmdCortexRoll(Command):
     - Matching dice can be used for special effects
     - Effect die (highest unused die) determines impact
     - Difficulty numbers:
-      * 8 - Easy task
-      * 12 - Moderate challenge
-      * 16 - Difficult feat
-      * 20 - Extreme challenge
+      * 3 - very easy
+      * 6 - easy
+      * 9 - moderate
+      * 12 - hard
+      * 15 - very hard
+      * 18 - extreme
     """
     
     key = "roll"
@@ -345,8 +347,8 @@ class CmdCortexRoll(Command):
             return
             
         try:
-            # Roll all dice and track results with their indices
-            rolls = [(roll_die(int(die)), die, i) for i, die in enumerate(self.dice)]
+            # Roll all dice and track results with their indices.
+            rolls = [(roll_die(int(die)), int(die), i) for i, die in enumerate(self.dice)]
             
             # Check for botch (all 1s)
             all_values = [value for value, _, _ in rolls]
@@ -371,7 +373,7 @@ class CmdCortexRoll(Command):
                 return
             
             # Process results
-            # Convert rolls to the format process_results expects (value, die_size)
+            # Convert rolls to the format process_results expects (value, die_size).
             process_rolls = [(value, die) for value, die, _ in rolls]
             total, effect_die, hitches = process_results(process_rolls)
             
@@ -428,7 +430,8 @@ class CmdCortexRoll(Command):
                             obj.msg(f"|y{self.caller.name} is using multiple {category} traits ({', '.join(category_names[category])})|n")
             
             if hitches:
-                result_msg += f"\n|yHitches: {len(hitches)} (rolled 1 on: d{', d'.join(hitches)})|n"
+                hitch_text = ", ".join(f"d{int(h)}" for h in hitches)
+                result_msg += f"\n|yHitches: {len(hitches)} (rolled 1 on: {hitch_text})|n"
             
             # Send result to room
             self.caller.location.msg_contents(result_msg)
@@ -463,39 +466,6 @@ class CmdCortexRoll(Command):
             
         return [trait.base]
 
-class CmdSpendPlot(Command):
-    """
-    Spend a plot point.
-    
-    Usage:
-        plot
-        
-    Spends one plot point from your character's available plot points.
-    Plot points can be spent to:
-    - Add an extra die to your total
-    - Create an asset
-    - Power special abilities
-    """
-    
-    key = "plot"
-    locks = "cmd:all()"
-    help_category = "Game"
-    
-    def func(self):
-        """Execute the plot point spending."""
-        # Get current plot points
-        plot_points = self.caller.db.plot_points or 0
-        
-        if plot_points < 1:
-            self.msg("You don't have any plot points to spend.")
-            return
-            
-        # Spend the plot point
-        self.caller.db.plot_points = plot_points - 1
-        
-        # Notify the player and the room
-        self.msg(f"You spend a plot point. ({plot_points-1} remaining)")
-        self.caller.location.msg_contents(f"{self.caller.key} spends a plot point.", exclude=[self.caller])
 
 class CortexCmdSet(CmdSet):
     """
@@ -506,4 +476,3 @@ class CortexCmdSet(CmdSet):
     def at_cmdset_creation(self):
         """Add commands to the command set."""
         self.add(CmdCortexRoll())
-        self.add(CmdSpendPlot())

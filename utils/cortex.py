@@ -171,7 +171,7 @@ def validate_dice_pool(dice: List[TraitDie]) -> Optional[str]:
             elif die.category == 'distinctions':
                 has_distinction = True
                 requires_prime_sets = True
-            elif die.category in ('signature_assets', 'char_resources'):
+            elif die.category in ('signature_assets', 'char_resources', 'powers', 'temporary_assets'):
                 requires_prime_sets = True  # Signature Assets and Resources require prime sets
     
     # If prime sets are required (due to any trait use), check all three are present
@@ -217,8 +217,8 @@ def process_results(results, hitches=False):
     # Sort results by value, highest first
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
     
-    # Find hitches (dice that rolled 1) and collect their die sizes
-    hitch_dice_sizes = [die_size for value, die_size in results if value == 1]
+    # Find hitches (dice that rolled 1) and collect their die sizes as ints
+    hitch_dice_sizes = [int(die_size) for value, die_size in results if value == 1]
     
     # Filter out hitches from total calculation
     non_hitch_results = [result for result in sorted_results if result[0] != 1]
@@ -234,8 +234,8 @@ def process_results(results, hitches=False):
         unused_dice = non_hitch_results[2:]  # All non-hitch dice after the first two
         
         if unused_dice:
-            # Effect die is the largest die size among unused dice
-            unused_die_sizes = [die_size for value, die_size in unused_dice]
+            # Effect die is the largest die size among unused dice (ensure numeric comparison)
+            unused_die_sizes = [int(die_size) for value, die_size in unused_dice]
             effect_die = max(unused_die_sizes)
         else:
             # No unused dice, effect die defaults to 4
