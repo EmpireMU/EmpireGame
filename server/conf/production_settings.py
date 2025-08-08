@@ -72,7 +72,7 @@ except ImportError:
 DEBUG = True
 IN_GAME_ERRORS = False
 
-ALLOWED_HOSTS = ['178.62.90.58', 'localhost', 'empiremush.org']
+ALLOWED_HOSTS = ['178.62.90.58', 'localhost', 'empiremush.org', 'www.empiremush.org']
 
 # Security settings for website
 SECURE_BROWSER_XSS_FILTER = True
@@ -103,6 +103,22 @@ WEBSOCKET_CLIENT_URL = "wss://empiremush.org/ws/"
 # To use these settings: evennia start --settings=production_settings
 # 
 # Required for CSRF validation with HTTPS frontend + HTTP backend:
-CSRF_TRUSTED_ORIGINS = ['https://empiremush.org']
-#
+CSRF_TRUSTED_ORIGINS = ['https://empiremush.org', 'https://www.empiremush.org']
+
+# Make Django aware it's behind a TLS-terminating proxy (Caddy)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# Send cookies only over HTTPS
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# HTTP Strict Transport Security (Caddy also redirects HTTP->HTTPS)
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = False  # enable only if you will preload the domain
+SECURE_SSL_REDIRECT = False  # handled by Caddy to avoid redirect loops
+
+# Tighten browser security headers
+SECURE_REFERRER_POLICY = 'same-origin'
 # Only enable if you need Django to detect requests as "secure" for other features.
