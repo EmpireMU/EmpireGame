@@ -3,11 +3,12 @@ Centralized trait validation and manipulation utilities.
 """
 from typing import Optional, Tuple, Dict, Any, Union
 from .trait_definitions import TraitDefinition
+from .cortex import DIE_SIZES
 
 class TraitValidator:
     """Centralized trait validation and helper methods."""
     
-    VALID_DIE_SIZES = {'4', '6', '8', '10', '12'}
+    VALID_DIE_SIZES = set(DIE_SIZES)
     
     TRAIT_CATEGORIES = {
         'attributes': 'character_attributes',

@@ -6,6 +6,7 @@ from evennia import Command
 from evennia import CmdSet
 from utils.cortex import (
     DIFFICULTIES,
+    DIE_SIZES,
     TraitDie,
     get_trait_die,
     validate_dice_pool,
@@ -19,7 +20,6 @@ from collections import defaultdict
 
 # Constants for validation
 MAX_DICE_POOL = 10  # Maximum number of dice that can be rolled at once
-VALID_DIE_SIZES = {'4', '6', '8', '10', '12'}  # Set for O(1) lookup
 
 def format_colored_roll(value, die, trait_info, extra_value=None):
     """
@@ -290,7 +290,7 @@ class CmdCortexRoll(Command):
                 
             # Check if it's a raw die (must match pattern 'd' followed by a valid die size)
             # or just a valid die size number
-            if arg.startswith('d') or arg in VALID_DIE_SIZES:
+            if arg.startswith('d') or arg in DIE_SIZES:
                 # Get the die size, either after 'd' or the full arg
                 die = arg[1:] if arg.startswith('d') else arg
                 
@@ -300,7 +300,7 @@ class CmdCortexRoll(Command):
                     self.dice = None
                     return
                 
-                if die in VALID_DIE_SIZES:
+                if die in DIE_SIZES:
                     dice_pool.append(TraitDie(die, None, None, None, self.caller))
                 else:
                     self.msg(f"Invalid die size: {arg}")
