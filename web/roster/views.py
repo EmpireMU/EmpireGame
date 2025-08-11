@@ -179,6 +179,14 @@ def roster_view(request):
     Shows available, active, and retired characters.
     Staff can also see unfinished characters.
     """
+    # AGGRESSIVE DEBUG - This should ALWAYS fire when the function is called
+    print("=" * 50)
+    print("ROSTER_VIEW FUNCTION CALLED!")
+    print(f"Request method: {request.method}")
+    print(f"Request path: {request.path}")
+    print(f"User-Agent: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
+    print("=" * 50)
+    
     # Check if user is staff (either Django staff or Evennia Admin/Builder)
     is_staff = is_staff_user(request.user)
     
