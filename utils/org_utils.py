@@ -1,5 +1,5 @@
 """
-Organization utility functions.
+Organisation utility functions.
 """
 
 from evennia.utils.search import search_object
@@ -40,14 +40,14 @@ def validate_rank(rank_str, default=None, caller=None):
 
 
 def get_org(org_name, caller=None):
-    """Find and validate an organization.
+    """Find and validate an organisation.
     
     Args:
-        org_name: Name of the organization to find
+        org_name: Name of the organisation to find
         caller: Optional caller to send error messages to
         
     Returns:
-        Organisation or None: The found organization or None if not found
+        Organisation or None: The found organisation or None if not found
     """
     org = caller.search(org_name, global_search=True) if caller else search_object(org_name)
     if not org:
@@ -55,7 +55,7 @@ def get_org(org_name, caller=None):
         
     if not isinstance(org, Organisation):
         if caller:
-            caller.msg(f"{org.name} is not an organization.")
+            caller.msg(f"{org.name} is not an organisation.")
         return None
         
     return org
@@ -83,10 +83,10 @@ def get_char(char_name, caller=None, check_resources=False):
 
 
 def get_org_and_char(org_name, char_name, caller=None):
-    """Find both an organization and a character.
+    """Find both an organisation and a character.
     
     Args:
-        org_name: Name of the organization to find
+        org_name: Name of the organisation to find
         char_name: Name of the character to find
         caller: Optional caller to send error messages to
         

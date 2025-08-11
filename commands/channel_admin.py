@@ -27,8 +27,8 @@ class CmdChannelColour(MuxCommand):
         c - bright cyan         C - dark cyan
         y - bright yellow       Y - dark yellow
         m - bright magenta      M - dark magenta
-        w - bright white        W - dark white (gray)
-        x - black               X - dark gray
+        w - bright white        W - dark white (grey)
+        x - black               X - dark grey
         
     Examples:
         channelcolour public=g               - Make public channel green

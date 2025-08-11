@@ -201,6 +201,10 @@ class CmdBoard(MuxCommand):
                 return
                 
         elif "post" in self.switches:
+            # Disallow guest accounts from posting
+            if caller.account.is_typeclass("typeclasses.accounts.Guest"):
+                caller.msg("Guest accounts cannot post to boards.")
+                return
             if not self.args or "=" not in self.args:
                 caller.msg("Usage: board/post <board>=<title>/<text>")
                 return

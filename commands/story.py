@@ -368,7 +368,7 @@ class CmdChapter(MuxCommand):
         chapter/time 3 Three days after the siege began
         
     Chapters represent major story divisions. Books and volumes are 
-    organizational labels for grouping chapters in the larger narrative.
+    organisational labels for grouping chapters in the larger narrative.
     """
     
     key = "chapter"

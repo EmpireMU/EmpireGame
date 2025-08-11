@@ -109,9 +109,8 @@ class CmdPlotPoints(CharacterLookupMixin, MuxCommand):
                 
             current = int(float(pp_trait.value))
             
-            # Remove and re-add with new value
-            char.traits.remove("plot_points")
-            char.traits.add("plot_points", value=current + 1, base=current + 1, min=0)
+            # Update the trait value directly
+            pp_trait.base = current + 1
             
             self.caller.msg(f"You give a plot point to {char.name}.")
             char.msg(f"{self.caller.name} gives you a plot point.")
@@ -140,9 +139,8 @@ class CmdPlotPoints(CharacterLookupMixin, MuxCommand):
                 self.caller.msg("You don't have any plot points to spend.")
                 return
                 
-            # Remove and re-add with new value
-            char.traits.remove("plot_points")
-            char.traits.add("plot_points", value=current - 1, base=current - 1, min=0)
+            # Update the trait value directly
+            pp_trait.base = current - 1
             
             reason = f" {self.args}" if self.args.strip() else ""
             self.caller.msg(f"You spend a plot point{reason}. ({current-1} remaining)")
@@ -183,9 +181,8 @@ class CmdPlotPoints(CharacterLookupMixin, MuxCommand):
                 self.caller.msg(f"{char.name} does not have a plot points trait.")
                 return
                 
-            # Remove and re-add with new value
-            char.traits.remove("plot_points")
-            char.traits.add("plot_points", value=amount, base=amount, min=0)
+            # Update the trait value directly
+            pp_trait.base = amount
             
             self.caller.msg(f"Set {char.name}'s plot points to {amount}.")
             if char != self.caller:
@@ -221,7 +218,8 @@ class CmdPlotPoints(CharacterLookupMixin, MuxCommand):
                 if not pp_trait:
                     continue
                     
-                char.traits.add("plot_points", value=amount)
+                # Update the trait value directly
+                pp_trait.base = amount
                 success_count += 1
                 
                 if char != self.caller:

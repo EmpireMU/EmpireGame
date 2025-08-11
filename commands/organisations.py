@@ -137,12 +137,12 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             self.msg("You don't have permission to create organisations.")
             return
             
-        # Check if an organization with this name already exists
+        # Check if an organisation with this name already exists
         if self._get_org(self.args):
             self.msg(f"An organisation with the name '{self.args}' already exists.")
             return
             
-        # Create the organization
+        # Create the organisation
         try:
             org = create_object(
                 typeclass=Organisation,
@@ -161,7 +161,7 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             self.msg("You don't have permission to delete organisations.")
             return
             
-        # Find the organization
+        # Find the organisation
         org = self._get_org(self.args)
         if not org:
             return
@@ -169,7 +169,7 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
         # Check if this is a confirmation
         confirming = self.caller.db.delete_org_confirming
         if confirming:
-            # Delete the organization
+            # Delete the organisation
             name = org.name
             org.delete()
             self.msg(f"Deleted organisation: {name}")
@@ -198,7 +198,7 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
         if rank is None:
             return
             
-        # Find the organization and character
+        # Find the organisation and character
         org, char = self._get_org_and_char(org_name, char_name)
         if not org or not char:
             return
@@ -222,7 +222,7 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             return
         org_name, char_name = parts
         
-        # Find the organization and character
+        # Find the organisation and character
         org, char = self._get_org_and_char(org_name, char_name)
         if not org or not char:
             return
@@ -306,11 +306,11 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
                     table.add_row(name, f"d{int(die_size)}")
                 self.msg(str(table))
             else:
-                self.msg("\nThis organization has no resources.")
+                self.msg("\nThis organisation has no resources.")
         
         # Show members
         if not members:
-            self.msg("\nThis organization has no members.")
+            self.msg("\nThis organisation has no members.")
             return
             
         # Create member table

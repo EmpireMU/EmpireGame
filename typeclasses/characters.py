@@ -112,7 +112,7 @@ class Character(ObjectParent, DefaultCharacter):
     @lazy_property
     def organisations(self):
         """
-        Get all organizations this character belongs to.
+        Get all organisations this character belongs to.
         Returns a dict of {org_id: rank_number}
         """
         return self.attributes.get('organisations', default={}, category='organisations')
@@ -298,7 +298,7 @@ class Character(ObjectParent, DefaultCharacter):
             **kwargs: Additional keyword arguments
         """
         # Handle board messages specially
-        if isinstance(text, tuple) and text[1].get("type") == "board_post":
+        if isinstance(text, tuple) and len(text) > 1 and isinstance(text[1], dict) and text[1].get("type") == "board_post":
             return True
             
         # Let the parent handle other messages
@@ -413,7 +413,7 @@ class Character(ObjectParent, DefaultCharacter):
         
     def transfer_resource(self, resource_name, target):
         """
-        Transfer a resource to another character or organization.
+        Transfer a resource to another character or organisation.
         
         Args:
             resource_name (str): Name of the resource to transfer
@@ -431,7 +431,7 @@ class Character(ObjectParent, DefaultCharacter):
             
         from typeclasses.organisations import Organisation
         if not (isinstance(target, type(self)) or isinstance(target, Organisation)):
-            raise ValueError("Can only transfer resources to characters or organizations")
+            raise ValueError("Can only transfer resources to characters or organisations")
             
         # Get the die size before removing
         die_size = trait.value

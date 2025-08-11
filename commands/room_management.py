@@ -65,10 +65,10 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
     def _has_org_management_permission(self, org):
         """
         Helper method to check if a character has sufficient rank (1 or 2) 
-        in an organization to manage rooms.
+        in an organisation to manage rooms.
         
         Args:
-            org (Organisation): The organization to check
+            org (Organisation): The organisation to check
             
         Returns:
             bool: True if character has sufficient rank
@@ -141,7 +141,7 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
                 return
                 
             if org_owners:
-                self.msg("Organization owners: " + list_to_string([name for id, name in org_owners.items()]))
+                self.msg("Organisation owners: " + list_to_string([name for id, name in org_owners.items()]))
             if char_owners:
                 self.msg("Character owners: " + list_to_string([char.name for id, char in char_owners.items()]))
                 
@@ -156,12 +156,12 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
                 
             room = self.caller.location
             
-            # Check if caller is an owner or has sufficient rank in an owning organization
+            # Check if caller is an owner or has sufficient rank in an owning organisation
             has_permission = False
             if self.caller.id in room.character_owners:
                 has_permission = True
             else:
-                # Check if caller has sufficient rank in any owning organization
+                # Check if caller has sufficient rank in any owning organisation
                 for org_id in room.org_owners.keys():
                     if org_id in self.caller.organisations and self.caller.organisations[org_id] <= 2:
                         has_permission = True
@@ -270,7 +270,7 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
         elif switch in ["invisible", "visible"]:
             room = self.caller.location
             
-            # Check if caller is an owner or has sufficient rank in an owning organization
+            # Check if caller is an owner or has sufficient rank in an owning organisation
             has_permission = False
             
             # Check if staff
@@ -282,7 +282,7 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
                 if self.caller.id in char_owners:
                     has_permission = True
                 else:
-                    # Check if has sufficient rank in owning organization
+                    # Check if has sufficient rank in owning organisation
                     org_owners = room.attributes.get("org_owners", default={})
                     for org_id in org_owners.keys():
                         if org_id in self.caller.organisations and self.caller.organisations[org_id] <= 2:
@@ -290,7 +290,7 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
                             break
             
             if not has_permission:
-                self.msg("You must be an owner or have rank 1 or 2 in an owning organization to change room visibility.")
+                self.msg("You must be an owner or have rank 1 or 2 in an owning organisation to change room visibility.")
                 return
             
             if switch == "invisible":

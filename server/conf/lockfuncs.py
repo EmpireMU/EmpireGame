@@ -31,7 +31,7 @@ lock functions from evennia.locks.lockfuncs.
 
 def orgmember(accessing_obj, accessed_obj, *args, **kwargs):
     """
-    Check if accessing_obj is a member of the specified organization and optionally has minimum rank.
+    Check if accessing_obj is a member of the specified organisation and optionally has minimum rank.
     
     Usage:
         orgmember(House Otrese) - returns True if accessing_obj is a member of House Otrese (rank 10 or better)
@@ -48,7 +48,7 @@ def orgmember(accessing_obj, accessed_obj, *args, **kwargs):
     if hasattr(accessing_obj, 'character'):
         character = accessing_obj.character
     
-    # Find the organization by name
+    # Find the organisation by name
     from evennia.utils.search import search_object
     orgs = search_object(org_name, typeclass='typeclasses.organisations.Organisation')
     if not orgs:
