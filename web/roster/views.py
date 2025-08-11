@@ -190,6 +190,9 @@ def roster_view(request):
     gone_chars = ObjectDB.objects.filter(db_attributes__db_key='status',
                                       db_attributes__db_value=STATUS_GONE).prefetch_related('db_attributes').order_by('db_key')
     
+    # Debug: Log raw database results before filtering
+    logger.info(f"Raw DB results - Available: {available_chars.count()}, Active: {active_chars.count()}, Gone: {gone_chars.count()}")
+    
     # Get unfinished characters (only if user is staff)
     unfinished_chars = []
     if is_staff:
@@ -200,6 +203,13 @@ def roster_view(request):
     available_chars = [char for char in available_chars if not (char.account and char.account.check_permstring("Builder"))]
     active_chars = [char for char in active_chars if not (char.account and char.account.check_permstring("Builder"))]
     gone_chars = [char for char in gone_chars if not (char.account and char.account.check_permstring("Builder"))]
+    
+    # Debug logging to track what Claude is seeing
+    user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+    logger.info(f"Roster access - User-Agent: {user_agent[:100]}, Available chars: {len(available_chars)}, Active: {len(active_chars)}, Gone: {len(gone_chars)}")
+    if 'claude' in user_agent.lower() or 'anthropic' in user_agent.lower():
+        logger.warning(f"Claude/Anthropic access detected - returning {len(available_chars)} available characters")
+        logger.warning(f"Available character names: {[char.name for char in available_chars]}")
     
     # Filter unfinished characters too (only if we have them)
     if is_staff:

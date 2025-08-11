@@ -83,6 +83,8 @@ X_FRAME_OPTIONS = 'DENY'
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
+IDLE_TIMEOUT = -1  # Disable idle timeout for MUD connections
+
 TIME_ZONE = 'UTC'
 
 # Security settings for reverse proxy (Caddy)
