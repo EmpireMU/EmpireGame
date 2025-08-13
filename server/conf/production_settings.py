@@ -107,6 +107,9 @@ WEBSOCKET_CLIENT_URL = "wss://empiremush.org/ws/"
 # Required for CSRF validation with HTTPS frontend + HTTP backend:
 CSRF_TRUSTED_ORIGINS = ['https://empiremush.org', 'https://www.empiremush.org']
 
+# Web profile domain for generating character URLs in info command
+WEB_PROFILE_DOMAIN = 'empiremush.org'  # Production setting
+
 # Make Django aware it's behind a TLS-terminating proxy (Caddy)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True

@@ -51,6 +51,9 @@ INSTALLED_APPS += (
     'web.relationships',
 )
 
+# Web profile domain for generating character URLs in info command
+WEB_PROFILE_DOMAIN = 'localhost:4001'  # Development setting
+
 ######################################################################
 # Text processing settings
 ######################################################################

@@ -5,6 +5,7 @@ Info/Finger command for displaying character information.
 from evennia import Command
 from evennia.utils.search import search_object
 from utils.command_mixins import CharacterLookupMixin
+from django.conf import settings
 
 
 class CmdInfo(CharacterLookupMixin, Command):
@@ -186,8 +187,10 @@ class CmdInfo(CharacterLookupMixin, Command):
         display_name = char.db.full_name or char.name
         
         # Build web profile URL
-        # Format: https://yoursite.com/roster/character/CharName/123/
-        web_url = f"https://yoursite.com/roster/character/{char.name}/{char.id}/"
+        # Get the site domain from settings, defaulting to empiremush.org
+        domain = getattr(settings, 'WEB_PROFILE_DOMAIN', 'empiremush.org')
+        # Format: https://empiremush.org/characters/detail/CharName/123/
+        web_url = f"https://{domain}/characters/detail/{char.name.lower()}/{char.id}/"
         
         # Start building the message
         msg = f"\n|w{char.name}'s Character Information|n"
