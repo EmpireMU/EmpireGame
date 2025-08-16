@@ -1,0 +1,23 @@
+User-agent: *
+
+# Allow indexing of public pages
+Allow: /
+Allow: /characters/
+Allow: /world/
+
+# Block private/sensitive areas
+Disallow: /admin/
+Disallow: /webclient/
+Disallow: /api/
+Disallow: /accounts/
+Disallow: /relationships/
+
+# Block common scan targets
+Disallow: /config
+Disallow: /backup
+Disallow: /logs
+Disallow: /.git
+Disallow: /.env
+
+# Point to sitemap
+Sitemap: https://empiremush.org/sitemap.xml

@@ -126,4 +126,4 @@ SECURE_SSL_REDIRECT = False  # handled by Caddy to avoid redirect loops
 
 # Tighten browser security headers
 SECURE_REFERRER_POLICY = 'same-origin'
-# Only enable if you need Django to detect requests as "secure" for other features.
+

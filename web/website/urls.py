@@ -10,6 +10,7 @@ from django.urls import path, include
 from django.http import HttpResponseForbidden
 from django.contrib.auth import logout
 from django.shortcuts import redirect
+from django.views.generic import TemplateView
 
 from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
 
@@ -35,6 +36,10 @@ urlpatterns = [
     path('characters/', include('web.roster.urls')),
     path('world/', include('web.worldinfo.urls')),
     path('family/', include('web.relationships.urls')),
+    
+    # SEO files
+    path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
+    path('sitemap.xml', TemplateView.as_view(template_name='sitemap.xml', content_type='application/xml')),
 ]
 
 # read by Django
