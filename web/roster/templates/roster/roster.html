@@ -54,7 +54,7 @@
                             </thead>
                             <tbody>
                             {% for char, concept, display_name in available_chars %}
-                                <tr>
+                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -72,40 +72,7 @@
                 </div>
             </div>
         </div>
-        {% for org, members in organizations.available %}
-        <div id="available-{{ org.id }}" class="org-tab" style="display: none;">
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Name</th>
-                                    <th>Concept</th>
-                                    <th>Gender</th>
-                                    <th>Age</th>
-                                    <th>Realm</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for char, concept, display_name, rank_name in members %}
-                                <tr>
-                                    <td>{{ rank_name }}</td>
-                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
-                                    <td>{{ concept }}</td>
-                                    <td>{{ char.db.gender }}</td>
-                                    <td>{{ char.db.age }}</td>
-                                    <td>{{ char.db.realm }}</td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+
     </div>
 
     {% if is_staff %}
@@ -126,7 +93,7 @@
                             </thead>
                             <tbody>
                             {% for char, concept, display_name in unfinished_chars %}
-                                <tr>
+                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -144,40 +111,7 @@
                 </div>
             </div>
         </div>
-        {% for org, members in organizations.unfinished %}
-        <div id="unfinished-{{ org.id }}" class="org-tab" style="display: none;">
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Name</th>
-                                    <th>Concept</th>
-                                    <th>Gender</th>
-                                    <th>Age</th>
-                                    <th>Realm</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for char, concept, display_name, rank_name in members %}
-                                <tr>
-                                    <td>{{ rank_name }}</td>
-                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
-                                    <td>{{ concept }}</td>
-                                    <td>{{ char.db.gender }}</td>
-                                    <td>{{ char.db.age }}</td>
-                                    <td>{{ char.db.realm }}</td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+
     </div>
     {% endif %}
 
@@ -199,7 +133,7 @@
                             </thead>
                             <tbody>
                             {% for char, concept, display_name in active_chars %}
-                                <tr>
+                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -218,42 +152,7 @@
                 </div>
             </div>
         </div>
-        {% for org, members in organizations.active %}
-        <div id="active-{{ org.id }}" class="org-tab" style="display: none;">
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Name</th>
-                                    <th>Concept</th>
-                                    <th>Gender</th>
-                                    <th>Age</th>
-                                    <th>Realm</th>
-                                    <th>Player</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for char, concept, display_name, rank_name in members %}
-                                <tr>
-                                    <td>{{ rank_name }}</td>
-                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
-                                    <td>{{ concept }}</td>
-                                    <td>{{ char.db.gender }}</td>
-                                    <td>{{ char.db.age }}</td>
-                                    <td>{{ char.db.realm }}</td>
-                                    <td>{{ char.account.username }}</td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+
     </div>
 
     <div id="gone" class="roster-tab" style="display: none;">
@@ -273,7 +172,7 @@
                             </thead>
                             <tbody>
                             {% for char, concept, display_name in gone_chars %}
-                                <tr>
+                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -291,40 +190,7 @@
                 </div>
             </div>
         </div>
-        {% for org, members in organizations.gone %}
-        <div id="gone-{{ org.id }}" class="org-tab" style="display: none;">
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Name</th>
-                                    <th>Concept</th>
-                                    <th>Gender</th>
-                                    <th>Age</th>
-                                    <th>Realm</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for char, concept, display_name, rank_name in members %}
-                                <tr>
-                                    <td>{{ rank_name }}</td>
-                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
-                                    <td>{{ concept }}</td>
-                                    <td>{{ char.db.gender }}</td>
-                                    <td>{{ char.db.age }}</td>
-                                    <td>{{ char.db.realm }}</td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+
     </div>
 </div>
 
@@ -388,12 +254,20 @@ function showTab(tabName, orgId) {
 }
 
 function showOrgTab(status, orgId) {
-    // Hide all organization tabs for this status
-    document.querySelectorAll(`#${status} .org-tab`).forEach(tab => {
-        tab.style.display = 'none';
+    // Show all character rows first
+    document.querySelectorAll(`#${status} .character-row`).forEach(row => {
+        row.style.display = '';
     });
-    // Show the selected organization tab
-    document.getElementById(`${status}-${orgId}`).style.display = 'block';
+    
+    // If filtering by specific organization, hide non-matching rows
+    if (orgId !== 'all') {
+        document.querySelectorAll(`#${status} .character-row`).forEach(row => {
+            const orgIds = row.getAttribute('data-org-ids');
+            if (!orgIds || !orgIds.split(',').includes(orgId)) {
+                row.style.display = 'none';
+            }
+        });
+    }
 
     // Update active state of organization nav links
     document.querySelectorAll(`#${status}-orgs .nav-link`).forEach(link => {

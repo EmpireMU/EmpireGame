@@ -1,5 +1,5 @@
 # Core framework
-evennia>=4.0.0
+evennia>=5.0.0
 
 # Database support (uncomment as needed)
 # psycopg2-binary>=2.8.6  # For PostgreSQL
