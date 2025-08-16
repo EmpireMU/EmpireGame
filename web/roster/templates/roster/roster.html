@@ -45,6 +45,7 @@
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="rank-header" style="display: none;">Rank</th>
                                     <th>Name</th>
                                     <th>Concept</th>
                                     <th>Gender</th>
@@ -55,6 +56,7 @@
                             <tbody>
                             {% for char, concept, display_name in available_chars %}
                                 <tr class="character-row all-chars">
+                                    <td class="rank-cell" style="display: none;"></td>
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -63,13 +65,14 @@
                                 </tr>
                             {% empty %}
                                 <tr class="all-chars">
+                                    <td class="rank-cell" style="display: none;"></td>
                                     <td colspan="5" class="text-center">No characters available</td>
                                 </tr>
                             {% endfor %}
                             {% for org, members in organizations.available %}
                                 {% for char, concept, display_name, rank_name in members %}
                                 <tr class="character-row org-member" data-org-id="{{ org.id }}" style="display: none;">
-                                    <td><strong>{{ rank_name }}</strong></td>
+                                    <td class="rank-cell">{{ rank_name }}</td>
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -96,6 +99,7 @@
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="rank-header" style="display: none;">Rank</th>
                                     <th>Name</th>
                                     <th>Concept</th>
                                     <th>Gender</th>
@@ -175,6 +179,7 @@
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="rank-header" style="display: none;">Rank</th>
                                     <th>Name</th>
                                     <th>Concept</th>
                                     <th>Gender</th>
@@ -274,6 +279,13 @@ function showOrgTab(status, orgId) {
         document.querySelectorAll(`#${status} .org-member`).forEach(row => {
             row.style.display = 'none';
         });
+        // Hide rank column
+        document.querySelectorAll(`#${status} .rank-header`).forEach(header => {
+            header.style.display = 'none';
+        });
+        document.querySelectorAll(`#${status} .rank-cell`).forEach(cell => {
+            cell.style.display = 'none';
+        });
     } else {
         // Hide "All" character rows, show only org-specific rows for this org
         document.querySelectorAll(`#${status} .all-chars`).forEach(row => {
@@ -285,6 +297,13 @@ function showOrgTab(status, orgId) {
             } else {
                 row.style.display = 'none';
             }
+        });
+        // Show rank column
+        document.querySelectorAll(`#${status} .rank-header`).forEach(header => {
+            header.style.display = '';
+        });
+        document.querySelectorAll(`#${status} .rank-cell`).forEach(cell => {
+            cell.style.display = '';
         });
     }
 
