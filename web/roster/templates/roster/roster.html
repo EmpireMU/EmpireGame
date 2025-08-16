@@ -263,7 +263,7 @@ function showOrgTab(status, orgId) {
     if (orgId !== 'all') {
         document.querySelectorAll(`#${status} .character-row`).forEach(row => {
             const orgIds = row.getAttribute('data-org-ids');
-            if (!orgIds || !orgIds.split(',').includes(orgId)) {
+            if (!orgIds || !orgIds.split(',').includes(orgId.toString())) {
                 row.style.display = 'none';
             }
         });
@@ -272,7 +272,8 @@ function showOrgTab(status, orgId) {
     // Update active state of organization nav links
     document.querySelectorAll(`#${status}-orgs .nav-link`).forEach(link => {
         link.classList.remove('active');
-        if (link.getAttribute('onclick').includes(`'${orgId}'`)) {
+        if ((orgId === 'all' && link.textContent.trim() === 'All') || 
+            (orgId !== 'all' && link.getAttribute('onclick').includes(`'${orgId}'`))) {
             link.classList.add('active');
         }
     });
