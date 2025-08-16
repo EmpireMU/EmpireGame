@@ -54,7 +54,7 @@
                             </thead>
                             <tbody>
                             {% for char, concept, display_name in available_chars %}
-                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
+                                <tr class="character-row all-chars">
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -62,9 +62,21 @@
                                     <td>{{ char.db.realm }}</td>
                                 </tr>
                             {% empty %}
-                                <tr>
+                                <tr class="all-chars">
                                     <td colspan="5" class="text-center">No characters available</td>
                                 </tr>
+                            {% endfor %}
+                            {% for org, members in organizations.available %}
+                                {% for char, concept, display_name, rank_name in members %}
+                                <tr class="character-row org-member" data-org-id="{{ org.id }}" style="display: none;">
+                                    <td><strong>{{ rank_name }}</strong></td>
+                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
+                                    <td>{{ concept }}</td>
+                                    <td>{{ char.db.gender }}</td>
+                                    <td>{{ char.db.age }}</td>
+                                    <td>{{ char.db.realm }}</td>
+                                </tr>
+                                {% endfor %}
                             {% endfor %}
                             </tbody>
                         </table>
@@ -254,16 +266,23 @@ function showTab(tabName, orgId) {
 }
 
 function showOrgTab(status, orgId) {
-    // Show all character rows first
-    document.querySelectorAll(`#${status} .character-row`).forEach(row => {
-        row.style.display = '';
-    });
-    
-    // If filtering by specific organization, hide non-matching rows
-    if (orgId !== 'all') {
-        document.querySelectorAll(`#${status} .character-row`).forEach(row => {
-            const orgIds = row.getAttribute('data-org-ids');
-            if (!orgIds || !orgIds.split(',').includes(orgId.toString())) {
+    if (orgId === 'all') {
+        // Show "All" character rows, hide org-specific rows
+        document.querySelectorAll(`#${status} .all-chars`).forEach(row => {
+            row.style.display = '';
+        });
+        document.querySelectorAll(`#${status} .org-member`).forEach(row => {
+            row.style.display = 'none';
+        });
+    } else {
+        // Hide "All" character rows, show only org-specific rows for this org
+        document.querySelectorAll(`#${status} .all-chars`).forEach(row => {
+            row.style.display = 'none';
+        });
+        document.querySelectorAll(`#${status} .org-member`).forEach(row => {
+            if (row.getAttribute('data-org-id') === orgId.toString()) {
+                row.style.display = '';
+            } else {
                 row.style.display = 'none';
             }
         });
