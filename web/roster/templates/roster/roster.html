@@ -37,6 +37,20 @@
     </div>
     {% endif %}
 
+    <div id="active-orgs" class="nav nav-pills mb-3 flex-wrap d-none">
+        <a class="nav-link active" href="#" onclick="showOrgTab('active', 'all'); return false;">All</a>
+        {% for org, members in organizations.active %}
+        <a class="nav-link" href="#" onclick="showOrgTab('active', '{{ org.id }}'); return false;">{{ org.name }} ({{ members|length }})</a>
+        {% endfor %}
+    </div>
+
+    <div id="gone-orgs" class="nav nav-pills mb-3 flex-wrap d-none">
+        <a class="nav-link active" href="#" onclick="showOrgTab('gone', 'all'); return false;">All</a>
+        {% for org, members in organizations.gone %}
+        <a class="nav-link" href="#" onclick="showOrgTab('gone', '{{ org.id }}'); return false;">{{ org.name }} ({{ members|length }})</a>
+        {% endfor %}
+    </div>
+
     <div id="available" class="roster-tab">
         <div id="available-all" class="org-tab">
             <div class="card">
@@ -108,19 +122,33 @@
                                 </tr>
                             </thead>
                             <tbody>
-                            {% for char, concept, display_name in unfinished_chars %}
-                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
-                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
-                                    <td>{{ concept }}</td>
-                                    <td>{{ char.db.gender }}</td>
-                                    <td>{{ char.db.age }}</td>
-                                    <td>{{ char.db.realm }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center">No unfinished characters</td>
-                                </tr>
-                            {% endfor %}
+                                        {% for char, concept, display_name in unfinished_chars %}
+                <tr class="character-row all-chars">
+                    <td class="rank-cell" style="display: none;"></td>
+                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
+                    <td>{{ concept }}</td>
+                    <td>{{ char.db.gender }}</td>
+                    <td>{{ char.db.age }}</td>
+                    <td>{{ char.db.realm }}</td>
+                </tr>
+            {% empty %}
+                <tr class="all-chars">
+                    <td class="rank-cell" style="display: none;"></td>
+                    <td colspan="5" class="text-center">No unfinished characters</td>
+                </tr>
+            {% endfor %}
+            {% for org, members in organizations.unfinished %}
+                {% for char, concept, display_name, rank_name in members %}
+                <tr class="character-row org-member" data-org-id="{{ org.id }}" style="display: none;">
+                    <td class="rank-cell">{{ rank_name }}</td>
+                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
+                    <td>{{ concept }}</td>
+                    <td>{{ char.db.gender }}</td>
+                    <td>{{ char.db.age }}</td>
+                    <td>{{ char.db.realm }}</td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -139,6 +167,7 @@
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="rank-header" style="display: none;">Rank</th>
                                     <th>Name</th>
                                     <th>Concept</th>
                                     <th>Gender</th>
@@ -149,7 +178,8 @@
                             </thead>
                             <tbody>
                             {% for char, concept, display_name in active_chars %}
-                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
+                                <tr class="character-row all-chars">
+                                    <td class="rank-cell" style="display: none;"></td>
                                     <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
                                     <td>{{ concept }}</td>
                                     <td>{{ char.db.gender }}</td>
@@ -158,9 +188,23 @@
                                     <td>{{ char.account.username }}</td>
                                 </tr>
                             {% empty %}
-                                <tr>
+                                <tr class="all-chars">
+                                    <td class="rank-cell" style="display: none;"></td>
                                     <td colspan="6" class="text-center">No active characters</td>
                                 </tr>
+                            {% endfor %}
+                            {% for org, members in organizations.active %}
+                                {% for char, concept, display_name, rank_name in members %}
+                                <tr class="character-row org-member" data-org-id="{{ org.id }}" style="display: none;">
+                                    <td class="rank-cell">{{ rank_name }}</td>
+                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
+                                    <td>{{ concept }}</td>
+                                    <td>{{ char.db.gender }}</td>
+                                    <td>{{ char.db.age }}</td>
+                                    <td>{{ char.db.realm }}</td>
+                                    <td>{{ char.account.username }}</td>
+                                </tr>
+                                {% endfor %}
                             {% endfor %}
                             </tbody>
                         </table>
@@ -188,19 +232,33 @@
                                 </tr>
                             </thead>
                             <tbody>
-                            {% for char, concept, display_name in gone_chars %}
-                                <tr class="character-row" data-org-ids="{{ char.attributes.organisations.keys|join:',' }}">
-                                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
-                                    <td>{{ concept }}</td>
-                                    <td>{{ char.db.gender }}</td>
-                                    <td>{{ char.db.age }}</td>
-                                    <td>{{ char.db.realm }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center">No retired characters</td>
-                                </tr>
-                            {% endfor %}
+                                        {% for char, concept, display_name in gone_chars %}
+                <tr class="character-row all-chars">
+                    <td class="rank-cell" style="display: none;"></td>
+                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
+                    <td>{{ concept }}</td>
+                    <td>{{ char.db.gender }}</td>
+                    <td>{{ char.db.age }}</td>
+                    <td>{{ char.db.realm }}</td>
+                </tr>
+            {% empty %}
+                <tr class="all-chars">
+                    <td class="rank-cell" style="display: none;"></td>
+                    <td colspan="5" class="text-center">No retired characters</td>
+                </tr>
+            {% endfor %}
+            {% for org, members in organizations.gone %}
+                {% for char, concept, display_name, rank_name in members %}
+                <tr class="character-row org-member" data-org-id="{{ org.id }}" style="display: none;">
+                    <td class="rank-cell">{{ rank_name }}</td>
+                    <td><a href="/characters/detail/{{ char.name|lower }}/{{ char.id }}/">{{ display_name }}</a></td>
+                    <td>{{ concept }}</td>
+                    <td>{{ char.db.gender }}</td>
+                    <td>{{ char.db.age }}</td>
+                    <td>{{ char.db.realm }}</td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
                             </tbody>
                         </table>
                     </div>
