@@ -138,6 +138,8 @@ class CmdRoster(MuxCommand):
         roster <n>       - Filter available characters by name
         roster/gender <gender> - Filter available characters by gender
         roster/gender <gender>/<n> - Filter by gender and name
+        roster/realm <realm> - Filter available characters by realm
+        roster/realm <realm>/<n> - Filter by realm and name
         roster/apply <character>/<email>=<application text>
         
     Staff only:
@@ -180,7 +182,7 @@ class CmdRoster(MuxCommand):
         Args:
             char (Character): The character to format
         Returns:
-            tuple: (name, concept, gender, age, realm)
+            tuple: (name, concept, gender, age)
         """
         name = char.db.full_name or char.key
         # Get concept from distinctions system (same as website)
@@ -191,12 +193,11 @@ class CmdRoster(MuxCommand):
             concept = "No concept set"
         gender = char.db.gender or "Not set"
         age = char.db.age or "Not set"
-        realm = char.db.realm or "Not set"
-        return (name, concept, gender, str(age), realm)
+        return (name, concept, gender, str(age))
         
-    def _filter_chars(self, chars, name=None, gender=None):
+    def _filter_chars(self, chars, name=None, gender=None, realm=None):
         """
-        Filter characters by name and/or gender.
+        Filter characters by name, gender, and/or realm.
         """
         if name:
             name = name.lower()
@@ -204,6 +205,9 @@ class CmdRoster(MuxCommand):
         if gender:
             gender = gender.lower()
             chars = [c for c in chars if gender == (c.db.gender or "").lower()]
+        if realm:
+            realm = realm.lower()
+            chars = [c for c in chars if realm == (c.db.realm or "").lower()]
         return chars
         
     def _notify_staff(self, message):
@@ -358,6 +362,12 @@ class CmdRoster(MuxCommand):
             else:
                 gender, name = self.args, None
             chars = self._filter_chars(chars, name=name, gender=gender)
+        elif "realm" in self.switches:
+            if "/" in self.args:
+                realm, name = self.args.split("/", 1)
+            else:
+                realm, name = self.args, None
+            chars = self._filter_chars(chars, name=name, realm=realm)
         elif self.args:
             chars = self._filter_chars(chars, name=self.args)
             
@@ -374,7 +384,6 @@ class CmdRoster(MuxCommand):
             "|wConcept|n",
             "|wGender|n",
             "|wAge|n",
-            "|wRealm|n",
             border="header"
         )
         
