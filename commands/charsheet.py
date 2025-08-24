@@ -176,9 +176,11 @@ class CmdSheet(CharacterLookupMixin, Command):
     
     Usage:
         sheet [character]
+        sheet/all                              - Staff only: export all finished characters
         
     Without arguments, shows your own character sheet.
     Staff members can view other characters' sheets by specifying their name.
+    The /all switch exports all finished character sheets for game balancing analysis.
     
     Sheet Sections:
     1. Basic Information
@@ -217,10 +219,18 @@ class CmdSheet(CharacterLookupMixin, Command):
     key = "sheet"
     locks = "cmd:all();view_other:perm(Builder)"
     help_category = "Character"
-    switch_options = ()
+    switch_options = ("all",)
 
     def func(self):
         """Execute the command."""
+        # Handle /all switch for staff
+        if "all" in self.switches:
+            if not self.caller.locks.check_lockstring(self.caller, "view_other:perm(Builder)"):
+                self.msg("You don't have permission to view all characters.")
+                return
+            self._export_all_characters()
+            return
+            
         # Get the target character
         if not self.args:
             char = self.caller
@@ -330,6 +340,79 @@ class CmdSheet(CharacterLookupMixin, Command):
         
         # Send the sheet to the caller
         self.msg(sheet)
+    
+    def _export_all_characters(self):
+        """Export all finished characters for game balancing."""
+        from typeclasses.characters import Character, STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE
+        
+        # Get all finished characters
+        finished_statuses = [STATUS_AVAILABLE, STATUS_ACTIVE, STATUS_GONE]
+        all_chars = Character.objects.all()
+        finished_chars = []
+        
+        for char in all_chars:
+            # Skip staff accounts
+            if char.account and char.account.check_permstring("Builder"):
+                continue
+                
+            # Only include finished characters with character sheet data
+            if (char.db.status in finished_statuses and 
+                hasattr(char, 'character_attributes')):
+                finished_chars.append(char)
+        
+        if not finished_chars:
+            self.msg("No finished characters found.")
+            return
+        
+        # Build output
+        output = []
+        output.append("="*80)
+        output.append(f"ALL CHARACTER SHEETS ({len(finished_chars)} characters)")
+        output.append("="*80)
+        
+        for i, char in enumerate(finished_chars):
+            if i > 0:
+                output.append("\n" + "="*60 + "\n")
+            
+            # Generate the character sheet using existing logic
+            sheet = f"CHARACTER: {char.name}\n"
+            sheet += f"Age: {char.db.age or 'Not set'}\n"
+            
+            # Add plot points if they exist
+            if hasattr(char, 'traits'):
+                plot_points = char.traits.get("plot_points")
+                if plot_points:
+                    sheet += f"Plot Points: {int(plot_points.value)}\n"
+            
+            # Add attributes
+            if hasattr(char, 'character_attributes'):
+                sheet += "\nATTRIBUTES:\n"
+                for trait in [char.character_attributes.get(key) for key in char.character_attributes.all()]:
+                    if trait:
+                        sheet += f"  {trait.name}: d{int(trait.value)}\n"
+            
+            # Add skills  
+            if hasattr(char, 'skills'):
+                sheet += "\nSKILLS:\n"
+                for trait in [char.skills.get(key) for key in char.skills.all()]:
+                    if trait:
+                        sheet += f"  {trait.name}: d{int(trait.value)}\n"
+            
+            # Add distinctions
+            if hasattr(char, 'distinctions'):
+                sheet += "\nDISTINCTIONS:\n"
+                for trait in [char.distinctions.get(key) for key in char.distinctions.all()]:
+                    if trait:
+                        desc = f" - {trait.desc}" if hasattr(trait, 'desc') and trait.desc else ""
+                        sheet += f"  {trait.name}: d{int(trait.value)}{desc}\n"
+            
+            # Add special effects
+            if hasattr(char, 'db') and char.db.special_effects:
+                sheet += f"\nSPECIAL EFFECTS:\n{char.db.special_effects}\n"
+            
+            output.append(sheet)
+        
+        self.msg("\n".join(output))
 
 
 class CharSheetCmdSet(CmdSet):
