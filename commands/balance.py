@@ -132,7 +132,7 @@ class CmdBalance(Command):
             if data['age']:
                 decade = data['age'] // 10
                 if decade >= 2:  # 20s and up
-                    expected_d8s = decade  # 20s=2, 30s=3, 40s=4, etc.
+                    expected_d8s = decade - 1  # 20s=1, 30s=2, 40s=3, etc.
                     data['expected_d8s'] = expected_d8s
                     data['d8_deficit'] = max(0, expected_d8s - skills_d8_count)
                     data['d8_surplus'] = max(0, skills_d8_count - expected_d8s)
@@ -291,7 +291,7 @@ class CmdBalance(Command):
             
             output.append(f"\n|yAge-Based d8 Skills:|n")
             output.append(f"  Characters meeting age expectations: {d8_compliant}/{len(aged_chars)} ({d8_percentage:.1f}%)")
-            output.append(f"  Expected: 20s=2d8, 30s=3d8, 40s=4d8, etc.")
+            output.append(f"  Expected: 20s=1d8, 30s=2d8, 40s=3d8, etc.")
             
             # List characters with deficits
             d8_violators = []
