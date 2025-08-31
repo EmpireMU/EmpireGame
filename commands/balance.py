@@ -182,28 +182,54 @@ class CmdBalance(Command):
         if outliers:
             output.append(f"  |rOutliers:|n {', '.join(outliers)}")
         
-        # Skill analysis
+        # Age-adjusted skill analysis
         skill_totals = [data['skill_total'] for data in char_data]
         skill_avg = sum(skill_totals) / len(skill_totals)
         skill_min = min(skill_totals)
         skill_max = max(skill_totals)
-        skills_trained = [data['skills_above_default'] for data in char_data]
-        skills_trained_avg = sum(skills_trained) / len(skills_trained)
         
-        output.append(f"\n|ySkill Analysis:|n")
-        output.append(f"  Total points - Average: {skill_avg:.1f} (baseline: {4 * len(SKILLS)})")
-        output.append(f"  Total points - Range: {skill_min} - {skill_max}")
-        output.append(f"  Trained skills - Average: {skills_trained_avg:.1f} per character")
-        
-        # Find skill outliers
-        skill_std = (sum((x - skill_avg) ** 2 for x in skill_totals) / len(skill_totals)) ** 0.5
-        skill_outliers = []
+        # Calculate expected skill totals based on age
+        expected_totals = []
         for data in char_data:
-            if abs(data['skill_total'] - skill_avg) > skill_std:
-                skill_outliers.append(f"{data['name']} ({data['skill_total']})")
+            # Base: 19 skills * 4 (d4 default) = 76 points
+            base_total = 4 * len(SKILLS)
+            
+            # Add points for 4d6 baseline: 4 skills get +2 points each = +8
+            baseline_bonus = 8
+            
+            # Add points for age-based d8s: each d8 is +4 points over d4
+            if data['expected_d8s']:
+                age_bonus = data['expected_d8s'] * 4
+            else:
+                age_bonus = 0
+                
+            expected_total = base_total + baseline_bonus + age_bonus
+            expected_totals.append(expected_total)
+            data['expected_skill_total'] = expected_total
+            data['skill_variance'] = data['skill_total'] - expected_total
         
-        if skill_outliers:
-            output.append(f"  |rOutliers:|n {', '.join(skill_outliers)}")
+        expected_avg = sum(expected_totals) / len(expected_totals) if expected_totals else 0
+        
+        output.append(f"\n|yAge-Adjusted Skill Analysis:|n")
+        output.append(f"  Actual average: {skill_avg:.1f}")
+        output.append(f"  Expected average (age-adjusted): {expected_avg:.1f}")
+        output.append(f"  Range: {skill_min} - {skill_max}")
+        
+        # Find characters significantly over/under their expected totals
+        over_expected = []
+        under_expected = []
+        for data in char_data:
+            if data['skill_variance'] > 8:  # More than 2 extra d8s worth
+                age_info = f" (age {data['age']})" if data['age'] else ""
+                over_expected.append(f"{data['name']}{age_info} (+{data['skill_variance']})")
+            elif data['skill_variance'] < -8:  # More than 2 d8s short
+                age_info = f" (age {data['age']})" if data['age'] else ""
+                under_expected.append(f"{data['name']}{age_info} ({data['skill_variance']})")
+        
+        if over_expected:
+            output.append(f"  |cAbove age expectations:|n {', '.join(over_expected)}")
+        if under_expected:
+            output.append(f"  |rBelow age expectations:|n {', '.join(under_expected)}")
         
         # 4d6 Baseline Analysis
         d6_compliant = sum(1 for data in char_data if data['meets_d6_baseline'])
