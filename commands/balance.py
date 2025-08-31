@@ -65,6 +65,16 @@ class CmdBalance(Command):
         for char in finished_chars:
             data = {'name': char.name}
             
+            # Get character age
+            age = getattr(char.db, 'age', None)
+            if age:
+                try:
+                    data['age'] = int(age)
+                except (ValueError, TypeError):
+                    data['age'] = None
+            else:
+                data['age'] = None
+            
             # Collect attributes
             attr_total = 0
             attr_count = 0
@@ -80,10 +90,14 @@ class CmdBalance(Command):
                     attr_total += 6
                     attr_count += 1
                     
-            # Collect skills
+            # Collect skills with detailed analysis
             skill_total = 0
             skill_count = 0
             skills_above_default = 0
+            skills_d6_count = 0  # 4d6 baseline tracking
+            skills_d8_count = 0  # Age-based d8 tracking
+            skills_d10_plus = 0  # Expert+ skills
+            
             for skill_def in SKILLS:
                 trait = char.skills.get(skill_def.key)
                 if trait:
@@ -93,6 +107,12 @@ class CmdBalance(Command):
                     skill_count += 1
                     if value > 4:  # above default
                         skills_above_default += 1
+                    if value >= 6:  # d6 or better
+                        skills_d6_count += 1
+                    if value >= 8:  # d8 or better
+                        skills_d8_count += 1
+                    if value >= 10:  # d10 or better
+                        skills_d10_plus += 1
                 else:
                     data[f"skill_{skill_def.key}"] = 4  # default
                     skill_total += 4
@@ -104,6 +124,30 @@ class CmdBalance(Command):
             data['skill_total'] = skill_total
             data['skill_average'] = skill_total / skill_count if skill_count > 0 else 0
             data['skills_above_default'] = skills_above_default
+            data['skills_d6_count'] = skills_d6_count
+            data['skills_d8_count'] = skills_d8_count
+            data['skills_d10_plus'] = skills_d10_plus
+            
+            # Age-based skill expectations
+            if data['age']:
+                decade = data['age'] // 10
+                if decade >= 2:  # 20s and up
+                    expected_d8s = decade  # 20s=2, 30s=3, 40s=4, etc.
+                    data['expected_d8s'] = expected_d8s
+                    data['d8_deficit'] = max(0, expected_d8s - skills_d8_count)
+                    data['d8_surplus'] = max(0, skills_d8_count - expected_d8s)
+                else:
+                    data['expected_d8s'] = 0
+                    data['d8_deficit'] = 0
+                    data['d8_surplus'] = skills_d8_count
+            else:
+                data['expected_d8s'] = None
+                data['d8_deficit'] = None
+                data['d8_surplus'] = None
+            
+            # 4d6 baseline check
+            data['d6_deficit'] = max(0, 4 - skills_d6_count)
+            data['meets_d6_baseline'] = skills_d6_count >= 4
             
             # Count additional traits
             data['signature_assets'] = len([k for k in char.signature_assets.all() if char.signature_assets.get(k)])
@@ -161,6 +205,62 @@ class CmdBalance(Command):
         if skill_outliers:
             output.append(f"  |rOutliers:|n {', '.join(skill_outliers)}")
         
+        # 4d6 Baseline Analysis
+        d6_compliant = sum(1 for data in char_data if data['meets_d6_baseline'])
+        d6_percentage = (d6_compliant / len(char_data)) * 100
+        output.append(f"\n|y4d6 Skill Baseline:|n")
+        output.append(f"  Characters meeting baseline: {d6_compliant}/{len(char_data)} ({d6_percentage:.1f}%)")
+        
+        d6_violators = [data['name'] for data in char_data if not data['meets_d6_baseline']]
+        if d6_violators:
+            output.append(f"  |rBelow baseline:|n {', '.join(d6_violators)}")
+        
+        # Age-based d8 Analysis
+        aged_chars = [data for data in char_data if data['age'] is not None and data['age'] >= 20]
+        if aged_chars:
+            d8_compliant = sum(1 for data in aged_chars if data['d8_deficit'] == 0)
+            d8_percentage = (d8_compliant / len(aged_chars)) * 100 if aged_chars else 0
+            
+            output.append(f"\n|yAge-Based d8 Skills:|n")
+            output.append(f"  Characters meeting age expectations: {d8_compliant}/{len(aged_chars)} ({d8_percentage:.1f}%)")
+            output.append(f"  Expected: 20s=2d8, 30s=3d8, 40s=4d8, etc.")
+            
+            # List characters with deficits
+            d8_violators = []
+            d8_exceders = []
+            for data in aged_chars:
+                if data['d8_deficit'] > 0:
+                    age_bracket = f"{(data['age']//10)*10}s"
+                    d8_violators.append(f"{data['name']} ({age_bracket}: has {data['skills_d8_count']}, needs {data['expected_d8s']})")
+                elif data['d8_surplus'] > 2:  # More than 2 above expected
+                    age_bracket = f"{(data['age']//10)*10}s"
+                    d8_exceders.append(f"{data['name']} ({age_bracket}: has {data['skills_d8_count']}, expected {data['expected_d8s']})")
+            
+            if d8_violators:
+                output.append(f"  |rBelow expectations:|n")
+                for violator in d8_violators:
+                    output.append(f"    {violator}")
+            
+            if d8_exceders:
+                output.append(f"  |cSignificantly above expectations:|n")
+                for exceeder in d8_exceders:
+                    output.append(f"    {exceeder}")
+        
+        # Expert skills analysis
+        d10_plus_counts = [data['skills_d10_plus'] for data in char_data]
+        if any(d10_plus_counts):
+            d10_avg = sum(d10_plus_counts) / len(d10_plus_counts)
+            d10_max = max(d10_plus_counts)
+            output.append(f"\n|yExpert Skills (d10+):|n")
+            output.append(f"  Average per character: {d10_avg:.1f}")
+            output.append(f"  Maximum: {d10_max}")
+            
+            # List characters with many expert skills
+            experts = [(data['name'], data['skills_d10_plus']) for data in char_data if data['skills_d10_plus'] > d10_avg + 1]
+            if experts:
+                experts.sort(key=lambda x: x[1], reverse=True)
+                output.append(f"  |cExpert specialists:|n {', '.join(f'{name} ({count})' for name, count in experts)}")
+        
         # Additional traits analysis
         sig_assets = [data['signature_assets'] for data in char_data]
         powers = [data['powers'] for data in char_data]
@@ -192,23 +292,53 @@ class CmdBalance(Command):
         if len(power_scores) > 5:
             output.append(f"     ... and {len(power_scores) - 5} more")
         
-        # Balance warnings
+        # Comprehensive Balance Warnings
         warnings = []
+        recommendations = []
+        
+        # Power level warnings
         power_avg = sum(score[1] for score in power_scores) / len(power_scores)
         power_std = (sum((score[1] - power_avg) ** 2 for score in power_scores) / len(power_scores)) ** 0.5
         
         for name, total, attrs, skills, extras in power_scores:
             if total > power_avg + (1.5 * power_std):
-                warnings.append(f"|r{name}|n significantly above average")
+                warnings.append(f"|r{name}|n significantly above average power level")
             elif total < power_avg - (1.5 * power_std):
-                warnings.append(f"|y{name}|n significantly below average")
+                warnings.append(f"|y{name}|n significantly below average power level")
         
+        # Compliance warnings
+        for data in char_data:
+            if not data['meets_d6_baseline']:
+                warnings.append(f"|r{data['name']}|n lacks 4d6 skill baseline ({data['skills_d6_count']}/4)")
+            
+            if data['age'] and data['age'] >= 20 and data['d8_deficit'] > 0:
+                age_bracket = f"{(data['age']//10)*10}s"
+                warnings.append(f"|r{data['name']}|n ({age_bracket}) needs {data['d8_deficit']} more d8 skills")
+        
+        # Generate recommendations
+        if d6_percentage < 80:
+            recommendations.append(f"Only {d6_percentage:.0f}% meet 4d6 baseline - consider skill point adjustments")
+        
+        if aged_chars and d8_percentage < 70:
+            recommendations.append(f"Only {d8_percentage:.0f}% meet age-based d8 expectations - review character advancement")
+        
+        if any(data['skills_d10_plus'] > 3 for data in char_data):
+            specialists = [data['name'] for data in char_data if data['skills_d10_plus'] > 3]
+            recommendations.append(f"High specialization detected in: {', '.join(specialists)} - verify balance")
+        
+        # Output warnings and recommendations
         if warnings:
-            output.append(f"\n|rBalance Warnings:|n")
+            output.append(f"\n|rBalance Issues:|n")
             for warning in warnings:
                 output.append(f"  • {warning}")
-        else:
-            output.append(f"\n|gNo major balance issues detected.|n")
+        
+        if recommendations:
+            output.append(f"\n|cRecommendations:|n")
+            for rec in recommendations:
+                output.append(f"  • {rec}")
+        
+        if not warnings and not recommendations:
+            output.append(f"\n|gAll characters meet balance expectations!|n")
         
         output.append("="*80)
         self.msg("\n".join(output))
