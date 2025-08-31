@@ -94,7 +94,7 @@ class CmdBalance(Command):
             skill_total = 0
             skill_count = 0
             skills_above_default = 0
-            skills_d6_count = 0  # 4d6 baseline tracking
+            skills_d6_exact = 0  # Exactly d6 skills (baseline)
             skills_d8_count = 0  # Age-based d8 tracking
             skills_d10_plus = 0  # Expert+ skills
             
@@ -107,8 +107,8 @@ class CmdBalance(Command):
                     skill_count += 1
                     if value > 4:  # above default
                         skills_above_default += 1
-                    if value >= 6:  # d6 or better
-                        skills_d6_count += 1
+                    if value == 6:  # exactly d6
+                        skills_d6_exact += 1
                     if value >= 8:  # d8 or better
                         skills_d8_count += 1
                     if value >= 10:  # d10 or better
@@ -124,7 +124,7 @@ class CmdBalance(Command):
             data['skill_total'] = skill_total
             data['skill_average'] = skill_total / skill_count if skill_count > 0 else 0
             data['skills_above_default'] = skills_above_default
-            data['skills_d6_count'] = skills_d6_count
+            data['skills_d6_exact'] = skills_d6_exact
             data['skills_d8_count'] = skills_d8_count
             data['skills_d10_plus'] = skills_d10_plus
             
@@ -145,9 +145,9 @@ class CmdBalance(Command):
                 data['d8_deficit'] = None
                 data['d8_surplus'] = None
             
-            # 4d6 baseline check
-            data['d6_deficit'] = max(0, 4 - skills_d6_count)
-            data['meets_d6_baseline'] = skills_d6_count >= 4
+            # 4d6 baseline check (exactly d6, not d6+)
+            data['d6_deficit'] = max(0, 4 - skills_d6_exact)
+            data['meets_d6_baseline'] = skills_d6_exact >= 4
             
             # Count additional traits
             data['signature_assets'] = len([k for k in char.signature_assets.all() if char.signature_assets.get(k)])
@@ -268,20 +268,20 @@ class CmdBalance(Command):
         if under_expected:
             output.append(f"  |rBelow age expectations:|n {', '.join(under_expected)}")
         
-        # 4d6 Baseline Analysis
+        # 4d6 Baseline Analysis (exactly d6 skills)
         d6_compliant = sum(1 for data in char_data if data['meets_d6_baseline'])
         d6_percentage = (d6_compliant / len(char_data)) * 100
-        output.append(f"\n|y4d6 Skill Baseline:|n")
+        output.append(f"\n|y4d6 Skill Baseline (exactly d6):|n")
         output.append(f"  Characters meeting baseline: {d6_compliant}/{len(char_data)} ({d6_percentage:.1f}%)")
         
-        # Show detailed d6+ breakdown
+        # Show detailed d6 exact breakdown
         for data in char_data:
-            d6_count = data['skills_d6_count']
-            if d6_count < 4:
-                output.append(f"  |r{data['name']}|n: {d6_count}/4 d6+ skills")
-            elif d6_count > 4:
-                excess = d6_count - 4
-                output.append(f"  |c{data['name']}|n: {d6_count}/4 d6+ skills (+{excess} above baseline)")
+            d6_exact = data['skills_d6_exact']
+            if d6_exact < 4:
+                output.append(f"  |r{data['name']}|n: {d6_exact}/4 d6 skills")
+            elif d6_exact > 4:
+                excess = d6_exact - 4
+                output.append(f"  |c{data['name']}|n: {d6_exact}/4 d6 skills (+{excess} extra d6s)")
         
         # Age-based d8 Analysis
         aged_chars = [data for data in char_data if data['age'] is not None and data['age'] >= 20]
