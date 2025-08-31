@@ -95,7 +95,7 @@ class CmdBalance(Command):
             skill_count = 0
             skills_above_default = 0
             skills_d6_exact = 0  # Exactly d6 skills (baseline)
-            skills_d8_count = 0  # Age-based d8 tracking
+            skills_d8_equivalent = 0  # Age-based d8 tracking (d10 counts as 2)
             skills_d10_plus = 0  # Expert+ skills
             
             for skill_def in SKILLS:
@@ -109,10 +109,11 @@ class CmdBalance(Command):
                         skills_above_default += 1
                     if value == 6:  # exactly d6
                         skills_d6_exact += 1
-                    if value >= 8:  # d8 or better
-                        skills_d8_count += 1
-                    if value >= 10:  # d10 or better
+                    if value >= 10:  # d10 or better (counts as 2 d8s)
+                        skills_d8_equivalent += 2
                         skills_d10_plus += 1
+                    elif value >= 8:  # d8 (counts as 1 d8)
+                        skills_d8_equivalent += 1
                 else:
                     data[f"skill_{skill_def.key}"] = 4  # default
                     skill_total += 4
@@ -125,7 +126,7 @@ class CmdBalance(Command):
             data['skill_average'] = skill_total / skill_count if skill_count > 0 else 0
             data['skills_above_default'] = skills_above_default
             data['skills_d6_exact'] = skills_d6_exact
-            data['skills_d8_count'] = skills_d8_count
+            data['skills_d8_equivalent'] = skills_d8_equivalent
             data['skills_d10_plus'] = skills_d10_plus
             
             # Age-based skill expectations
@@ -134,12 +135,12 @@ class CmdBalance(Command):
                 if decade >= 2:  # 20s and up
                     expected_d8s = decade - 1  # 20s=1, 30s=2, 40s=3, etc.
                     data['expected_d8s'] = expected_d8s
-                    data['d8_deficit'] = max(0, expected_d8s - skills_d8_count)
-                    data['d8_surplus'] = max(0, skills_d8_count - expected_d8s)
+                    data['d8_deficit'] = max(0, expected_d8s - skills_d8_equivalent)
+                    data['d8_surplus'] = max(0, skills_d8_equivalent - expected_d8s)
                 else:
                     data['expected_d8s'] = 0
                     data['d8_deficit'] = 0
-                    data['d8_surplus'] = skills_d8_count
+                    data['d8_surplus'] = skills_d8_equivalent
             else:
                 data['expected_d8s'] = None
                 data['d8_deficit'] = None
@@ -289,7 +290,7 @@ class CmdBalance(Command):
             d8_compliant = sum(1 for data in aged_chars if data['d8_deficit'] == 0)
             d8_percentage = (d8_compliant / len(aged_chars)) * 100 if aged_chars else 0
             
-            output.append(f"\n|yAge-Based d8 Skills:|n")
+            output.append(f"\n|yAge-Based d8 Skills (d10 counts as 2d8):|n")
             output.append(f"  Characters meeting age expectations: {d8_compliant}/{len(aged_chars)} ({d8_percentage:.1f}%)")
             output.append(f"  Expected: 20s=1d8, 30s=2d8, 40s=3d8, etc.")
             
@@ -299,10 +300,10 @@ class CmdBalance(Command):
             for data in aged_chars:
                 if data['d8_deficit'] > 0:
                     age_bracket = f"{(data['age']//10)*10}s"
-                    d8_violators.append(f"{data['name']} ({age_bracket}: has {data['skills_d8_count']}, needs {data['expected_d8s']})")
+                    d8_violators.append(f"{data['name']} ({age_bracket}: has {data['skills_d8_equivalent']}, needs {data['expected_d8s']})")
                 elif data['d8_surplus'] > 2:  # More than 2 above expected
                     age_bracket = f"{(data['age']//10)*10}s"
-                    d8_exceders.append(f"{data['name']} ({age_bracket}: has {data['skills_d8_count']}, expected {data['expected_d8s']})")
+                    d8_exceders.append(f"{data['name']} ({age_bracket}: has {data['skills_d8_equivalent']}, expected {data['expected_d8s']})")
             
             if d8_violators:
                 output.append(f"  |rBelow expectations:|n")
