@@ -378,33 +378,33 @@ class CmdSheet(CharacterLookupMixin, Command):
             sheet = f"CHARACTER: {char.name}\n"
             sheet += f"Age: {char.db.age or 'Not set'}\n"
             
-            # Add plot points if they exist
-            if hasattr(char, 'traits'):
-                plot_points = char.traits.get("plot_points")
-                if plot_points:
-                    sheet += f"Plot Points: {int(plot_points.value)}\n"
-            
-            # Add attributes
+            # Add attributes on one line
             if hasattr(char, 'character_attributes'):
-                sheet += "\nATTRIBUTES:\n"
+                attrs = []
                 for trait in [char.character_attributes.get(key) for key in char.character_attributes.all()]:
                     if trait:
-                        sheet += f"  {trait.name}: d{int(trait.value)}\n"
+                        attrs.append(f"{trait.name}: d{int(trait.value)}")
+                if attrs:
+                    sheet += f"ATTRIBUTES: {', '.join(attrs)}\n"
             
-            # Add skills  
+            # Add skills on one line
             if hasattr(char, 'skills'):
-                sheet += "\nSKILLS:\n"
+                skills = []
                 for trait in [char.skills.get(key) for key in char.skills.all()]:
                     if trait:
-                        sheet += f"  {trait.name}: d{int(trait.value)}\n"
+                        skills.append(f"{trait.name}: d{int(trait.value)}")
+                if skills:
+                    sheet += f"SKILLS: {', '.join(skills)}\n"
             
-            # Add distinctions
+            # Add distinctions on one line
             if hasattr(char, 'distinctions'):
-                sheet += "\nDISTINCTIONS:\n"
+                dists = []
                 for trait in [char.distinctions.get(key) for key in char.distinctions.all()]:
                     if trait:
-                        desc = f" - {trait.desc}" if hasattr(trait, 'desc') and trait.desc else ""
-                        sheet += f"  {trait.name}: d{int(trait.value)}{desc}\n"
+                        desc = f" ({trait.desc})" if hasattr(trait, 'desc') and trait.desc else ""
+                        dists.append(f"{trait.name}: d{int(trait.value)}{desc}")
+                if dists:
+                    sheet += f"DISTINCTIONS: {', '.join(dists)}\n"
             
             # Add special effects
             if hasattr(char, 'db') and char.db.special_effects:

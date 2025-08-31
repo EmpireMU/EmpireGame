@@ -44,6 +44,33 @@ class Room(ObjectParent, DefaultRoom):
         exits = [ex for ex in self.contents if ex.destination]
         if not exits:
             return ""
+        
+        # Cardinal directions in compass order
+        cardinal_order = ['N', 'NORTH', 'NE', 'NORTHEAST', 'E', 'EAST', 'SE', 'SOUTHEAST',
+                         'S', 'SOUTH', 'SW', 'SOUTHWEST', 'W', 'WEST', 'NW', 'NORTHWEST',
+                         'U', 'UP', 'D', 'DOWN', 'O', 'OUT']
+        
+        # Separate cardinal and non-cardinal exits
+        cardinal_exits = []
+        other_exits = []
+        
+        for ex in exits:
+            cardinal_found = False
+            if ex.aliases.all():
+                for alias in ex.aliases.all():
+                    if alias.upper() in cardinal_order:
+                        cardinal_exits.append((cardinal_order.index(alias.upper()), ex))
+                        cardinal_found = True
+                        break
+            if not cardinal_found:
+                other_exits.append(ex)
+        
+        # Sort each group
+        cardinal_exits.sort()  # Sort by cardinal order
+        other_exits.sort(key=lambda ex: ex.key.lower())  # Sort alphabetically
+        
+        # Combine back into single list
+        exits = [ex for _, ex in cardinal_exits] + other_exits
             
         exit_names = []
         for ex in exits:
