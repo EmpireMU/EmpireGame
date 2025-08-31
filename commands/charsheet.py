@@ -177,10 +177,12 @@ class CmdSheet(CharacterLookupMixin, Command):
     Usage:
         sheet [character]
         sheet/all                              - Staff only: export all finished characters
+
         
     Without arguments, shows your own character sheet.
     Staff members can view other characters' sheets by specifying their name.
     The /all switch exports all finished character sheets for game balancing analysis.
+
     
     Sheet Sections:
     1. Basic Information
