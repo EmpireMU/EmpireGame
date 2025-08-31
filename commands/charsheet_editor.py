@@ -404,8 +404,6 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
             concept = char.distinctions.get("concept")
             if concept:
                 msg += f"\n|wConcept:|n {concept.name}"
-                if concept.desc:
-                    msg += f" - {concept.desc}"
             else:
                 msg += "\n|wConcept:|n Not set"
         

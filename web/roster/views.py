@@ -353,7 +353,6 @@ def character_detail_view(request, char_name, char_id):
             trait = character.distinctions.get(key)
             distinctions[trait.name or key] = {
                 'key': key,
-                'description': trait.desc or "No description",
                 'value': f"d{int(trait.value)}"
             }
         

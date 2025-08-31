@@ -275,10 +275,7 @@ class CmdSheet(CharacterLookupMixin, Command):
             sheet += "\n|wDistinctions:|n\n"
             for trait in [char.distinctions.get(key) for key in char.distinctions.all()]:
                 if trait:
-                    sheet += f"  {trait.name}: d{int(trait.value)}"
-                    if hasattr(trait, 'desc') and trait.desc:
-                        sheet += f" ({trait.desc})"
-                    sheet += "\n"
+                    sheet += f"  {trait.name}: d{int(trait.value)}\n"
         
         # Get optional handlers
         has_signature_assets = hasattr(char, 'signature_assets')

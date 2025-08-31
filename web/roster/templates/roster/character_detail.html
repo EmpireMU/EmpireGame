@@ -732,20 +732,7 @@ const cancelDistinctionEdit = function(slot, field) {
                                 {% endif %}
                             </div>
                             
-                            <!-- Description editing -->
-                            <div id="distinction_{{ trait.key }}_description_container">
-                                <div id="distinction_{{ trait.key }}_description_display" class="text-muted">{{ trait.description|default:'No description'|linebreaks }}</div>
-                                {% if is_staff %}
-                                    <button onclick="editDistinction('{{ trait.key }}', 'description', '{{ trait.description|default:''|escapejs }}')" class="btn btn-sm btn-link">
-                                        Edit Description
-                                    </button>
-                                    <span id="distinction_{{ trait.key }}_description_editor" style="display: none;">
-                                        <textarea class="form-control form-control-sm w-100 mt-1" rows="3"></textarea>
-                                        <button onclick="saveDistinction('{{ trait.key }}', 'description', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary mt-2">Save</button>
-                                        <button onclick="cancelDistinctionEdit('{{ trait.key }}', 'description')" class="btn btn-sm btn-secondary mt-2">Cancel</button>
-                                    </span>
-                                {% endif %}
-                            </div>
+
                         </div>
                         {% endfor %}
                     {% else %}
