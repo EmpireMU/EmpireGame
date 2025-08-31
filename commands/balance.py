@@ -162,25 +162,62 @@ class CmdBalance(Command):
         output.append(f"|wCHARACTER BALANCE ANALYSIS|n ({len(finished_chars)} characters)")
         output.append("="*80)
         
-        # Attribute analysis
-        attr_totals = [data['attr_total'] for data in char_data]
-        attr_avg = sum(attr_totals) / len(attr_totals)
-        attr_min = min(attr_totals)
-        attr_max = max(attr_totals)
+        # Detailed Attribute Analysis (2d8 + 4d6 baseline)
+        output.append(f"\n|yAttribute Analysis (2d8 + 4d6 baseline):|n")
+        baseline_total = (2 * 8) + (4 * 6)  # 2d8 + 4d6 = 16 + 24 = 40
+        output.append(f"  Expected baseline total: {baseline_total}")
         
-        output.append(f"\n|yAttribute Totals:|n")
-        output.append(f"  Average: {attr_avg:.1f} (baseline: {6 * len(ATTRIBUTES)})")
-        output.append(f"  Range: {attr_min} - {attr_max}")
-        
-        # Find outliers (more than 1 standard deviation from mean)
-        attr_std = (sum((x - attr_avg) ** 2 for x in attr_totals) / len(attr_totals)) ** 0.5
-        outliers = []
+        attr_deviations = []
         for data in char_data:
-            if abs(data['attr_total'] - attr_avg) > attr_std:
-                outliers.append(f"{data['name']} ({data['attr_total']})")
+            char_name = data['name']
+            attr_total = data['attr_total']
+            deviation = attr_total - baseline_total
+            
+            # Count attribute dice distribution
+            d8_plus_attrs = 0
+            d6_attrs = 0
+            d4_attrs = 0
+            attr_details = []
+            
+            for attr_def in ATTRIBUTES:
+                attr_value = data.get(f"attr_{attr_def.key}", 6)
+                if attr_value >= 8:
+                    d8_plus_attrs += 1
+                    if attr_value >= 10:
+                        attr_details.append(f"|w{attr_def.name}(d{attr_value})|n")
+                    else:
+                        attr_details.append(f"{attr_def.name}(d{attr_value})")
+                elif attr_value == 6:
+                    d6_attrs += 1
+                else:
+                    d4_attrs += 1
+                    attr_details.append(f"|r{attr_def.name}(d{attr_value})|n")
+            
+            # Flag significant deviations
+            status = ""
+            if deviation > 4:  # More than 1 extra die step
+                status = "|c(above baseline)|n"
+            elif deviation < -4:  # More than 1 die step below
+                status = "|r(below baseline)|n"
+            elif d8_plus_attrs != 2:  # Wrong number of d8+ attributes
+                if d8_plus_attrs > 2:
+                    status = f"|c({d8_plus_attrs} high attrs)|n"
+                else:
+                    status = f"|y({d8_plus_attrs} high attrs)|n"
+            
+            if status or d4_attrs > 0:  # Show if deviation or has d4s
+                detail_text = ", ".join(attr_details) if (d4_attrs > 0 or d8_plus_attrs != 2) else ""
+                if detail_text:
+                    attr_deviations.append(f"  {char_name} (total: {attr_total}, {deviation:+d}): {detail_text} {status}")
+                else:
+                    attr_deviations.append(f"  {char_name} (total: {attr_total}, {deviation:+d}) {status}")
         
-        if outliers:
-            output.append(f"  |rOutliers:|n {', '.join(outliers)}")
+        if attr_deviations:
+            output.append(f"  |yDeviations from 2d8+4d6 baseline:|n")
+            for deviation in attr_deviations:
+                output.append(deviation)
+        else:
+            output.append(f"  |gAll characters meet baseline expectations|n")
         
         # Age-adjusted skill analysis
         skill_totals = [data['skill_total'] for data in char_data]
@@ -237,9 +274,14 @@ class CmdBalance(Command):
         output.append(f"\n|y4d6 Skill Baseline:|n")
         output.append(f"  Characters meeting baseline: {d6_compliant}/{len(char_data)} ({d6_percentage:.1f}%)")
         
-        d6_violators = [data['name'] for data in char_data if not data['meets_d6_baseline']]
-        if d6_violators:
-            output.append(f"  |rBelow baseline:|n {', '.join(d6_violators)}")
+        # Show detailed d6+ breakdown
+        for data in char_data:
+            d6_count = data['skills_d6_count']
+            if d6_count < 4:
+                output.append(f"  |r{data['name']}|n: {d6_count}/4 d6+ skills")
+            elif d6_count > 4:
+                excess = d6_count - 4
+                output.append(f"  |c{data['name']}|n: {d6_count}/4 d6+ skills (+{excess} above baseline)")
         
         # Age-based d8 Analysis
         aged_chars = [data for data in char_data if data['age'] is not None and data['age'] >= 20]
@@ -272,20 +314,41 @@ class CmdBalance(Command):
                 for exceeder in d8_exceders:
                     output.append(f"    {exceeder}")
         
-        # Expert skills analysis
-        d10_plus_counts = [data['skills_d10_plus'] for data in char_data]
-        if any(d10_plus_counts):
-            d10_avg = sum(d10_plus_counts) / len(d10_plus_counts)
-            d10_max = max(d10_plus_counts)
-            output.append(f"\n|yExpert Skills (d10+):|n")
-            output.append(f"  Average per character: {d10_avg:.1f}")
-            output.append(f"  Maximum: {d10_max}")
+        # Detailed Expert Skills Analysis
+        output.append(f"\n|yDetailed Expert Skills (d10+):|n")
+        
+        # Get all d10+ skills by character
+        expert_details = []
+        for data in char_data:
+            char_name = data['name']
+            d10_skills = []
+            d12_skills = []
             
-            # List characters with many expert skills
-            experts = [(data['name'], data['skills_d10_plus']) for data in char_data if data['skills_d10_plus'] > d10_avg + 1]
-            if experts:
-                experts.sort(key=lambda x: x[1], reverse=True)
-                output.append(f"  |cExpert specialists:|n {', '.join(f'{name} ({count})' for name, count in experts)}")
+            # Check each skill for d10+ values
+            for skill_def in SKILLS:
+                skill_value = data.get(f"skill_{skill_def.key}", 4)
+                if skill_value >= 12:
+                    d12_skills.append(skill_def.name)
+                elif skill_value >= 10:
+                    d10_skills.append(skill_def.name)
+            
+            if d10_skills or d12_skills:
+                skill_list = []
+                if d12_skills:
+                    skill_list.extend([f"|W{skill}(d12)|n" for skill in d12_skills])
+                if d10_skills:
+                    skill_list.extend([f"|w{skill}(d10)|n" for skill in d10_skills])
+                
+                total_expert = len(d10_skills) + len(d12_skills)
+                expert_details.append((char_name, total_expert, skill_list))
+        
+        if expert_details:
+            expert_details.sort(key=lambda x: x[1], reverse=True)
+            for char_name, total_count, skill_list in expert_details:
+                skills_text = ", ".join(skill_list)
+                output.append(f"  {char_name} ({total_count}): {skills_text}")
+        else:
+            output.append(f"  No characters have d10+ skills")
         
         # Additional traits analysis
         sig_assets = [data['signature_assets'] for data in char_data]
