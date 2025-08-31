@@ -709,30 +709,28 @@ const cancelDistinctionEdit = function(slot, field) {
                 <div class="card-body">
                     {% if distinctions %}
                         {% for name, trait in distinctions.items %}
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center">
-                                    <strong class="me-2">{{ trait.key|title }}:</strong>
-                                    <span class="badge bg-info me-2">d8</span>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ trait.key|title }}:</strong>
+                                    <span id="distinction_{{ trait.key }}_name_display">{{ name }}</span>
+                                    <span class="badge bg-info ms-2">d8</span>
                                 </div>
-                            </div>
-                            
-                            <!-- Name editing -->
-                            <div id="distinction_{{ trait.key }}_name_container" class="mb-2">
-                                <span id="distinction_{{ trait.key }}_name_display" class="fw-bold">{{ name }}</span>
                                 {% if is_staff %}
                                     <button onclick="editDistinction('{{ trait.key }}', 'name', '{{ name|escapejs }}')" class="btn btn-sm btn-link">
-                                        Edit Name
+                                        Edit
                                     </button>
-                                    <span id="distinction_{{ trait.key }}_name_editor" style="display: none;">
-                                        <input type="text" class="form-control form-control-sm d-inline-block w-50">
-                                        <button onclick="saveDistinction('{{ trait.key }}', 'name', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary">Save</button>
-                                        <button onclick="cancelDistinctionEdit('{{ trait.key }}', 'name')" class="btn btn-sm btn-secondary">Cancel</button>
-                                    </span>
                                 {% endif %}
                             </div>
                             
-
+                            {% if is_staff %}
+                                <!-- Name editing (hidden by default) -->
+                                <div id="distinction_{{ trait.key }}_name_editor" style="display: none;" class="mt-2">
+                                    <input type="text" class="form-control form-control-sm d-inline-block w-75">
+                                    <button onclick="saveDistinction('{{ trait.key }}', 'name', '{{ character.name }}', {{ character.id }})" class="btn btn-sm btn-primary ms-2">Save</button>
+                                    <button onclick="cancelDistinctionEdit('{{ trait.key }}', 'name')" class="btn btn-sm btn-secondary ms-1">Cancel</button>
+                                </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}
