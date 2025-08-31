@@ -398,7 +398,7 @@ class CmdBalance(Command):
         # Compliance warnings
         for data in char_data:
             if not data['meets_d6_baseline']:
-                warnings.append(f"|r{data['name']}|n lacks 4d6 skill baseline ({data['skills_d6_count']}/4)")
+                warnings.append(f"|r{data['name']}|n lacks 4d6 skill baseline ({data['skills_d6_exact']}/4)")
             
             if data['age'] and data['age'] >= 20 and data['d8_deficit'] > 0:
                 age_bracket = f"{(data['age']//10)*10}s"
