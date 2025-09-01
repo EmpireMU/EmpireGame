@@ -42,6 +42,7 @@ from commands.time import CmdTime
 from commands.story import CmdStory, CmdChapter
 from commands.family import CmdFamily
 from commands.balance import BalanceCmdSet
+from commands.directions import CmdDirections
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -91,6 +92,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdChapter())
         self.add(CmdFamily())
         self.add(BalanceCmdSet)
+        self.add(CmdDirections())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):
