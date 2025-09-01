@@ -182,7 +182,7 @@ class CmdDirections(MuxCommand):
                 step_word = "step" if distance == 1 else "steps"
                 output_lines.append(f"\n|c{distance} {step_word} away:|n")
             
-            direction_str = " → ".join(directions)
+            direction_str = " -> ".join(directions)
             output_lines.append(f"  {room.name}: |y{direction_str}|n")
         
         output_lines.append(f"\nUse |wdirections <room name>|n for specific directions.")
@@ -223,7 +223,7 @@ class CmdDirections(MuxCommand):
                 if path:
                     distance = len(path)
                     step_word = "step" if distance == 1 else "steps"
-                    directions = " → ".join([step[0] for step in path])
+                    directions = " -> ".join([step[0] for step in path])
                     self.msg(f"  {i}. {room.name} ({distance} {step_word}): |y{directions}|n")
                 else:
                     self.msg(f"  {i}. {room.name} (no path found)")
@@ -244,7 +244,7 @@ class CmdDirections(MuxCommand):
         step_word = "step" if distance == 1 else "steps"
         directions = [step[0] for step in path]
         
-        self.msg(f"|wPath to {target_room.name}:|n {' → '.join(directions)} |c({distance} {step_word})|n")
+        self.msg(f"|wPath to {target_room.name}:|n {' -> '.join(directions)} |c({distance} {step_word})|n")
     
     def _list_all_visible_rooms(self):
         """List all visible room names for reference."""
