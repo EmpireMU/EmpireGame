@@ -1,30 +1,18 @@
-{% extends "evennia_website_base.html" %}
-{% load static %}
+{% extends "website/base.html" %}
 
-{% block title %}{{ game_name }}{% endblock %}
+{% block titleblock %}Home{% endblock %}
+
+{% block header_ext %}
+{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col">
         <div class="card text-center">
             <div class="card-body">
-                <h1 class="card-title">Welcome to Empire!</h1>
-                <hr/>
-                <p class="lead">Words words words.</p>
-                <p>Words words words.</p>
 
-                {% if webclient_enabled %}
-                <p><a href="{% url 'webclient:index' %}" class="btn btn-primary btn-lg">Play in the browser!</a></p>
-                {% endif %}
-                
-                {% if telnet_enabled %}
-                <p>
-                    <strong>Connect via Telnet:</strong> <code>{{ server_hostname }}</code>, port
-                    {% for port in telnet_ports %}
-                    {% if not forloop.first and forloop.last %} or {% elif forloop.counter != 1 %}, {% endif %}<code>{{ port }}</code>
-                    {% endfor %}
-                </p>
-                {% endif %}
+                {% include "website/homepage/main-content.html" %}
+
             </div>
         </div>
     </div>
@@ -33,39 +21,30 @@
 <hr/>
 
 <div class="row">
-    <div class="col-12 col-md-6 mb-3">
-        <div class="card">
-            <h4 class="card-header text-center">Game Information</h4>
-            <div class="card-body">
-                <p>Find out more about Empire.</p>
-                <ul class="list-unstyled">
-                    <li><a href="/world/">World Information</a> - Explore the details of the setting</li>
-                    <li><a href="{% url 'characters' %}">Character Roster</a> - View all characters in the game</li>
-                </ul>
-            </div>
-        </div>
+    <div class="col-12 col-md-4 mb-3">
+
+        {% include "website/homepage/accounts-widget.html" %}
+
     </div>
 
-    <div class="col-12 col-md-6 mb-3">
-        <div class="card">
-            <h4 class="card-header text-center">Server Stats</h4>
-            <div class="card-body">
-                <p>Currently <strong>{{num_accounts_connected}}</strong> connected out of <strong>{{num_accounts_registered}}</strong> total accounts.</p>
-                <p><strong>{{num_rooms}}</strong> rooms, <strong>{{num_characters}}</strong> characters in the game.</p>
-            </div>
-        </div>
+    <div class="col-12 col-md-4 mb-3">
+
+        {% include "website/homepage/recently-connected-widget.html" %}
+
+    </div>
+
+    <div class="col-12 col-md-4 mb-3">
+
+        {% include "website/homepage/database-stats-widget.html" %}
+
     </div>
 </div>
 
 <div class="row">
     <div class="col">
-        <div class="card text-center">
-            <div class="card-body">
-                <small class="text-muted">
-                    Empire is powered by <a href="https://evennia.com">Evennia</a>, an open-source MUD/MU* creation framework.
-                </small>
-            </div>
-        </div>
+
+        {% include "website/homepage/evennia-widget.html" %}
+
     </div>
 </div>
 {% endblock %}
