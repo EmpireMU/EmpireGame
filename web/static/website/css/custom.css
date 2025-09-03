@@ -2,9 +2,11 @@
 
 /* Primary color scheme - you can change these to your preferred colors */
 :root {
-    /*--primary-color: #2c3e50;      /* Dark blue-gray */
-    /*--secondary-color: #34495e;    /* Slightly lighter blue-gray */
-    /*--accent-color: #3498db;       /* Bright blue */
+    /* Original colors - commented out
+    --primary-color: #2c3e50;      
+    --secondary-color: #34495e;    
+    --accent-color: #3498db;       
+    */
     --primary-color: #8B4513;      /* Saddle brown */
     --secondary-color: #A0522D;    /* Sienna */
     --accent-color: #DAA520;       /* Goldenrod */
