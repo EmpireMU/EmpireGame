@@ -2,19 +2,23 @@
 
 /* Primary color scheme - you can change these to your preferred colors */
 :root {
-    /* Original colors - commented out
-    --primary-color: #2c3e50;      
+ /*   --primary-color: #2c3e50;      
     --secondary-color: #34495e;    
     --accent-color: #3498db;       
+    --success-color: #27ae60; 
+    --warning-color: #f39c12; 
+    --danger-color: #e74c3c; 
+    --dark-color: #2c3e50;  
+    --light-color: #ecf0f1;
     */
-    --primary-color: #ffd75f; 
-    --secondary-color: #ffd787;
-    --accent-color: #DAA520;       /* Goldenrod */
-    --success-color: #27ae60;      /* Green */
-    --warning-color: #f39c12;      /* Orange */
-    --danger-color: #e74c3c;       /* Red */
-    --dark-color: #2c3e50;         /* Dark background */
-    --light-color: #ecf0f1;        /* Light background */
+    --primary-color: #7A6B3D;      /* Vintage gold */
+    --secondary-color: #8B7D4F;    /* Faded gold */
+    --accent-color: #A08B5A;       /* Light vintage gold */
+    --success-color: #525A3A;      /* Muted olive */
+    --warning-color: #8B5A00;      /* Dark amber */
+    --danger-color: #704214;       /* Rich brown */
+    --dark-color: #404040;         /* Medium charcoal */
+    --light-color: #F7F4E8;        /* Antique white */
 }
 
 /* Override Bootstrap's primary colors */
@@ -93,4 +97,29 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     padding: 20px;
     margin-top: 20px;
+}
+
+/* Footer styling to match theme */
+footer, .footer {
+    background-color: var(--primary-color) !important;
+    color: var(--dark-color) !important; /* Dark text on vintage gold background */
+}
+
+footer a, .footer a {
+    color: var(--accent-color) !important;
+}
+
+footer a:hover, .footer a:hover {
+    color: var(--light-color) !important;
+}
+
+/* Override remaining Bootstrap blue backgrounds */
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+/* Fix blue buttons or elements that might be using Bootstrap defaults */
+.btn-info {
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
 }
