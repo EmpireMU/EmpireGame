@@ -1,23 +1,21 @@
 /* Custom theme colors for Empire */
 
-/* Primary color scheme - you can change these to your preferred colors */
+/* Default Evennia color scheme */
 :root {
-    --primary-color: #2c3e50;      
-    --secondary-color: #34495e;    
-    --accent-color: #3498db;       
-    --success-color: #27ae60; 
-    --warning-color: #f39c12; 
-    --danger-color: #e74c3c; 
-    --dark-color: #2c3e50;  
-    --light-color: #ecf0f1;
-
-
+    --primary-color: #2c3e50;      /* Dark blue-gray */
+    --secondary-color: #34495e;    /* Slightly lighter blue-gray */
+    --accent-color: #3498db;       /* Bright blue */
+    --success-color: #27ae60;      /* Green */
+    --warning-color: #f39c12;      /* Orange */
+    --danger-color: #e74c3c;       /* Red */
+    --dark-color: #2c3e50;         /* Dark background */
+    --light-color: #ecf0f1;        /* Light background */
 }
 
 /* Override Bootstrap's primary colors */
-.navbar-dark {
+/* .navbar-dark {
     background-color: var(--primary-color) !important;
-}
+} */
 
 .btn-primary {
     background-color: var(--accent-color);
