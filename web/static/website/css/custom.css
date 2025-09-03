@@ -2,7 +2,7 @@
 
 /* Primary color scheme - you can change these to your preferred colors */
 :root {
- /*   --primary-color: #2c3e50;      
+    --primary-color: #2c3e50;      
     --secondary-color: #34495e;    
     --accent-color: #3498db;       
     --success-color: #27ae60; 
@@ -10,15 +10,8 @@
     --danger-color: #e74c3c; 
     --dark-color: #2c3e50;  
     --light-color: #ecf0f1;
-    */
-    --primary-color: #7A6B3D;      /* Vintage gold */
-    --secondary-color: #8B7D4F;    /* Faded gold */
-    --accent-color: #A08B5A;       /* Light vintage gold */
-    --success-color: #525A3A;      /* Muted olive */
-    --warning-color: #8B5A00;      /* Dark amber */
-    --danger-color: #704214;       /* Rich brown */
-    --dark-color: #404040;         /* Medium charcoal */
-    --light-color: #F7F4E8;        /* Antique white */
+
+
 }
 
 /* Override Bootstrap's primary colors */
