@@ -102,7 +102,12 @@ body {
 /* Footer styling to match theme */
 footer, .footer {
     background-color: var(--primary-color) !important;
-    color: var(--dark-color) !important; /* Dark text on vintage gold background */
+    color: var(--dark-color) !important;
+}
+
+/* Override Bootstrap's text-white class in footer */
+footer .text-white, .footer .text-white {
+    color: var(--dark-color) !important;
 }
 
 footer a, .footer a {
@@ -110,7 +115,7 @@ footer a, .footer a {
 }
 
 footer a:hover, .footer a:hover {
-    color: var(--light-color) !important;
+    color: var(--dark-color) !important;
 }
 
 /* Override remaining Bootstrap blue backgrounds */
