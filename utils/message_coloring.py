@@ -72,9 +72,10 @@ def apply_character_coloring(message, character):
     # Get character's word colour preferences
     word_colors = character.db.emit_word_colors or {}
     
-    # Apply word colouring first, then speech colouring
-    colored_message = colorize_words(message, word_colors)
-    colored_message = colorize_speech(colored_message, speech_color)
+    # Apply speech colouring first, then word colouring
+    # This prevents word color resets from interfering with speech color
+    colored_message = colorize_speech(message, speech_color)
+    colored_message = colorize_words(colored_message, word_colors)
     
     return colored_message
 
