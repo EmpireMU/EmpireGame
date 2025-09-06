@@ -1,0 +1,152 @@
+"""
+Emit command
+
+The emit command allows players to send messages to everyone in their
+current room.
+"""
+
+from evennia.commands.command import Command
+from utils.message_coloring import apply_character_coloring, apply_name_coloring
+
+
+class CmdEmit(Command):
+    """
+    Send a message to everyone in your current room.
+    
+    Usage:
+        emit <message>                      - No name
+        pose <message>                      - Your name at start
+        emit/shownames - Toggle seeing sender names on emits
+        emit/speechcolour <colour> - Set speech colour in emits
+        emit/colourword <word>=<colour> - Set colour for specific words
+
+    Examples:
+
+        emit/shownames
+        emit/speechcolour |y
+        emit/speechcolour |344
+        emit/speechcolour |r
+        emit/colourword drum=|344
+        emit/colourword magic=|b
+        
+    Use 'emit/shownames' to toggle whether you see the name of who 
+    sent an emit. When enabled, emits will show as "(Name) message".
+    
+    Use 'emit/speechcolour <colour>' to set the colour for quoted speech
+    in emits. Supports ANSI colours (|r, |g, |b, |y, etc.) and xterm 
+    colours (|001 to |255). Default is |y (yellow).
+    
+    Use 'emit/colourword <word>=<colour>' to set custom colours for 
+    specific words in emits. For example, 'emit/colourword drum=|344'
+    will highlight all instances of 'drum' in colour 344.
+    """
+    
+    key = "emit"
+    aliases = ["pose"]
+    locks = "cmd:all()"
+    help_category = "Social"
+    
+    def func(self):
+        """Execute the emit command."""
+        # Handle the shownames switch
+        if "shownames" in self.switches:
+            current_setting = self.caller.db.show_emit_names
+            new_setting = not current_setting
+            self.caller.db.show_emit_names = new_setting
+            
+            if new_setting:
+                self.msg("You will now see sender names on emits: (Name) message")
+            else:
+                self.msg("You will no longer see sender names on emits.")
+            return
+            
+        # Handle the speechcolour switch
+        if "speechcolour" in self.switches:
+            if not self.args:
+                current_color = self.caller.db.emit_speech_color or "|y"
+                self.msg(f"Current speech colour: {current_color}Hello|n")
+                self.msg("Usage: emit/speechcolour <colour> (e.g., |y, |r, |344)")
+                return
+                
+            color = self.args.strip()
+            
+            # Validate colour format (basic validation)
+            if not color.startswith('|'):
+                self.msg("Colour must start with | (e.g., |y, |r, |344)")
+                return
+                
+            # Store the colour setting
+            self.caller.db.emit_speech_color = color
+            self.msg(f"Speech colour set to: {color}\"Sample speech\"|n")
+            return
+            
+        # Handle the colourword switch
+        if "colourword" in self.switches:
+            if not self.args or "=" not in self.args:
+                # Show current word colours
+                word_colors = self.caller.db.emit_word_colors or {}
+                if word_colors:
+                    self.msg("Current word colours:")
+                    for word, color in word_colors.items():
+                        self.msg(f"  {color}{word}|n = {color}")
+                else:
+                    self.msg("No word colours set.")
+                self.msg("Usage: emit/colourword <word>=<colour> (e.g., emit/colourword drum=|344)")
+                return
+                
+            word, color = self.args.split("=", 1)
+            word = word.strip().lower()  # Store words in lowercase for case-insensitive matching
+            color = color.strip()
+            
+            # Validate colour format
+            if not color.startswith('|'):
+                self.msg("Colour must start with | (e.g., |y, |r, |344)")
+                return
+                
+            # Initialize word colors dict if it doesn't exist
+            if not self.caller.db.emit_word_colors:
+                self.caller.db.emit_word_colors = {}
+                
+            # Store the word colour setting
+            self.caller.db.emit_word_colors[word] = color
+            self.msg(f"Word colour set: {color}{word}|n = {color}")
+            return
+        
+        if not self.args:
+            self.msg("Usage: emit <message>, emit/shownames, emit/speechcolour <colour>, or emit/colourword <word>=<colour>")
+            return
+            
+        if not self.caller.location:
+            self.msg("You must be in a room to use emit.")
+            return
+            
+        message = self.args.strip()
+        location = self.caller.location
+        
+        # Check if user typed 'pose' vs 'emit' to determine message format
+        is_pose = self.cmdstring.lower() == "pose"
+        
+        # Send the message to everyone in the room
+        # Check each character's preference for showing emit names and apply coloring
+        for character in location.contents_get(content_type="characters"):
+            if hasattr(character, 'sessions') and character.sessions.all():
+                # Apply character's color preferences to the message
+                colored_message = apply_character_coloring(message, character)
+                
+                # Apply character's color preferences to the sender name
+                colored_sender_name = apply_name_coloring(self.caller.name, character)
+                
+                if is_pose:
+                    # Pose: always show sender name at the start
+                    formatted_message = f"{colored_sender_name} {colored_message}"
+                else:
+                    # Emit: check if this character wants to see emit names
+                    show_names = character.db.show_emit_names
+                    if show_names:
+                        # Show with sender name in parentheses
+                        formatted_message = f"({colored_sender_name}) {colored_message}"
+                    else:
+                        # Show without sender name (traditional emit)
+                        formatted_message = colored_message
+                
+                character.msg(formatted_message)

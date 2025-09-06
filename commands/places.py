@@ -8,6 +8,7 @@ sub-locations within rooms and interact with others at those places.
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia import CmdSet
 from utils.command_mixins import CharacterLookupMixin
+from utils.message_coloring import apply_character_coloring, apply_name_coloring
 
 
 class CmdPlace(MuxCommand):
@@ -391,24 +392,26 @@ class CmdPemit(MuxCommand):
     Emit a message to everyone at your current place.
     
     Usage:
-        pemit <message>
+        pemit <message>        - Environmental message to place
+        ppose <message>        - Action with your name at start
         
     Examples:
-        pemit orders a drink
-        pemit "How's everyone doing?"
+        pemit orders a drink                          -> [Place] orders a drink (or [Place] (Ada) orders a drink if shownames on)
+        ppose sits down and sighs.                    -> [Place] Ada sits down and sighs.
         
     Sends a message only to other characters at your current place.
     If you're not at a place, this command won't work.
     """
     
     key = "pemit"
+    aliases = ["ppose"]
     locks = "cmd:all()"
     help_category = "Social"
     
     def func(self):
         """Execute the command."""
         if not self.args:
-            self.msg("Usage: pemit <message>")
+            self.msg("Usage: pemit <message> or ppose <message>")
             return
             
         if not self.caller.location:
@@ -439,14 +442,32 @@ class CmdPemit(MuxCommand):
             
         message = self.args.strip()
         
-        # Send ephemeral room echo to everyone at the place (like a pose)
-        place_message = f"|w[{current_place_name}]|n ({self.caller.name}) {message}"
+        # Check if user typed 'ppose' vs 'pemit' to determine message format
+        is_ppose = self.cmdstring.lower() == "ppose"
         
-        # Get all characters in room who are NOT at this place to exclude them
-        all_in_room = [obj for obj in room.contents if hasattr(obj, 'sessions')]
-        exclude_list = [char for char in all_in_room if char not in characters]
-        
-        room.msg_contents(place_message, exclude=exclude_list, from_obj=self.caller)
+        # Send personalized messages to each character at the place
+        for character in characters:
+            if hasattr(character, 'sessions') and character.sessions.all():
+                # Apply character's color preferences to the message
+                colored_message = apply_character_coloring(message, character)
+                
+                # Apply character's color preferences to the sender name
+                colored_sender_name = apply_name_coloring(self.caller.name, character)
+                
+                if is_ppose:
+                    # Ppose: always show sender name at start of message
+                    place_message = f"|w[{current_place_name}]|n {colored_sender_name} {colored_message}"
+                else:
+                    # Pemit: check if this character wants to see emit names
+                    show_names = character.db.show_emit_names
+                    if show_names:
+                        # Show with sender name in parentheses
+                        place_message = f"|w[{current_place_name}]|n ({colored_sender_name}) {colored_message}"
+                    else:
+                        # Show without sender name (respects emit/shownames setting)
+                        place_message = f"|w[{current_place_name}]|n {colored_message}"
+                
+                character.msg(place_message)
 
 
 
