@@ -5,11 +5,11 @@ The emit command allows players to send messages to everyone in their
 current room.
 """
 
-from evennia.commands.command import Command
+from evennia.commands.default.muxcommand import MuxCommand
 from utils.message_coloring import apply_character_coloring, apply_name_coloring
 
 
-class CmdEmit(Command):
+class CmdEmit(MuxCommand):
     """
     Send a message to everyone in your current room.
     
@@ -23,21 +23,21 @@ class CmdEmit(Command):
     Examples:
 
         emit/shownames
-        emit/speechcolour |y
-        emit/speechcolour |344
-        emit/speechcolour |r
-        emit/colourword drum=|344
-        emit/colourword magic=|b
+        emit/speechcolour ||y
+        emit/speechcolour ||344
+        emit/speechcolour ||r
+        emit/colourword drum=||344
+        emit/colourword magic=||b
         
     Use 'emit/shownames' to toggle whether you see the name of who 
     sent an emit. When enabled, emits will show as "(Name) message".
     
     Use 'emit/speechcolour <colour>' to set the colour for quoted speech
-    in emits. Supports ANSI colours (|r, |g, |b, |y, etc.) and xterm 
-    colours (|001 to |255). Default is |y (yellow).
+    in emits. Supports ANSI colours (||r, ||g, ||b, ||y, etc.) and xterm 
+    colours (||001 to ||255). Default is ||y (yellow).
     
     Use 'emit/colourword <word>=<colour>' to set custom colours for 
-    specific words in emits. For example, 'emit/colourword drum=|344'
+    specific words in emits. For example, 'emit/colourword drum=||344'
     will highlight all instances of 'drum' in colour 344.
     """
     
