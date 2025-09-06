@@ -77,7 +77,9 @@ class CmdEmit(MuxCommand):
                 
             # Store the colour setting
             self.caller.db.emit_speech_color = color
-            self.msg(f"Speech colour set to: {color}\"Sample speech\"|n")
+            # Escape the color code in the confirmation message so it displays as text
+            escaped_color = color.replace("|", "||")
+            self.msg(f"Speech colour set to: {color}\"Sample speech\"|n = {escaped_color}")
             return
             
         # Handle the colourword switch
@@ -88,28 +90,41 @@ class CmdEmit(MuxCommand):
                 if word_colors:
                     self.msg("Current word colours:")
                     for word, color in word_colors.items():
-                        self.msg(f"  {color}{word}|n = {color}")
+                        escaped_color = color.replace("|", "||")
+                        self.msg(f"  {color}{word}|n = {escaped_color}")
                 else:
                     self.msg("No word colours set.")
                 self.msg("Usage: emit/colourword <word>=<colour> (e.g., emit/colourword drum=|344)")
+                self.msg("To remove: emit/colourword <word>= (empty colour)")
                 return
                 
             word, color = self.args.split("=", 1)
             word = word.strip().lower()  # Store words in lowercase for case-insensitive matching
             color = color.strip()
             
+            # Initialize word colors dict if it doesn't exist
+            if not self.caller.db.emit_word_colors:
+                self.caller.db.emit_word_colors = {}
+            
+            # Check if removing a color (empty value)
+            if not color:
+                if word in self.caller.db.emit_word_colors:
+                    del self.caller.db.emit_word_colors[word]
+                    self.msg(f"Word colour removed for: {word}")
+                else:
+                    self.msg(f"No colour was set for: {word}")
+                return
+            
             # Validate colour format
             if not color.startswith('|'):
                 self.msg("Colour must start with | (e.g., |y, |r, |344)")
                 return
                 
-            # Initialize word colors dict if it doesn't exist
-            if not self.caller.db.emit_word_colors:
-                self.caller.db.emit_word_colors = {}
-                
             # Store the word colour setting
             self.caller.db.emit_word_colors[word] = color
-            self.msg(f"Word colour set: {color}{word}|n = {color}")
+            # Escape the color code in the confirmation message so it displays as text
+            escaped_color = color.replace("|", "||")
+            self.msg(f"Word colour set: {color}{word}|n = {escaped_color}")
             return
         
         if not self.args:
