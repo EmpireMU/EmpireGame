@@ -126,24 +126,26 @@ class CmdEmit(MuxCommand):
         # Check if user typed 'pose' vs 'emit' to determine message format
         is_pose = self.cmdstring.lower() == "pose"
         
-        # Define a custom message function that applies per-receiver coloring
-        def msg_func(receiver):
-            # Apply this receiver's color preferences to the message
-            colored_message = apply_character_coloring(message, receiver)
-            colored_sender_name = apply_name_coloring(self.caller.name, receiver)
-            
-            if is_pose:
-                # Pose: always show sender name at the start
-                return f"{colored_sender_name} {colored_message}"
-            else:
-                # Emit: check if this receiver wants to see emit names
-                show_names = receiver.db.show_emit_names
-                if show_names:
-                    # Show with sender name in parentheses
-                    return f"({colored_sender_name}) {colored_message}"
+        # Send personalized messages to each receiver with their color preferences
+        # We need to manually iterate since each person sees different colors
+        for obj in self.caller.location.contents:
+            # Only send to characters with active sessions (online players)
+            if hasattr(obj, 'sessions') and obj.sessions.all():
+                # Apply this receiver's color preferences to the message
+                colored_message = apply_character_coloring(message, obj)
+                colored_sender_name = apply_name_coloring(self.caller.name, obj)
+                
+                if is_pose:
+                    # Pose: always show sender name at the start
+                    final_message = f"{colored_sender_name} {colored_message}"
                 else:
-                    # Show without sender name (traditional emit)
-                    return colored_message
-        
-        # Use the standard Evennia way with custom message function
-        self.caller.location.msg_contents(msg_func)
+                    # Emit: check if this receiver wants to see emit names
+                    show_names = obj.db.show_emit_names
+                    if show_names:
+                        # Show with sender name in parentheses
+                        final_message = f"({colored_sender_name}) {colored_message}"
+                    else:
+                        # Show without sender name (traditional emit)
+                        final_message = colored_message
+                
+                obj.msg(final_message)
