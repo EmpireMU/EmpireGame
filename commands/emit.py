@@ -126,27 +126,24 @@ class CmdEmit(MuxCommand):
         # Check if user typed 'pose' vs 'emit' to determine message format
         is_pose = self.cmdstring.lower() == "pose"
         
-        # Send the message to everyone in the room
-        # Check each character's preference for showing emit names and apply coloring
-        for character in location.contents_get(content_type="characters"):
-            if hasattr(character, 'sessions') and character.sessions.all():
-                # Apply character's color preferences to the message
-                colored_message = apply_character_coloring(message, character)
-                
-                # Apply character's color preferences to the sender name
-                colored_sender_name = apply_name_coloring(self.caller.name, character)
-                
-                if is_pose:
-                    # Pose: always show sender name at the start
-                    formatted_message = f"{colored_sender_name} {colored_message}"
+        # Define a custom message function that applies per-receiver coloring
+        def msg_func(receiver):
+            # Apply this receiver's color preferences to the message
+            colored_message = apply_character_coloring(message, receiver)
+            colored_sender_name = apply_name_coloring(self.caller.name, receiver)
+            
+            if is_pose:
+                # Pose: always show sender name at the start
+                return f"{colored_sender_name} {colored_message}"
+            else:
+                # Emit: check if this receiver wants to see emit names
+                show_names = receiver.db.show_emit_names
+                if show_names:
+                    # Show with sender name in parentheses
+                    return f"({colored_sender_name}) {colored_message}"
                 else:
-                    # Emit: check if this character wants to see emit names
-                    show_names = character.db.show_emit_names
-                    if show_names:
-                        # Show with sender name in parentheses
-                        formatted_message = f"({colored_sender_name}) {colored_message}"
-                    else:
-                        # Show without sender name (traditional emit)
-                        formatted_message = colored_message
-                
-                character.msg(formatted_message)
+                    # Show without sender name (traditional emit)
+                    return colored_message
+        
+        # Use the standard Evennia way with custom message function
+        self.caller.location.msg_contents(msg_func)
