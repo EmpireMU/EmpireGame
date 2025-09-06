@@ -31,13 +31,14 @@ def colorize_speech(message, speech_color="|y"):
     return re.sub(speech_pattern, replace_speech, message)
 
 
-def colorize_words(message, word_colors):
+def colorize_words(message, word_colors, speech_color="|y"):
     """
     Colourise specific words in a message.
     
     Args:
         message (str): The message to process
         word_colors (dict): Dictionary of word -> color mappings
+        speech_color (str): The speech color to restore inside quotes
         
     Returns:
         str: Message with coloured words
@@ -49,8 +50,25 @@ def colorize_words(message, word_colors):
     for word, color in word_colors.items():
         # Use word boundary regex to match whole words only
         pattern = r'\b' + re.escape(word) + r'\b'
-        replacement = f"{color}\\g<0>|n"
-        message = re.sub(pattern, replacement, message, flags=re.IGNORECASE)
+        
+        def replace_word(match):
+            matched_word = match.group(0)
+            # Check if we're inside quotes by looking at the context
+            start_pos = match.start()
+            before_word = message[:start_pos]
+            
+            # Count quotes before this word to see if we're inside quotes
+            quote_count = before_word.count('"') + before_word.count("'")
+            in_quotes = quote_count % 2 == 1
+            
+            if in_quotes:
+                # Inside quotes: restore speech color after word color
+                return f"{color}{matched_word}{speech_color}"
+            else:
+                # Outside quotes: reset color normally
+                return f"{color}{matched_word}|n"
+        
+        message = re.sub(pattern, replace_word, message, flags=re.IGNORECASE)
     
     return message
 
@@ -73,9 +91,9 @@ def apply_character_coloring(message, character):
     word_colors = character.db.emit_word_colors or {}
     
     # Apply speech colouring first, then word colouring
-    # This prevents word color resets from interfering with speech color
+    # Pass speech color to word function so it can restore properly inside quotes
     colored_message = colorize_speech(message, speech_color)
-    colored_message = colorize_words(colored_message, word_colors)
+    colored_message = colorize_words(colored_message, word_colors, speech_color)
     
     return colored_message
 
