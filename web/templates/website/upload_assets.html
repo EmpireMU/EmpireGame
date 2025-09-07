@@ -51,7 +51,7 @@ document.getElementById('assetUploadForm').addEventListener('submit', function(e
     
     const formData = new FormData(this);
     
-    fetch('/upload-assets/', {
+    fetch('/admin/upload-assets/', {
         method: 'POST',
         body: formData,
         headers: {
