@@ -17,6 +17,7 @@ def upload_site_asset(request):
         
         asset_file = request.FILES['asset']
         asset_type = request.POST.get('type', 'logo')  # logo, icon, etc.
+        custom_name = request.POST.get('custom_name', '')  # Optional custom filename
         
         # Validate file type
         valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
@@ -24,8 +25,11 @@ def upload_site_asset(request):
         if ext not in valid_extensions:
             return JsonResponse({'error': 'Invalid file type'}, status=400)
         
-        # Save to site_assets directory
-        filename = f"{asset_type}_{uuid.uuid4()}{ext}"
+        # Use custom name if provided, otherwise use type + UUID
+        if custom_name:
+            filename = f"{custom_name}{ext}"
+        else:
+            filename = f"{asset_type}_{uuid.uuid4()}{ext}"
         path = f"site_assets/{filename}"
         saved_path = default_storage.save(path, asset_file)
         

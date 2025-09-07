@@ -15,6 +15,12 @@
                     <form id="assetUploadForm" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="mb-3">
+                            <label for="custom_name" class="form-label">Filename (optional):</label>
+                            <input type="text" class="form-control" id="custom_name" name="custom_name" 
+                                   placeholder="e.g. empire_logo (without extension)">
+                            <small class="text-muted">Leave blank for auto-generated name</small>
+                        </div>
+                        <div class="mb-3">
                             <label for="type" class="form-label">Asset Type:</label>
                             <select class="form-control" id="type" name="type">
                                 <option value="logo">Logo</option>
