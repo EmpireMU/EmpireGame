@@ -1,2 +1,147 @@
-/* Custom CSS for Empire - currently empty to use Evennia defaults */
+/* Custom CSS for Empire - Imperial Theme */
+
+/* Color Variables - Dark Theme */
+:root {
+    --empire-dark-bg: #1a1a1a;
+    --empire-card-bg: #2a2a2a;
+    --empire-header-dark: #3d3529;
+    --empire-copper: #C7862B;
+    --empire-cream: #f0f0f0;
+    --empire-dark-copper: #B07428;
+    --empire-header-light: #4a3f30;
+    --empire-text-light: #e0e0e0;
+    --empire-text-muted: #b0b0b0;
+}
+
+/* Navigation Bar */
+.navbar-dark {
+    background: linear-gradient(135deg, var(--empire-header-dark) 0%, var(--empire-header-light) 100%) !important;
+    border-bottom: 2px solid var(--empire-copper);
+}
+
+.navbar-brand {
+    color: var(--empire-copper) !important;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: bold;
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-brand small {
+    color: var(--empire-cream) !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    font-weight: normal;
+}
+
+.navbar-nav .nav-link {
+    color: var(--empire-cream) !important;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--empire-copper) !important;
+}
+
+/* Main Content - Dark Theme */
+body {
+    background-color: var(--empire-dark-bg);
+    color: var(--empire-text-light);
+}
+
+/* Welcome Card - Dark Theme */
+.card {
+    border: 2px solid var(--empire-copper);
+    background-color: var(--empire-card-bg);
+    color: var(--empire-text-light);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card h1 {
+    color: var(--empire-copper);
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    border-bottom: 1px solid var(--empire-copper);
+}
+
+.text-muted {
+    color: var(--empire-text-muted) !important;
+}
+
+/* Play Button */
+.playbutton {
+    background: linear-gradient(135deg, var(--empire-burgundy), var(--empire-light-burgundy)) !important;
+    color: var(--empire-cream) !important;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    border: 2px solid var(--empire-gold);
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.playbutton:hover {
+    background: linear-gradient(135deg, var(--empire-light-burgundy), var(--empire-burgundy)) !important;
+    color: var(--empire-gold) !important;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 21, 56, 0.3);
+}
+
+/* Links - Dark Theme */
+a {
+    color: var(--empire-copper);
+}
+
+a:hover {
+    color: var(--empire-cream);
+}
+
+/* Better Desktop Layout - Widen the actual layout */
+.container-fluid {
+    max-width: none !important;
+    width: 90%;
+    margin: 0 auto;
+}
+
+@media (min-width: 1200px) {
+    .container-fluid {
+        width: 85%;
+    }
+}
+
+/* Improve navbar spacing for wider screens */
+.navbar {
+    padding-left: 3rem;
+    padding-right: 3rem;
+}
+
+.navbar-nav {
+    margin-left: auto;
+    margin-right: 2rem;
+}
+
+/* Footer Styling */
+.footer {
+    background: linear-gradient(135deg, var(--empire-header-dark) 0%, var(--empire-header-light) 100%) !important;
+    border-top: 2px solid var(--empire-copper);
+}
+
+.footer a {
+    color: var(--empire-cream) !important;
+}
+
+.footer a:hover {
+    color: var(--empire-copper) !important;
+}
+
+/* Custom Background Classes */
+.bg-empire {
+    background: linear-gradient(135deg, var(--empire-header-dark) 0%, var(--empire-header-light) 100%) !important;
+}
 
