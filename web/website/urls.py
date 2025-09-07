@@ -13,6 +13,7 @@ from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
 from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
+from .views import upload_site_asset
 
 def character_creation_disabled(request):
     """Return a 403 Forbidden response for character creation/management URLs."""
@@ -31,6 +32,9 @@ urlpatterns = [
     
     # Custom logout that accepts GET requests
     path('auth/logout/', custom_logout, name='logout'),
+    
+    # Admin asset upload
+    path('admin/upload-assets/', upload_site_asset, name='upload-assets'),
     
     # Custom app URLs
     path('characters/', include('web.roster.urls')),
