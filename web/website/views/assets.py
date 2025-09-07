@@ -9,6 +9,9 @@ from django.core.files.base import ContentFile
 import uuid
 import os
 
+# Import resize function from roster
+from web.roster.views import resize_image
+
 @staff_member_required
 def upload_site_asset(request):
     if request.method == 'POST':
@@ -27,11 +30,17 @@ def upload_site_asset(request):
         
         # Use custom name if provided, otherwise use type + UUID
         if custom_name:
-            filename = f"{custom_name}{ext}"
+            filename = f"{custom_name}.jpg"  # Force JPG for consistency
         else:
-            filename = f"{asset_type}_{uuid.uuid4()}{ext}"
-        path = f"site_assets/{filename}"
-        saved_path = default_storage.save(path, asset_file)
+            filename = f"{asset_type}_{uuid.uuid4()}.jpg"
+        
+        # Resize and compress the image (800px max, good quality)
+        try:
+            compressed_buffer = resize_image(asset_file, 800, good_quality=True)
+            path = f"site_assets/{filename}"
+            saved_path = default_storage.save(path, ContentFile(compressed_buffer.read()))
+        except Exception as e:
+            return JsonResponse({'error': f'Could not process image: {e}'}, status=400)
         
         url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else f"/media/{saved_path}"
         
