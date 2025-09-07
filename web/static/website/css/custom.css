@@ -145,3 +145,8 @@ a:hover {
     background: linear-gradient(135deg, var(--empire-header-dark) 0%, var(--empire-header-light) 100%) !important;
 }
 
+/* Table content readability fixes */
+table td, .table td {
+    color: var(--empire-cream) !important;
+}
+

@@ -23,11 +23,13 @@
                         <div class="mb-3">
                             <label for="type" class="form-label">Asset Type:</label>
                             <select class="form-control" id="type" name="type">
-                                <option value="logo">Logo</option>
-                                <option value="icon">Icon</option>
+                                <option value="logo">Logo (preserves transparency)</option>
+                                <option value="icon">Icon (preserves transparency)</option>
+                                <option value="emblem">Emblem (preserves transparency)</option>
                                 <option value="banner">Banner</option>
                                 <option value="other">Other</option>
                             </select>
+                            <small class="text-muted">Logo/Icon/Emblem types preserve transparency and save as PNG</small>
                         </div>
                         <div class="mb-3">
                             <label for="asset" class="form-label">File:</label>

@@ -58,27 +58,20 @@ def validate_emblem_image(image_file):
 def process_emblem_image(image_file):
     """
     Process emblem image - resize to reasonable emblem size (max 200px).
+    Preserves transparency for heraldic emblems.
     Returns processed image buffer.
     """
     img = Image.open(image_file)
     
-    # Handle transparency properly - use white background instead of black
-    if img.mode in ('RGBA', 'LA', 'P'):
-        # Create a white background
-        background = Image.new('RGB', img.size, (255, 255, 255))
-        if img.mode == 'P':
-            img = img.convert('RGBA')
-        background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
-        img = background
-    elif img.mode != 'RGB':
-        img = img.convert('RGB')
+    # Preserve transparency for emblems - they often have irregular shapes
+    # Don't convert to RGB, keep original mode including transparency
     
     # Resize to max 200px (good size for article emblems)
     img.thumbnail((200, 200), LANCZOS)
     
-    # Save as JPEG
+    # Save as PNG to preserve transparency
     buffer = io.BytesIO()
-    img.save(buffer, format='JPEG', quality=90, optimize=True)
+    img.save(buffer, format='PNG', optimize=True)
     buffer.seek(0)
     return buffer
 

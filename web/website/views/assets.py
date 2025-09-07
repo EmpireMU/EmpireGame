@@ -11,6 +11,22 @@ import os
 
 # Import resize function from roster
 from web.roster.views import resize_image
+from PIL import Image, ImageOps
+from PIL.Image import LANCZOS
+import io
+
+def resize_image_with_transparency(image_file, max_size):
+    """Resize image while preserving transparency for logos/icons/emblems."""
+    img = Image.open(image_file)
+    
+    # Resize while preserving the original mode (including transparency)
+    img.thumbnail((max_size, max_size), LANCZOS)
+    
+    # Save as PNG to preserve transparency
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG', optimize=True)
+    buffer.seek(0)
+    return buffer
 
 @staff_member_required
 def upload_site_asset(request):
@@ -28,15 +44,24 @@ def upload_site_asset(request):
         if ext not in valid_extensions:
             return JsonResponse({'error': 'Invalid file type'}, status=400)
         
+        # Determine if we should preserve transparency
+        preserve_transparency = asset_type in ['logo', 'icon', 'emblem']
+        
         # Use custom name if provided, otherwise use type + UUID
         if custom_name:
-            filename = f"{custom_name}.jpg"  # Force JPG for consistency
+            filename = f"{custom_name}.png" if preserve_transparency else f"{custom_name}.jpg"
         else:
-            filename = f"{asset_type}_{uuid.uuid4()}.jpg"
+            filename = f"{asset_type}_{uuid.uuid4()}.png" if preserve_transparency else f"{asset_type}_{uuid.uuid4()}.jpg"
         
-        # Resize and compress the image (800px max, good quality)
+        # Resize the image (800px max)
         try:
-            compressed_buffer = resize_image(asset_file, 800, good_quality=True)
+            if preserve_transparency:
+                # For logos/icons/emblems, preserve transparency
+                compressed_buffer = resize_image_with_transparency(asset_file, 800)
+            else:
+                # For other assets, use white background like character images
+                compressed_buffer = resize_image(asset_file, 800, good_quality=True)
+            
             path = f"site_assets/{filename}"
             saved_path = default_storage.save(path, ContentFile(compressed_buffer.read()))
         except Exception as e:
