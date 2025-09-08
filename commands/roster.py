@@ -135,18 +135,22 @@ class CmdApplication(MuxCommand):
                 # Find the existing account for this character
                 account = char.db.account
                 if account:
-                    self.caller.msg(f"Application for {char.key} has been approved.")
-                    self.caller.msg(f"Remember to contact the player at: {email}")
-                    if comment:
-                        self.caller.msg(f"Your comment: {comment}")
+                    from utils.email_utils import send_application_approved_email
+                    if send_application_approved_email(email, char.key, account, comment):
+                        self.caller.msg(f"Application for {char.key} has been approved and email sent to {email}.")
+                    else:
+                        self.caller.msg(f"Application for {char.key} has been approved, but email failed to send.")
+                        self.caller.msg(f"Remember to contact the player at: {email}")
                 else:
                     self.caller.msg(f"Application for {char.key} has been approved.")
                     self.caller.msg(f"Warning: No account found for character. Remember to contact the player at: {email}")
             else:  # decline
-                self.caller.msg(f"Application for {char.key} has been declined.")
-                self.caller.msg(f"Remember to contact the player at: {email}")
-                if comment:
-                    self.caller.msg(f"Your comment: {comment}")
+                from utils.email_utils import send_application_declined_email
+                if send_application_declined_email(email, char.key, comment):
+                    self.caller.msg(f"Application for {char.key} has been declined and email sent to {email}.")
+                else:
+                    self.caller.msg(f"Application for {char.key} has been declined, but email failed to send.")
+                    self.caller.msg(f"Remember to contact the player at: {email}")
                     
             # Delete the application
             app.delete()

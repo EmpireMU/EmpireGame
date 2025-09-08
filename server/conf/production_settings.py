@@ -131,15 +131,14 @@ SECURE_REFERRER_POLICY = 'same-origin'
 # Email Configuration (Production)
 ######################################################################
 
-# Outlook SMTP configuration for production
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp-mail.outlook.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-outlook@outlook.com'  # Update this in secret_settings.py
-EMAIL_HOST_PASSWORD = 'your-outlook-password'  # Update this in secret_settings.py
+# SendGrid Web API configuration for production (preferred)
+# Fallback email backend for development or if SendGrid unavailable
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Default from email address (will be overridden in secret_settings.py with actual Outlook)
-DEFAULT_FROM_EMAIL = 'Empire MUSH <your-outlook@outlook.com>'
-SERVER_EMAIL = 'Empire MUSH <your-outlook@outlook.com>'
+# SendGrid API key (will be overridden in secret_settings.py)
+SENDGRID_API_KEY = 'your-sendgrid-api-key'
+
+# Default from email address (will be overridden in secret_settings.py)
+DEFAULT_FROM_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
+SERVER_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
 

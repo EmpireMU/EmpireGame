@@ -1,32 +1,45 @@
 # Email Automation Setup Instructions
 
-## Outlook SMTP Configuration
+## SendGrid SMTP Configuration
 
-### 1. Outlook Account Setup
+### 1. SendGrid Account Setup
 
-1. **Create or use an Outlook/Hotmail account** for your MUD (recommended: something like `empiremush@outlook.com`)
+1. **Sign up at sendgrid.com** (free tier: 100 emails/day)
 
-2. **Enable 2-Factor Authentication** (recommended for security):
-   - Go to Microsoft account security settings
-   - Turn on two-step verification
+2. **Verify your email address**
 
-3. **No app passwords needed** - just use your regular Outlook password!
+3. **Create an API Key**:
+   - Go to Settings → API Keys
+   - Click "Create API Key"
+   - Choose "Restricted Access"
+   - Enable only "Mail Send" permissions
+   - Copy the API key (starts with `SG.`)
+
+4. **Verify your sender email**:
+   - Go to Settings → Sender Authentication
+   - Use "Single Sender Verification"
+   - Verify an email address you control (this will be your "from" address)
 
 ### 2. Update Secret Settings
 
 Add the following to your `server/conf/secret_settings.py` file:
 
 ```python
-# Outlook SMTP Configuration
-EMAIL_HOST_USER = 'your-outlook@outlook.com'  # Replace with your Outlook address
-EMAIL_HOST_PASSWORD = 'your-outlook-password'  # Replace with your regular Outlook password
+# SendGrid Web API Configuration
+SENDGRID_API_KEY = 'SG.your-actual-api-key-here'  # Replace with your SendGrid API key
 
-# Update the from email addresses
-DEFAULT_FROM_EMAIL = 'Empire MUSH <your-outlook@outlook.com>'
-SERVER_EMAIL = 'Empire MUSH <your-outlook@outlook.com>'
+# Update the from email addresses (must be verified in SendGrid)
+DEFAULT_FROM_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
+SERVER_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
 ```
 
-### 3. Test the Configuration
+### 3. Install SendGrid Package
+
+```bash
+pip install sendgrid
+```
+
+### 4. Test the Configuration
 
 1. Start your server with production settings:
    ```
