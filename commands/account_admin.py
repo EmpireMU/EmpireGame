@@ -179,4 +179,97 @@ class CmdSetPassword(MuxCommand):
         account.set_password(password)
         account.save()
         
-        caller.msg(f"Password for account '{account.username}' set to: {password}") 
+        caller.msg(f"Password for account '{account.username}' set to: {password}")
+
+
+class CmdCheckEmails(MuxCommand):
+    """
+    Check application patterns for an email address and detect shared IPs.
+    
+    Usage:
+        checkemails <email>           - Show application history and cross-IP analysis for email
+    """
+    
+    key = "checkemails"
+    locks = "cmd:perm(Admin)"
+    help_category = "Admin"
+    
+    def func(self):
+        """
+        Execute command.
+        """
+        if not self.args:
+            self.caller.msg("Usage: checkemails <email>")
+            return
+            
+        email = self.args.strip()
+        
+        # Find all applications for this email
+        from evennia.scripts.models import ScriptDB
+        all_apps = ScriptDB.objects.filter(
+            db_typeclass_path="typeclasses.applications.Application"
+        )
+        
+        user_apps = []
+        user_ips = set()
+        
+        for app in all_apps:
+            if app.db.email == email:
+                user_apps.append(app)
+                if app.db.ip_address:
+                    user_ips.add(app.db.ip_address)
+        
+        if not user_apps:
+            self.caller.msg(f"No applications found for {email}")
+            return
+            
+        # Display email analysis
+        self.caller.msg(f"|w=== Email Analysis: {email} ===|n")
+        self.caller.msg(f"Total applications: {len(user_apps)}")
+        
+        # Show application history
+        self.caller.msg(f"\n|wApplication History:|n")
+        for app in sorted(user_apps, key=lambda x: x.id):
+            status = app.db.status or "pending"
+            char_name = app.db.char_name
+            reviewer = ""
+            if app.db.reviewer:
+                reviewer = f" (by {app.db.reviewer.key})"
+            date = ""
+            if app.db.review_date:
+                date = f" on {app.db.review_date.strftime('%Y-%m-%d')}"
+            
+            self.caller.msg(f"  #{app.id}: {char_name} - {status}{reviewer}{date}")
+        
+        # Show IP analysis
+        if user_ips:
+            self.caller.msg(f"\n|wIP Addresses Used:|n")
+            for ip in user_ips:
+                if ip != "Unknown":
+                    self.caller.msg(f"  {ip}")
+        
+        # Cross-reference with other emails using same IPs
+        shared_ip_users = {}
+        for ip in user_ips:
+            if ip == "Unknown":
+                continue
+                
+            for app in all_apps:
+                if (app.db.ip_address == ip and 
+                    app.db.email != email and 
+                    app.db.email):
+                    if ip not in shared_ip_users:
+                        shared_ip_users[ip] = set()
+                    shared_ip_users[ip].add(app.db.email)
+        
+        # Display shared IP warnings
+        if shared_ip_users:
+            self.caller.msg(f"\n|y*** SHARED IP DETECTED ***|n")
+            for ip, emails in shared_ip_users.items():
+                self.caller.msg(f"  IP {ip} also used by:")
+                for other_email in emails:
+                    # Count applications for this other email
+                    other_app_count = sum(1 for app in all_apps if app.db.email == other_email)
+                    self.caller.msg(f"    - {other_email} ({other_app_count} applications)")
+        else:
+            self.caller.msg(f"\n|g** No shared IPs detected **|n") 

@@ -31,7 +31,7 @@ from commands import home
 from commands.page import CmdPage
 from commands.mail import CmdMailCharacterOOC
 from commands import where
-from commands.account_admin import CmdCreatePlayerAccount, CmdSetPassword
+from commands.account_admin import CmdCreatePlayerAccount, CmdSetPassword, CmdCheckEmails
 from commands.roster import CmdRoster, CmdApplication
 from commands.places import PlaceCmdSet
 from commands.channel_admin import ChannelAdminCmdSet
@@ -125,6 +125,7 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
         # Add roster commands
         self.add(CmdRoster())
         self.add(CmdApplication())
+        self.add(CmdCheckEmails())
         # Add channel admin commands
         self.add(ChannelAdminCmdSet)
 
