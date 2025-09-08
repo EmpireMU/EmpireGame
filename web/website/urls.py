@@ -11,6 +11,7 @@ from django.http import HttpResponseForbidden
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
+from django.contrib.auth import views as auth_views
 
 from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
 from .views import upload_site_asset
@@ -33,6 +34,22 @@ urlpatterns = [
     # Custom logout that accepts GET requests
     path('auth/logout/', custom_logout, name='logout'),
     
+    # Password reset URLs
+    path('accounts/password/reset/', auth_views.PasswordResetView.as_view(
+        template_name='website/password_reset_form.html',
+        email_template_name='website/password_reset_email.html',
+        success_url='/accounts/password/reset/done/'
+    ), name='password_reset'),
+    path('accounts/password/reset/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='website/password_reset_done.html'
+    ), name='password_reset_done'),
+    path('accounts/password/reset/confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='website/password_reset_confirm.html',
+        success_url='/accounts/password/reset/complete/'
+    ), name='password_reset_confirm'),
+    path('accounts/password/reset/complete/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='website/password_reset_complete.html'
+    ), name='password_reset_complete'),
     
     # Admin asset upload
     path('admin/upload-assets/', upload_site_asset, name='upload-assets'),
