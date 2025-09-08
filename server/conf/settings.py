@@ -62,6 +62,17 @@ WEB_PROFILE_DOMAIN = 'localhost:4001'  # Development setting
 COMMAND_PARSER = "server.conf.cmdparser.cmdparser"
 
 ######################################################################
+# Email Configuration
+######################################################################
+
+# Email backend for development (console output)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Default from email address (development - emails go to console)
+DEFAULT_FROM_EMAIL = 'Empire MUSH <noreply@localhost>'
+SERVER_EMAIL = 'Empire MUSH <noreply@localhost>'
+
+######################################################################
 # Settings given in secret_settings.py override those in this file.
 ######################################################################
 try:

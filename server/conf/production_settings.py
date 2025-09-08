@@ -127,3 +127,19 @@ SECURE_SSL_REDIRECT = False  # handled by Caddy to avoid redirect loops
 # Tighten browser security headers
 SECURE_REFERRER_POLICY = 'same-origin'
 
+######################################################################
+# Email Configuration (Production)
+######################################################################
+
+# Gmail SMTP configuration for production
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your-gmail@gmail.com'  # Update this in secret_settings.py
+EMAIL_HOST_PASSWORD = 'your-app-password'  # Update this in secret_settings.py
+
+# Default from email address (will be overridden in secret_settings.py with actual Gmail)
+DEFAULT_FROM_EMAIL = 'Empire MUSH <your-gmail@gmail.com>'
+SERVER_EMAIL = 'Empire MUSH <your-gmail@gmail.com>'
+

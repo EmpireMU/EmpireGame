@@ -82,16 +82,23 @@ class CmdApplication(MuxCommand):
             self.caller.msg(f"|wApplication for {app.db.char_name}|n")
             self.caller.msg(f"Email: {app.db.email}")
             self.caller.msg(f"IP: {app.db.ip_address}")
-            self.caller.msg("\nApplication Text:")
+
             self.caller.msg(app.db.app_text)
             return
             
         if "approve" in self.switches or "decline" in self.switches:
             if not self.args:
-                self.caller.msg(f"Usage: application/{self.switches[0]} <id>")
+                self.caller.msg(f"Usage: application/{self.switches[0]} <id> or application/{self.switches[0]} <id>=<comment>")
                 return
                 
-            apps = search_script("#" + self.args)
+            # Parse app ID and optional comment
+            if "=" in self.args:
+                app_id, comment = [part.strip() for part in self.args.split("=", 1)]
+            else:
+                app_id = self.args.strip()
+                comment = ""
+                
+            apps = search_script("#" + app_id)
             if not apps:
                 self.caller.msg(f"Application {self.args} not found.")
                 return
@@ -121,10 +128,30 @@ class CmdApplication(MuxCommand):
                 email = app.db.email
                 pass
                     
+            # Send appropriate email
+            if "approve" in self.switches:
+                # Find the existing account for this character
+                account = char.db.account
+                if account:
+                    from utils.email_utils import send_application_approved_email
+                    if send_application_approved_email(email, char.key, account, comment):
+                        self.caller.msg(f"Application for {char.key} has been approved and email sent to {email}.")
+                    else:
+                        self.caller.msg(f"Application for {char.key} has been approved, but email failed to send.")
+                        self.caller.msg(f"Remember to contact the player at: {email}")
+                else:
+                    self.caller.msg(f"Application for {char.key} has been approved.")
+                    self.caller.msg(f"Warning: No account found for character. Remember to contact the player at: {email}")
+            else:  # decline
+                from utils.email_utils import send_application_declined_email
+                if send_application_declined_email(email, char.key, comment):
+                    self.caller.msg(f"Application for {char.key} has been declined and email sent to {email}.")
+                else:
+                    self.caller.msg(f"Application for {char.key} has been declined, but email failed to send.")
+                    self.caller.msg(f"Remember to contact the player at: {email}")
+                    
             # Delete the application
             app.delete()
-            self.caller.msg(f"Application for {char.key} has been {'approved' if 'approve' in self.switches else 'declined'}.")
-            self.caller.msg(f"Remember to contact the player at: {email}")
 
 class CmdRoster(MuxCommand):
     """
