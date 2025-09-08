@@ -23,7 +23,11 @@ class CmdApplication(MuxCommand):
     Manage character applications.
     
     Usage:
-        application                     - List all applications
+        application                     - List pending applications
+        application/pending             - List pending applications
+        application/approved            - List approved applications (last 20)
+        application/declined            - List declined applications (last 20)
+        application/all                 - List all applications (last 50)
         application/view <id>           - View application details
         application/approve <id>        - Approve application (sends email)
         application/approve <id>=<comment> - Approve with personal message
@@ -57,16 +61,81 @@ class CmdApplication(MuxCommand):
         """
         Execute command.
         """
-        if not self.switches:
-            # List all applications
-            apps = ScriptDB.objects.filter(db_typeclass_path="typeclasses.applications.Application")
+        if not self.switches or "pending" in self.switches:
+            # List pending applications (default behavior)
+            apps = ScriptDB.objects.filter(
+                db_typeclass_path="typeclasses.applications.Application"
+            ).exclude(
+                db_status__in=["approved", "rejected"]
+            ).order_by('-id')
+            
             if not apps:
                 self.caller.msg("No pending applications.")
                 return
                 
-            table = EvTable("|wID|n", "|wCharacter|n", border="header")
+            table = EvTable("|wID|n", "|wCharacter|n", "|wEmail|n", border="header")
             for app in apps:
-                table.add_row(app.id, app.db.char_name)
+                table.add_row(app.id, app.db.char_name, app.db.email)
+            self.caller.msg(f"|wPending Applications ({len(apps)})|n")
+            self.caller.msg(str(table))
+            return
+            
+        if "approved" in self.switches:
+            # List approved applications (last 20)
+            apps = ScriptDB.objects.filter(
+                db_typeclass_path="typeclasses.applications.Application",
+                db_status="approved"
+            ).order_by('-id')[:20]
+            
+            if not apps:
+                self.caller.msg("No approved applications found.")
+                return
+                
+            table = EvTable("|wID|n", "|wCharacter|n", "|wReviewer|n", "|wDate|n", border="header")
+            for app in apps:
+                reviewer = app.db.reviewer.key if app.db.reviewer else "Unknown"
+                date = app.db.review_date.strftime("%Y-%m-%d") if app.db.review_date else "Unknown"
+                table.add_row(app.id, app.db.char_name, reviewer, date)
+            self.caller.msg(f"|wApproved Applications (last 20)|n")
+            self.caller.msg(str(table))
+            return
+            
+        if "declined" in self.switches:
+            # List declined applications (last 20)
+            apps = ScriptDB.objects.filter(
+                db_typeclass_path="typeclasses.applications.Application",
+                db_status="rejected"
+            ).order_by('-id')[:20]
+            
+            if not apps:
+                self.caller.msg("No declined applications found.")
+                return
+                
+            table = EvTable("|wID|n", "|wCharacter|n", "|wReviewer|n", "|wDate|n", border="header")
+            for app in apps:
+                reviewer = app.db.reviewer.key if app.db.reviewer else "Unknown"
+                date = app.db.review_date.strftime("%Y-%m-%d") if app.db.review_date else "Unknown"
+                table.add_row(app.id, app.db.char_name, reviewer, date)
+            self.caller.msg(f"|wDeclined Applications (last 20)|n")
+            self.caller.msg(str(table))
+            return
+            
+        if "all" in self.switches:
+            # List all applications (last 50)
+            apps = ScriptDB.objects.filter(
+                db_typeclass_path="typeclasses.applications.Application"
+            ).order_by('-id')[:50]
+            
+            if not apps:
+                self.caller.msg("No applications found.")
+                return
+                
+            table = EvTable("|wID|n", "|wCharacter|n", "|wStatus|n", "|wReviewer|n", border="header")
+            for app in apps:
+                status = app.db.status or "pending"
+                reviewer = app.db.reviewer.key if app.db.reviewer else "-"
+                table.add_row(app.id, app.db.char_name, status, reviewer)
+            self.caller.msg(f"|wAll Applications (last 50)|n")
             self.caller.msg(str(table))
             return
             
@@ -113,6 +182,9 @@ class CmdApplication(MuxCommand):
                 return
             char = char[0]
             
+            # Store email before processing
+            email = app.db.email
+            
             if "approve" in self.switches:
                 # Check if character is still available
                 if char.db.status != STATUS_AVAILABLE:
@@ -122,17 +194,10 @@ class CmdApplication(MuxCommand):
                 # Set character to active
                 char.db.status = STATUS_ACTIVE
                 
-                # Store email before deleting application
-                email = app.db.email
-                    
-            else:  # decline
-                # Store email before deleting application
-                email = app.db.email
-                pass
-                    
-            # Send appropriate email
-            if "approve" in self.switches:
-                # Find the existing account for this character
+                # Mark application as approved (instead of deleting)
+                app.approve(self.caller, comment)
+                
+                # Send approval email
                 account = char.db.account
                 if account:
                     from utils.email_utils import send_application_approved_email
@@ -144,16 +209,18 @@ class CmdApplication(MuxCommand):
                 else:
                     self.caller.msg(f"Application for {char.key} has been approved.")
                     self.caller.msg(f"Warning: No account found for character. Remember to contact the player at: {email}")
+                    
             else:  # decline
+                # Mark application as rejected (instead of deleting)
+                app.reject(self.caller, comment)
+                
+                # Send decline email
                 from utils.email_utils import send_application_declined_email
                 if send_application_declined_email(email, char.key, comment):
                     self.caller.msg(f"Application for {char.key} has been declined and email sent to {email}.")
                 else:
                     self.caller.msg(f"Application for {char.key} has been declined, but email failed to send.")
                     self.caller.msg(f"Remember to contact the player at: {email}")
-                    
-            # Delete the application
-            app.delete()
 
 class CmdRoster(MuxCommand):
     """
@@ -282,6 +349,31 @@ class CmdRoster(MuxCommand):
         # Check character is available
         if char.db.status != STATUS_AVAILABLE:
             self.caller.msg(f"Character '{char_name}' is not available for applications.")
+            return
+            
+        # Check for existing pending applications from this email for this character
+        existing_apps = ScriptDB.objects.filter(
+            db_typeclass_path="typeclasses.applications.Application",
+            db_char_name=char_name,
+            db_email=email
+        ).exclude(db_status__in=["approved", "rejected"])
+        
+        if existing_apps.exists():
+            self.caller.msg(f"You already have a pending application for character '{char_name}'. "
+                          "Please wait for staff to review your existing application.")
+            return
+            
+        # Check if this email already has an approved application for this character
+        approved_apps = ScriptDB.objects.filter(
+            db_typeclass_path="typeclasses.applications.Application",
+            db_char_name=char_name,
+            db_email=email,
+            db_status="approved"
+        )
+        
+        if approved_apps.exists():
+            self.caller.msg(f"You have already been approved for character '{char_name}'. "
+                          "If you believe this is an error, please contact staff.")
             return
             
         # Create the application
