@@ -1,34 +1,29 @@
 # Email Automation Setup Instructions
 
-## Gmail SMTP Configuration
+## Outlook SMTP Configuration
 
-### 1. Gmail Account Setup
+### 1. Outlook Account Setup
 
-1. **Create or use a dedicated Gmail account** for your MUD (recommended: something like `empiremush@gmail.com`)
+1. **Create or use an Outlook/Hotmail account** for your MUD (recommended: something like `empiremush@outlook.com`)
 
-2. **Enable 2-Factor Authentication** on the Gmail account:
-   - Go to Google Account settings → Security
-   - Turn on 2-Step Verification
+2. **Enable 2-Factor Authentication** (recommended for security):
+   - Go to Microsoft account security settings
+   - Turn on two-step verification
 
-3. **Generate an App Password**:
-   - Go to Google Account settings → Security → App passwords
-   - Select "Mail" and "Other (custom name)"
-   - Enter "Empire MUSH" as the name
-   - Google will generate a 16-character app password
-   - **Save this password** - you'll need it for the configuration
+3. **No app passwords needed** - just use your regular Outlook password!
 
 ### 2. Update Secret Settings
 
 Add the following to your `server/conf/secret_settings.py` file:
 
 ```python
-# Gmail SMTP Configuration
-EMAIL_HOST_USER = 'your-gmail@gmail.com'  # Replace with your Gmail address
-EMAIL_HOST_PASSWORD = 'your-app-password'  # Replace with the 16-character app password
+# Outlook SMTP Configuration
+EMAIL_HOST_USER = 'your-outlook@outlook.com'  # Replace with your Outlook address
+EMAIL_HOST_PASSWORD = 'your-outlook-password'  # Replace with your regular Outlook password
 
 # Update the from email addresses
-DEFAULT_FROM_EMAIL = 'Empire MUSH <your-gmail@gmail.com>'
-SERVER_EMAIL = 'Empire MUSH <your-gmail@gmail.com>'
+DEFAULT_FROM_EMAIL = 'Empire MUSH <your-outlook@outlook.com>'
+SERVER_EMAIL = 'Empire MUSH <your-outlook@outlook.com>'
 ```
 
 ### 3. Test the Configuration
@@ -58,21 +53,20 @@ The new automated workflow works as follows:
 ### 5. Development vs Production
 
 - **Development**: Emails are printed to console (no real sending)
-- **Production**: Emails are sent via Gmail SMTP
+- **Production**: Emails are sent via Outlook SMTP
 
 ### 6. Security Notes
 
-- The Gmail app password should be kept secret
-- App passwords are specific to the application and can be revoked if needed
-- Regular Gmail passwords won't work with SMTP - you must use an app password
-- Consider using a dedicated Gmail account rather than your personal one
+- Your Outlook password should be kept secret
+- Consider using a dedicated Outlook account rather than your personal one
+- 2FA is recommended but not required for SMTP to work
 
 ### 7. Troubleshooting
 
 **"Authentication failed" errors:**
-- Check that 2FA is enabled on the Gmail account
-- Verify you're using the app password, not the regular password
+- Verify you're using the correct Outlook password
 - Check that the email address in settings matches exactly
+- Make sure the account isn't locked or suspended
 
 **Emails not being received:**
 - Check spam/junk folders
