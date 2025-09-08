@@ -131,14 +131,15 @@ SECURE_REFERRER_POLICY = 'same-origin'
 # Email Configuration (Production)
 ######################################################################
 
-# SendGrid Web API configuration for production (preferred)
-# Fallback email backend for development or if SendGrid unavailable
+# Mailgun Web API configuration for production (preferred)
+# Fallback email backend for development or if Mailgun unavailable
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# SendGrid API key (will be overridden in secret_settings.py)
-SENDGRID_API_KEY = 'your-sendgrid-api-key'
+# Mailgun settings (will be overridden in secret_settings.py)
+MAILGUN_API_KEY = 'your-mailgun-api-key'
+MAILGUN_DOMAIN = 'your-domain.mailgun.org'
 
 # Default from email address (will be overridden in secret_settings.py)
-DEFAULT_FROM_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
-SERVER_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
+DEFAULT_FROM_EMAIL = 'Empire MUSH <noreply@your-domain.mailgun.org>'
+SERVER_EMAIL = 'Empire MUSH <noreply@your-domain.mailgun.org>'
 

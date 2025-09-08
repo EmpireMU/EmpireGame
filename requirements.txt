@@ -8,4 +8,4 @@ evennia>=5.0.0
 # Additional dependencies for specific features
 Pillow>=9.0.0           # For image handling in roster system
 markdown>=3.0.0         # For markdown formatting in world info pages
-sendgrid>=6.0.0          # For email automation via SendGrid Web API
+requests>=2.25.0         # For email automation via Mailgun Web API

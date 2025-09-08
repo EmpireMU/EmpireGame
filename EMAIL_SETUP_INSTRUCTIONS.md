@@ -1,43 +1,39 @@
 # Email Automation Setup Instructions
 
-## SendGrid SMTP Configuration
+## Mailgun Web API Configuration
 
-### 1. SendGrid Account Setup
+### 1. Mailgun Account Setup
 
-1. **Sign up at sendgrid.com** (free tier: 100 emails/day)
+1. **Sign up at mailgun.com** (free tier: 100 emails/day, 3,000/month)
 
 2. **Verify your email address**
 
-3. **Create an API Key**:
+3. **Get your API Key**:
    - Go to Settings → API Keys
-   - Click "Create API Key"
-   - Choose "Restricted Access"
-   - Enable only "Mail Send" permissions
-   - Copy the API key (starts with `SG.`)
+   - Copy your "Private API key" (starts with `key-`)
 
-4. **Verify your sender email**:
-   - Go to Settings → Sender Authentication
-   - Use "Single Sender Verification"
-   - Verify an email address you control (this will be your "from" address)
+4. **Get your domain**:
+   - Go to Sending → Domains  
+   - Use the sandbox domain (like `sandbox123.mailgun.org`) for free tier
+   - Or add your own domain for production
 
 ### 2. Update Secret Settings
 
 Add the following to your `server/conf/secret_settings.py` file:
 
 ```python
-# SendGrid Web API Configuration
-SENDGRID_API_KEY = 'SG.your-actual-api-key-here'  # Replace with your SendGrid API key
+# Mailgun Web API Configuration
+MAILGUN_API_KEY = 'key-your-actual-api-key-here'  # Replace with your Mailgun API key
+MAILGUN_DOMAIN = 'sandbox123.mailgun.org'         # Replace with your Mailgun domain
 
-# Update the from email addresses (must be verified in SendGrid)
-DEFAULT_FROM_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
-SERVER_EMAIL = 'Empire MUSH <your-verified-email@yourdomain.com>'
+# Update the from email addresses (use your Mailgun domain)
+DEFAULT_FROM_EMAIL = 'Empire MUSH <noreply@sandbox123.mailgun.org>'
+SERVER_EMAIL = 'Empire MUSH <noreply@sandbox123.mailgun.org>'
 ```
 
-### 3. Install SendGrid Package
+### 3. No Extra Packages Needed
 
-```bash
-pip install sendgrid
-```
+Mailgun uses standard HTTP requests (via the `requests` library), which is already in your requirements.txt.
 
 ### 4. Test the Configuration
 

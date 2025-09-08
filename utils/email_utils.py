@@ -9,15 +9,14 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 import logging
 
-# SendGrid Web API
+# Mailgun Web API
 try:
-    from sendgrid import SendGridAPIClient
-    from sendgrid.helpers.mail import Mail
-    SENDGRID_AVAILABLE = True
+    import requests
+    MAILGUN_AVAILABLE = True
 except ImportError:
     # Fallback to Django's email backend
     from django.core.mail import send_mail
-    SENDGRID_AVAILABLE = False
+    MAILGUN_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +101,7 @@ Unfortunately, your application has been declined."""
 
 def _send_email(to_email, subject, message, description):
     """
-    Send email using SendGrid Web API or fallback to Django's email backend.
+    Send email using Mailgun Web API or fallback to Django's email backend.
     
     Args:
         to_email (str): Recipient email address
@@ -113,28 +112,29 @@ def _send_email(to_email, subject, message, description):
     Returns:
         bool: True if successful, False otherwise
     """
-    if SENDGRID_AVAILABLE and hasattr(settings, 'SENDGRID_API_KEY'):
-        # Use SendGrid Web API
+    if MAILGUN_AVAILABLE and hasattr(settings, 'MAILGUN_API_KEY') and hasattr(settings, 'MAILGUN_DOMAIN'):
+        # Use Mailgun Web API
         try:
-            mail = Mail(
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to_emails=to_email,
-                subject=subject,
-                plain_text_content=message
+            response = requests.post(
+                f"https://api.mailgun.net/v3/{settings.MAILGUN_DOMAIN}/messages",
+                auth=("api", settings.MAILGUN_API_KEY),
+                data={
+                    "from": settings.DEFAULT_FROM_EMAIL,
+                    "to": to_email,
+                    "subject": subject,
+                    "text": message
+                }
             )
             
-            sg = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
-            response = sg.send(mail)
-            
-            if response.status_code == 202:
-                logger.info(f"SendGrid API: {description} sent to {to_email}")
+            if response.status_code == 200:
+                logger.info(f"Mailgun API: {description} sent to {to_email}")
                 return True
             else:
-                logger.error(f"SendGrid API error: {response.status_code} for {description}")
+                logger.error(f"Mailgun API error: {response.status_code} - {response.text}")
                 return False
                 
         except Exception as e:
-            logger.error(f"Failed to send {description} via SendGrid API: {e}")
+            logger.error(f"Failed to send {description} via Mailgun API: {e}")
             return False
     else:
         # Fallback to Django's email backend
