@@ -23,10 +23,12 @@ class CmdApplication(MuxCommand):
     Manage character applications.
     
     Usage:
-        application              - List all applications
-        application/view <id>    - View application details
-        application/approve <id> - Approve application
-        application/decline <id> - Decline application
+        application                     - List all applications
+        application/view <id>           - View application details
+        application/approve <id>        - Approve application (sends email)
+        application/approve <id>=<comment> - Approve with personal message
+        application/decline <id>        - Decline application (sends email)
+        application/decline <id>=<comment> - Decline with explanation
     """
     
     key = "application"
