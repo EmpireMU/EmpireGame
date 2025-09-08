@@ -15,7 +15,7 @@ class Application(DefaultScript):
         """
         self.key = "application_unnamed"
         self.desc = "Character application"
-        self.interval = None  # Not a repeating script
+        self.interval = -1  # Not a repeating script
         self.persistent = True
         
         # Initialize storage attributes
