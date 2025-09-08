@@ -63,11 +63,16 @@ class CmdApplication(MuxCommand):
         """
         if not self.switches or "pending" in self.switches:
             # List pending applications (default behavior)
-            apps = ScriptDB.objects.filter(
+            all_apps = ScriptDB.objects.filter(
                 db_typeclass_path="typeclasses.applications.Application"
-            ).exclude(
-                db_status__in=["approved", "rejected"]
             ).order_by('-id')
+            
+            # Filter to only pending applications (those without approved/rejected status)
+            apps = []
+            for app in all_apps:
+                status = app.db.status
+                if not status or status not in ["approved", "rejected"]:
+                    apps.append(app)
             
             if not apps:
                 self.caller.msg("No pending applications.")
@@ -82,10 +87,16 @@ class CmdApplication(MuxCommand):
             
         if "approved" in self.switches:
             # List approved applications (last 20)
-            apps = ScriptDB.objects.filter(
-                db_typeclass_path="typeclasses.applications.Application",
-                db_status="approved"
-            ).order_by('-id')[:20]
+            all_apps = ScriptDB.objects.filter(
+                db_typeclass_path="typeclasses.applications.Application"
+            ).order_by('-id')
+            
+            apps = []
+            for app in all_apps:
+                if app.db.status == "approved":
+                    apps.append(app)
+                if len(apps) >= 20:  # Limit to 20
+                    break
             
             if not apps:
                 self.caller.msg("No approved applications found.")
@@ -102,10 +113,16 @@ class CmdApplication(MuxCommand):
             
         if "declined" in self.switches:
             # List declined applications (last 20)
-            apps = ScriptDB.objects.filter(
-                db_typeclass_path="typeclasses.applications.Application",
-                db_status="rejected"
-            ).order_by('-id')[:20]
+            all_apps = ScriptDB.objects.filter(
+                db_typeclass_path="typeclasses.applications.Application"
+            ).order_by('-id')
+            
+            apps = []
+            for app in all_apps:
+                if app.db.status == "rejected":
+                    apps.append(app)
+                if len(apps) >= 20:  # Limit to 20
+                    break
             
             if not apps:
                 self.caller.msg("No declined applications found.")
@@ -122,9 +139,9 @@ class CmdApplication(MuxCommand):
             
         if "all" in self.switches:
             # List all applications (last 50)
-            apps = ScriptDB.objects.filter(
+            apps = list(ScriptDB.objects.filter(
                 db_typeclass_path="typeclasses.applications.Application"
-            ).order_by('-id')[:50]
+            ).order_by('-id')[:50])
             
             if not apps:
                 self.caller.msg("No applications found.")
@@ -351,30 +368,28 @@ class CmdRoster(MuxCommand):
             self.caller.msg(f"Character '{char_name}' is not available for applications.")
             return
             
-        # Check for existing pending applications from this email for this character
-        existing_apps = ScriptDB.objects.filter(
-            db_typeclass_path="typeclasses.applications.Application",
-            db_char_name=char_name,
-            db_email=email
-        ).exclude(db_status__in=["approved", "rejected"])
-        
-        if existing_apps.exists():
-            self.caller.msg(f"You already have a pending application for character '{char_name}'. "
-                          "Please wait for staff to review your existing application.")
-            return
-            
-        # Check if this email already has an approved application for this character
-        approved_apps = ScriptDB.objects.filter(
-            db_typeclass_path="typeclasses.applications.Application",
-            db_char_name=char_name,
-            db_email=email,
-            db_status="approved"
+        # Check for existing applications from this email for this character
+        all_apps = ScriptDB.objects.filter(
+            db_typeclass_path="typeclasses.applications.Application"
         )
         
-        if approved_apps.exists():
-            self.caller.msg(f"You have already been approved for character '{char_name}'. "
-                          "If you believe this is an error, please contact staff.")
-            return
+        # Check for pending applications from this email for this character
+        for app in all_apps:
+            if (app.db.char_name == char_name and 
+                app.db.email == email and 
+                (not app.db.status or app.db.status not in ["approved", "rejected"])):
+                self.caller.msg(f"You already have a pending application for character '{char_name}'. "
+                              "Please wait for staff to review your existing application.")
+                return
+        
+        # Check if this email already has an approved application for this character  
+        for app in all_apps:
+            if (app.db.char_name == char_name and 
+                app.db.email == email and 
+                app.db.status == "approved"):
+                self.caller.msg(f"You have already been approved for character '{char_name}'. "
+                              "If you believe this is an error, please contact staff.")
+                return
             
         # Create the application
         try:
