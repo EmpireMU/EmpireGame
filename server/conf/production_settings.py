@@ -61,16 +61,32 @@ MULTISESSION_MODE = 1  #Many sessions per account, with input and output being t
 COMMAND_PARSER = "server.conf.cmdparser.cmdparser"
 
 ######################################################################
+# Email Configuration
+######################################################################
+
+# Mailgun Web API configuration for production (preferred)
+# Fallback email backend for development or if Mailgun unavailable
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Mailgun settings (will be overridden in secret_settings.py)
+MAILGUN_API_KEY = 'your-mailgun-api-key'
+MAILGUN_DOMAIN = 'your-domain.mailgun.org'
+
+# Default from email address (will be overridden in secret_settings.py)
+DEFAULT_FROM_EMAIL = 'Empire MUSH <noreply@your-domain.mailgun.org>'
+SERVER_EMAIL = 'Empire MUSH <noreply@your-domain.mailgun.org>'
+
+#Remove debug and error output for production
+DEBUG = True
+IN_GAME_ERRORS = False
+
+######################################################################
 # Settings given in secret_settings.py override those in this file.
 ######################################################################
 try:
     from server.conf.secret_settings import *
 except ImportError:
     print("secret_settings.py file not found or failed to import.")
-
-#Remove debug and error output for production
-DEBUG = True
-IN_GAME_ERRORS = False
 
 ALLOWED_HOSTS = ['178.62.90.58', 'localhost', 'empiremush.org', 'www.empiremush.org']
 
@@ -127,19 +143,4 @@ SECURE_SSL_REDIRECT = False  # handled by Caddy to avoid redirect loops
 # Tighten browser security headers
 SECURE_REFERRER_POLICY = 'same-origin'
 
-######################################################################
-# Email Configuration (Production)
-######################################################################
-
-# Mailgun Web API configuration for production (preferred)
-# Fallback email backend for development or if Mailgun unavailable
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# Mailgun settings (will be overridden in secret_settings.py)
-MAILGUN_API_KEY = 'your-mailgun-api-key'
-MAILGUN_DOMAIN = 'your-domain.mailgun.org'
-
-# Default from email address (will be overridden in secret_settings.py)
-DEFAULT_FROM_EMAIL = 'Empire MUSH <noreply@your-domain.mailgun.org>'
-SERVER_EMAIL = 'Empire MUSH <noreply@your-domain.mailgun.org>'
 
