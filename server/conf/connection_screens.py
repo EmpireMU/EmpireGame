@@ -26,8 +26,8 @@ from evennia import utils
 
 CONNECTION_SCREEN = """
 |b==============================================================|n
- Welcome to |g{}|n! For more details about the game, visit the
- wiki at https://www.worldanvil.com/w/empire-empiremux
+ Welcome to |540{}|n! For more details about the game, visit the
+ website at https://www.empiremush.org
 
  You can connect to a guest account to apply for a character or
  chat on channels by typing:
@@ -36,8 +36,14 @@ CONNECTION_SCREEN = """
  If you have an existing account, connect to it by typing:
       |wconnect <username> <password>|n
 
+Information about the game and the setting can be found at:
+      |whttps://empiremush.org/world/|n
+
  A list of characters can be found at:
-      |wTODO INSERT URL HERE|n
+      |whttps://empiremush.org/characters/|n
+
+The game rules can be found at:
+      |whttps://empiremush.org/world/game-rules/|n
 
  Enter |whelp|n for information on game commands.
  |wlook|n will redisplay this screen.
