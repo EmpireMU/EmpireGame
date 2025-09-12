@@ -1,4 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block header_ext %}
+<link rel="stylesheet" href="{% static 'website/css/custom.css' %}">
+{% endblock %}
+
 {% block content %}
 
 <div class="container mt-4">
@@ -115,5 +121,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
 
 {% endblock %} 
