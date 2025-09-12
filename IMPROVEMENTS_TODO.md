@@ -14,13 +14,20 @@
 - **Benefit:** Prevents duplicate applications, provides history, eliminates ID waste
 - **Added:** Smart filtering (pending/approved/declined/all) for performance
 
-### Better Account Tracking
-- **Current:** Store just email strings in applications
-- **Improvement:** Store structured account info (account_id, username, email)
-- **Benefit:** Better tracking even if accounts change hands
-- **Time:** 10 minutes
+### ✅ Better Account Tracking - COMPLETED (Analysis Phase)
+- **Was:** Store just email strings in applications with no cross-reference capability
+- **Now:** `checkemails` command provides cross-email IP analysis and application pattern detection
+- **Benefit:** Multi-accounting detection, shared IP warnings, complete application history
+- **Added:** ASCII-friendly output compatible with all MUD clients
+- **Note:** Still uses email-based tracking; true account linking could be post-launch enhancement
 
 ## Medium Priority (Post-Launch)
+
+### True Account Linking
+- **Current:** Applications track emails, analysis via `checkemails` command
+- **Enhancement:** Link applications directly to Account objects (account_id, username)
+- **Benefit:** Robust tracking across email changes, account transfers
+- **Time:** 15-20 minutes to modify application creation
 
 ### Basic Scene Logging
 - **Add:** Simple RP logging to emit/pose commands using room attributes

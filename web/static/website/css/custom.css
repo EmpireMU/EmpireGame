@@ -150,3 +150,107 @@ table td, .table td {
     color: var(--empire-cream) !important;
 }
 
+/* Button styling to match Empire theme */
+.btn-primary {
+    background: linear-gradient(135deg, var(--empire-copper), var(--empire-dark-copper)) !important;
+    border-color: var(--empire-copper) !important;
+    color: var(--empire-cream) !important;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--empire-dark-copper), var(--empire-copper)) !important;
+    border-color: var(--empire-dark-copper) !important;
+    color: var(--empire-cream) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(199, 134, 43, 0.3);
+}
+
+.btn-primary:focus, .btn-primary.focus {
+    box-shadow: 0 0 0 0.2rem rgba(199, 134, 43, 0.5) !important;
+    color: var(--empire-cream) !important;
+}
+
+.btn-primary:active, .btn-primary.active {
+    background: var(--empire-dark-copper) !important;
+    border-color: var(--empire-dark-copper) !important;
+    color: var(--empire-cream) !important;
+}
+
+.btn-outline-primary {
+    color: var(--empire-copper) !important;
+    border-color: var(--empire-copper) !important;
+    background: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+    background: var(--empire-copper) !important;
+    border-color: var(--empire-copper) !important;
+    color: var(--empire-cream) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(199, 134, 43, 0.3);
+}
+
+.btn-outline-primary:focus, .btn-outline-primary.focus {
+    box-shadow: 0 0 0 0.2rem rgba(199, 134, 43, 0.5) !important;
+}
+
+.btn-outline-primary:active, .btn-outline-primary.active {
+    background: var(--empire-copper) !important;
+    border-color: var(--empire-copper) !important;
+    color: var(--empire-cream) !important;
+}
+
+/* Secondary button styling for consistency */
+.btn-outline-secondary {
+    color: var(--empire-text-muted) !important;
+    border-color: var(--empire-text-muted) !important;
+    background: transparent !important;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-secondary:hover {
+    background: var(--empire-text-muted) !important;
+    border-color: var(--empire-text-muted) !important;
+    color: var(--empire-dark-bg) !important;
+    transform: translateY(-1px);
+}
+
+/* Badge styling to match Empire theme */
+.badge-primary, .bg-primary {
+    background-color: var(--empire-copper) !important;
+    color: var(--empire-cream) !important;
+}
+
+.badge-info, .bg-info {
+    background-color: var(--empire-dark-copper) !important;
+    color: var(--empire-cream) !important;
+}
+
+.badge-success, .bg-success {
+    background-color: #4a5d3a !important;
+    color: var(--empire-cream) !important;
+}
+
+.badge-warning, .bg-warning {
+    background-color: #8B4513 !important;
+    color: var(--empire-cream) !important;
+}
+
+.badge-secondary, .bg-secondary {
+    background-color: var(--empire-text-muted) !important;
+    color: var(--empire-dark-bg) !important;
+}
+
+.badge-light {
+    background-color: var(--empire-card-bg) !important;
+    color: var(--empire-text-light) !important;
+    border: 1px solid var(--empire-text-muted);
+}
+
+/* Text color overrides */
+.text-primary {
+    color: var(--empire-copper) !important;
+}
+
