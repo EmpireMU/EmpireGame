@@ -15,6 +15,7 @@ own cmdsets by inheriting from them or directly from `evennia.CmdSet`.
 """
 
 from evennia import default_cmds
+from evennia.commands.default import account as default_account
 from commands.charsheet import CharSheetCmdSet
 from commands.charsheet_editor import CharSheetEditorCmdSet
 from commands.charsheet_admin import CharSheetAdminCmdSet
@@ -44,6 +45,7 @@ from commands.family import CmdFamily
 from commands.balance import BalanceCmdSet
 from commands.directions import CmdDirections
 from commands.emit import CmdEmit
+from commands.ooc import CmdOOC, CmdUnpuppet
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -95,6 +97,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(BalanceCmdSet)
         self.add(CmdDirections())
         self.add(CmdEmit())
+        self.add(CmdOOC())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):
@@ -128,6 +131,9 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
         self.add(CmdCheckEmails())
         # Add channel admin commands
         self.add(ChannelAdminCmdSet)
+        # Replace default ooc/unpuppet handling so `ooc` is free for chat
+        self.remove(default_account.CmdOOC)
+        self.add(CmdUnpuppet())
 
 
 class UnloggedinCmdSet(default_cmds.UnloggedinCmdSet):

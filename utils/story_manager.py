@@ -28,6 +28,10 @@ class StoryManager:
         if not title.strip():
             raise ValueError("Chapter title cannot be empty")
             
+        # Get next order number before creating the chapter
+        all_chapters = cls.get_all_chapters()
+        next_order = len(all_chapters) + 1
+        
         chapter_id = cls.get_next_chapter_id()
         chapter = create_script(
             "typeclasses.story.StoryElement",
@@ -36,10 +40,6 @@ class StoryManager:
         
         if not chapter:
             raise RuntimeError("Failed to create chapter")
-            
-        # Get next order number
-        all_chapters = cls.get_all_chapters()
-        next_order = len(all_chapters) + 1
             
         chapter.db.story_id = chapter_id
         chapter.db.story_type = "chapter"
@@ -72,6 +72,10 @@ class StoryManager:
         if not content.strip():
             raise ValueError("Story update content cannot be empty")
             
+        # Get next order number for this chapter before creating the update
+        existing_updates = cls.get_chapter_updates(chapter_id)
+        next_order = len(existing_updates) + 1
+        
         update_id = cls.get_next_update_id()
         update = create_script(
             "typeclasses.story.StoryElement",
@@ -80,10 +84,6 @@ class StoryManager:
         
         if not update:
             raise RuntimeError("Failed to create story update")
-            
-        # Get next order number for this chapter
-        existing_updates = cls.get_chapter_updates(chapter_id)
-        next_order = len(existing_updates) + 1
             
         update.db.story_id = update_id
         update.db.story_type = "update"
@@ -358,4 +358,38 @@ class StoryManager:
                             return update, fallback_book
                     return None, None
             except ValueError:
-                return None, None 
+                return None, None
+    
+    @classmethod
+    def delete_chapter(cls, chapter_id):
+        """Delete a chapter and all its story updates.
+        
+        Args:
+            chapter_id (int): The chapter ID to delete
+            
+        Returns:
+            tuple: (success, message, deleted_count) where:
+                - success (bool): Whether the deletion succeeded
+                - message (str): Status message
+                - deleted_count (int): Number of story updates deleted
+        """
+        # Find the chapter
+        chapter = cls.find_chapter(chapter_id)
+        if not chapter:
+            return False, f"Chapter #{chapter_id} not found", 0
+        
+        # Safety check: prevent deletion of current chapter
+        if chapter.db.is_current:
+            return False, "Cannot delete the current chapter. Set a different chapter as current first.", 0
+        
+        # Get and delete all story updates in this chapter
+        updates = cls.get_chapter_updates(chapter_id)
+        deleted_count = len(updates)
+        for update in updates:
+            update.delete()
+        
+        # Delete the chapter itself
+        chapter_title = chapter.db.title
+        chapter.delete()
+        
+        return True, f"Deleted chapter #{chapter_id}: {chapter_title}", deleted_count 

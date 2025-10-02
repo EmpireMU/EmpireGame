@@ -22,8 +22,10 @@ class CmdStory(MuxCommand):
         story/read <id>                 - Read story update (book-scoped number)
         story/read "<book>" <id>        - Read story update from specific book
         story/create <title>=<content> - Create new story update (staff only)
-        story/edit <id> <title>=<content> - Edit story update (staff only)
+        story/edit <id>=<content>      - Edit story update (staff only)
+        story/edit "<book>" <id>=<content> - Edit update from specific book (staff only)
         story/delete <id>               - Delete story update (staff only)
+        story/delete "<book>" <id>      - Delete update from specific book (staff only)
         story/list                      - Show all story updates (staff only)
         
     Examples:
@@ -32,8 +34,10 @@ class CmdStory(MuxCommand):
         story "A New Book" 1            (1st update in "A New Book")
         story/read 3
         story/create Tensions Rise=The Duke's mysterious visitors continue to arrive...
-        story/edit 5 Tensions Rise=The Duke's mysterious visitors arrived under cover of darkness...
+        story/edit 5=The Duke's mysterious visitors arrived under cover of darkness...
+        story/edit "A New Book" 1=New content for first update in A New Book...
         story/delete 5
+        story/delete "Boop" 15
         
     Story updates use book-scoped numbering for user convenience. Each book
     has its own sequence (1, 2, 3...) while maintaining global IDs internally.
@@ -222,67 +226,57 @@ class CmdStory(MuxCommand):
     def _edit_update(self):
         """Edit an existing story update."""
         if not self.args or "=" not in self.args:
-            self.msg("Usage: story/edit <id> <title>=<content>")
+            self.msg("Usage: story/edit <id>=<new content> OR story/edit \"<book>\" <id>=<new content>")
             return
             
-        id_and_title, content = self.args.split("=", 1)
+        id_part, content = self.args.split("=", 1)
         content = content.strip()
         
-        parts = id_and_title.strip().split(" ", 1)
-        if len(parts) < 2:
-            self.msg("Usage: story/edit <id> <title>=<content>")
-            return
-            
-        try:
-            update_id = int(parts[0])
-        except ValueError:
-            self.msg("Update ID must be a number.")
-            return
-            
-        title = parts[1].strip()
-        
-        if not title:
-            self.msg("Title cannot be empty.")
-            return
         if not content:
             self.msg("Content cannot be empty.")
             return
-            
-        # Find the update
-        update = StoryManager.find_story_update(update_id)
+        
+        # Parse the ID part - might be just "3" or '"Book Title" 3'
+        update, book_title = StoryManager.parse_story_reference(id_part.strip())
+        
         if not update:
-            self.msg(f"Story update #{update_id} not found.")
+            self.msg(f"Story update not found. Use: story/edit <id>=<content> OR story/edit \"<book>\" <id>=<content>")
             return
             
-        # Update it
-        old_title = update.db.title
-        update.db.title = title
+        # Update content only, keep existing title
         update.db.content = content
         
-        self.msg(f"Updated story update #{update_id}: |y{old_title}|n -> |c{title}|n")
+        # Get book-scoped number for display
+        book_scoped_num = StoryManager.get_book_scoped_number(update.db.story_id, book_title)
+        
+        if book_scoped_num and book_title and book_title != "Untitled Book":
+            self.msg(f"Updated story update #{book_scoped_num} in '{book_title}': |c{update.db.title}|n")
+        else:
+            self.msg(f"Updated story update #{update.db.story_id}: |c{update.db.title}|n")
     
     def _delete_update(self):
         """Delete a story update."""
         if not self.args:
-            self.msg("Usage: story/delete <id>")
+            self.msg("Usage: story/delete <id> OR story/delete \"<book>\" <id>")
             return
             
-        try:
-            update_id = int(self.args.strip())
-        except ValueError:
-            self.msg("Update ID must be a number.")
-            return
-            
-        # Find the update
-        update = StoryManager.find_story_update(update_id)
+        # Parse the reference - might be just "3" or '"Book Title" 3'
+        update, book_title = StoryManager.parse_story_reference(self.args.strip())
+        
         if not update:
-            self.msg(f"Story update #{update_id} not found.")
+            self.msg(f"Story update not found. Use: story/delete <id> OR story/delete \"<book>\" <id>")
             return
             
         title = update.db.title
+        global_id = update.db.story_id
+        book_scoped_num = StoryManager.get_book_scoped_number(global_id, book_title)
+        
         update.delete()
         
-        self.msg(f"Deleted story update #{update_id}: |r{title}|n")
+        if book_scoped_num and book_title and book_title != "Untitled Book":
+            self.msg(f"Deleted story update #{book_scoped_num} from '{book_title}': |r{title}|n")
+        else:
+            self.msg(f"Deleted story update #{global_id}: |r{title}|n")
     
     def _list_all_updates(self):
         """List all story updates for staff."""
@@ -719,8 +713,6 @@ class CmdChapter(MuxCommand):
             self.msg("No chapters found.")
             return
             
-        table = evtable.EvTable("ID", "Title", "Book", "Volume", "Current", border="cells")
-        
         table = evtable.EvTable("ID", "Title", "Book", "Volume", "Time", "Current", border="cells")
         
         for chapter in all_chapters:

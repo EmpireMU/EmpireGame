@@ -59,15 +59,17 @@ class RequestManager:
         if not text.strip():
             raise ValueError("Request text cannot be empty")
             
+        request_id = cls.get_next_id()
+
         request = create_script(
             "typeclasses.requests.Request",
-            key=f"Request-{cls.get_next_id()}"
+            key=f"Request-{request_id}"
         )
         
         if not request:
             raise RuntimeError("Failed to create request")
             
-        request.db.id = cls.get_next_id()
+        request.db.id = request_id
         request.db.title = title.strip()
         request.db.text = text.strip()
         request.db.submitter = submitter
