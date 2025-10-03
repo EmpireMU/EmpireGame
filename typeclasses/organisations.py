@@ -289,7 +289,9 @@ class Organisation(ObjectParent, DefaultObject):
         """
         members = []
         for char_id, rank in self.db.members.items():
-            char = ObjectDB.objects.get(id=char_id)
+            char = ObjectDB.objects.filter(id=char_id).first()
+            if not char:
+                continue
             rank_name = self.db.rank_names.get(rank, f"Rank {rank}")
             members.append((char, rank, rank_name))
             
@@ -304,8 +306,12 @@ class Organisation(ObjectParent, DefaultObject):
         """
         # Remove all members
         for char_id in list(self.db.members.keys()):
-            char = ObjectDB.objects.get(id=char_id)
-            self.remove_member(char)
+            char = ObjectDB.objects.filter(id=char_id).first()
+            if char:
+                self.remove_member(char)
+            else:
+                # Remove stale membership entry
+                del self.db.members[char_id]
         
         # Delete the organisation
         super().delete() 

@@ -2,6 +2,8 @@
 Organization commands for managing organisations and their members.
 """
 
+import time
+
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia import CmdSet, create_object
 from evennia.utils import evtable
@@ -166,19 +168,25 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
         if not org:
             return
             
-        # Check if this is a confirmation
-        confirming = self.caller.db.delete_org_confirming
-        if confirming:
+        # Check if this is a confirmation for the same org
+        confirming = getattr(self.caller.db, "delete_org_confirming", None)
+        if isinstance(confirming, dict) and confirming.get("name") == org.name:
+            # Check timeout (60 seconds)
+            if time.time() - confirming.get("timestamp", 0) > 60:
+                self.msg("Delete confirmation timed out. Please repeat the command to confirm.")
+                self.caller.db.delete_org_confirming = {"name": org.name, "timestamp": time.time()}
+                return
             # Delete the organisation
             name = org.name
             org.delete()
             self.msg(f"Deleted organisation: {name}")
             del self.caller.db.delete_org_confirming
             return
-        # First time through - ask for confirmation
+
+        # First time through - ask for confirmation and store target
         self.msg(f"|yWARNING: This will delete the organisation '{org.name}' and remove all member references.|n")
-        self.msg("|yThis action cannot be undone. Type 'org/delete' again to confirm.|n")
-        self.caller.db.delete_org_confirming = True
+        self.msg("|yThis action cannot be undone. Repeat the command to confirm within 60 seconds.|n")
+        self.caller.db.delete_org_confirming = {"name": org.name, "timestamp": time.time()}
         
     def manage_member(self):
         """Add or update a member's rank."""

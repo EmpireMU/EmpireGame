@@ -20,13 +20,15 @@ def find_board(board_name, debug_to=None):
     # Try direct script search first
     boards = search_script(board_name, typeclass=BulletinBoardScript)
         
-    # If no boards found, try direct database query
-    if not boards:
-        db_boards = ScriptDB.objects.filter(db_typeclass_path="typeclasses.boards.BulletinBoardScript")
-        boards = list(db_boards)
-    
-    # For direct board search, we've already searched by name
-    return boards[0] if boards else None
+    if boards:
+        return boards[0]
+
+    # No direct match - fall back to case-insensitive lookup via ScriptDB
+    db_board = ScriptDB.objects.filter(
+        db_typeclass_path="typeclasses.boards.BulletinBoardScript",
+        db_key__iexact=board_name
+    ).first()
+    return db_board
 
 class CmdBoard(MuxCommand):
     """

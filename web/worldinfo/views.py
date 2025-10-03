@@ -88,12 +88,10 @@ def worldinfo_index(request):
     
     # Define custom category ordering
     CATEGORY_ORDER = [
-        'Introduction',
-        'World Overview',
-        'Houses of the Empire',
-        'Other Organisations',
-        'The City of Sanctuary',
-        'Lands Beyond the Empire'
+        'Introductory Information',
+        'Setting Information',
+        'Houses and Organisations',
+        'Game Mechanics',
     ]
     
     def get_category_order(category):
