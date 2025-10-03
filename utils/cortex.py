@@ -4,7 +4,6 @@ Cortex Prime game system utilities.
 
 import re
 from typing import List, Tuple, Optional, Dict, NamedTuple, Any
-from collections import defaultdict
 from random import randint
 
 # Define difficulty ratings as constants
@@ -186,10 +185,10 @@ def validate_dice_pool(dice: List[TraitDie]) -> Optional[str]:
             
         if missing_sets:
             if len(missing_sets) == 1:
-                return f"When using traits, you must include a {missing_sets[0]}."
+                return f"When using traits, you must include {missing_sets[0]}."
             else:
                 missing = ", ".join(missing_sets[:-1]) + f" and {missing_sets[-1]}"
-                return f"When using traits, you must include an {missing}."
+                return f"When using traits, you must include {missing}."
         
     return None
 

@@ -12,9 +12,7 @@ from utils.cortex import (
     validate_dice_pool,
     roll_die,
     process_results,
-    get_success_level,
-    format_roll_result,
-    step_die
+    get_success_level
 )
 from collections import defaultdict
 
@@ -108,11 +106,10 @@ class CmdCortexRoll(Command):
     - Effect die (highest unused die) determines impact
     - Difficulty numbers:
       * 3 - very easy
-      * 6 - easy
-      * 9 - moderate
-      * 12 - hard
-      * 15 - very hard
-      * 18 - extreme
+      * 7 - easy
+      * 11 - challenging
+      * 15 - hard
+      * 19 - very hard
     """
     
     key = "roll"
@@ -146,22 +143,29 @@ class CmdCortexRoll(Command):
         
         # First pass: handle quoted strings
         for word in self.args.split():
-            if word.startswith('"'):
-                in_quotes = True
-                current_arg.append(word[1:])
-            elif word.endswith('"'):
-                in_quotes = False
-                current_arg.append(word[:-1])
-                args.append(' '.join(current_arg))
-                current_arg = []
-            elif in_quotes:
-                current_arg.append(word)
-            else:
-                # Handle underscores by replacing them with spaces
-                if '_' in word:
-                    args.append(word.replace('_', ' '))
+            if in_quotes:
+                if word.endswith('"'):
+                    current_arg.append(word[:-1])
+                    args.append(' '.join(current_arg))
+                    current_arg = []
+                    in_quotes = False
                 else:
-                    args.append(word)
+                    current_arg.append(word)
+                continue
+
+            if word.startswith('"'):
+                if word.endswith('"') and len(word) > 1:
+                    args.append(word[1:-1])
+                else:
+                    in_quotes = True
+                    current_arg.append(word[1:])
+                continue
+
+            # Handle underscores by replacing them with spaces
+            if '_' in word:
+                args.append(word.replace('_', ' '))
+            else:
+                args.append(word)
                 
         if current_arg:  # Handle any remaining words
             args.append(' '.join(current_arg))
