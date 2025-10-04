@@ -1,13 +1,14 @@
 # Simple site assets upload for admins
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import uuid
 import os
+from datetime import datetime
 
 # Import resize function from roster
 from web.roster.views import resize_image
@@ -69,11 +70,100 @@ def upload_site_asset(request):
         
         url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else f"/media/{saved_path}"
         
+        # Extract the actual saved filename (Django may have modified it if file existed)
+        actual_filename = os.path.basename(saved_path)
+        
         return JsonResponse({
             'success': True,
-            'filename': filename,
+            'filename': actual_filename,  # Return the actual saved filename
             'url': url,
             'path': saved_path
         })
     
     return render(request, 'website/upload_assets.html')
+
+@staff_member_required
+def manage_site_assets(request):
+    """View to list and manage all site assets."""
+    site_assets_dir = 'site_assets/'
+    files = []
+    
+    try:
+        # List all files in the site_assets directory
+        directories, filenames = default_storage.listdir(site_assets_dir)
+        
+        for filename in filenames:
+            file_path = os.path.join(site_assets_dir, filename)
+            
+            try:
+                # Get file info
+                file_size = default_storage.size(file_path)
+                modified_time = default_storage.get_modified_time(file_path)
+                url = default_storage.url(file_path) if hasattr(default_storage, 'url') else f"/media/{file_path}"
+                
+                # Determine file type
+                ext = os.path.splitext(filename)[1].lower()
+                is_image = ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+                
+                files.append({
+                    'filename': filename,
+                    'path': file_path,
+                    'url': url,
+                    'size': file_size,
+                    'size_kb': round(file_size / 1024, 1),
+                    'modified': modified_time,
+                    'is_image': is_image,
+                    'extension': ext
+                })
+            except Exception as e:
+                # Skip files that can't be read
+                continue
+        
+        # Sort by modification time (newest first)
+        files.sort(key=lambda x: x['modified'], reverse=True)
+        
+    except Exception as e:
+        # Directory might not exist yet
+        pass
+    
+    return render(request, 'website/manage_assets.html', {'files': files})
+
+@staff_member_required
+@require_http_methods(["DELETE", "POST"])
+@csrf_protect
+def delete_site_asset(request):
+    """Delete a site asset file."""
+    try:
+        if request.method == "POST":
+            # Handle POST request with filename in body
+            import json
+            data = json.loads(request.body)
+            filename = data.get('filename')
+        else:
+            # Handle DELETE request
+            import json
+            data = json.loads(request.body)
+            filename = data.get('filename')
+        
+        if not filename:
+            return JsonResponse({'error': 'No filename provided'}, status=400)
+        
+        # Ensure the file is in the site_assets directory (security check)
+        file_path = os.path.join('site_assets/', filename)
+        if not file_path.startswith('site_assets/'):
+            return JsonResponse({'error': 'Invalid file path'}, status=400)
+        
+        # Check if file exists
+        if not default_storage.exists(file_path):
+            return JsonResponse({'error': 'File not found'}, status=404)
+        
+        # Delete the file
+        default_storage.delete(file_path)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'File {filename} deleted successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

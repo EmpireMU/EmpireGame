@@ -7,9 +7,12 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
-                    <h4>Upload Site Assets</h4>
-                    <small class="text-muted">Admin only - upload logos, icons, etc.</small>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4>Upload Site Assets</h4>
+                        <small class="text-muted">Admin only - upload logos, icons, etc.</small>
+                    </div>
+                    <a href="/admin/manage-assets/" class="btn btn-secondary">Manage Assets</a>
                 </div>
                 <div class="card-body">
                     <form id="assetUploadForm" enctype="multipart/form-data">
@@ -43,8 +46,15 @@
                     <div id="uploadResult" class="mt-3" style="display: none;">
                         <div class="alert alert-success">
                             <strong>Upload successful!</strong><br>
-                            <strong>URL:</strong> <span id="assetUrl"></span><br>
-                            <strong>Path:</strong> <span id="assetPath"></span>
+                            <strong>Filename:</strong> <span id="assetFilename"></span><br>
+                            <strong>URL:</strong> <input type="text" id="assetUrl" class="form-control form-control-sm mt-1" readonly onclick="this.select();"><br>
+                            <a href="/admin/manage-assets/" class="btn btn-sm btn-primary mt-2">View All Assets</a>
+                        </div>
+                    </div>
+                    <div id="uploadError" class="mt-3" style="display: none;">
+                        <div class="alert alert-danger">
+                            <strong>Upload failed!</strong><br>
+                            <span id="errorMessage"></span>
                         </div>
                     </div>
                 </div>
@@ -69,15 +79,23 @@ document.getElementById('assetUploadForm').addEventListener('submit', function(e
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            document.getElementById('assetUrl').textContent = data.url;
-            document.getElementById('assetPath').textContent = data.path;
+            document.getElementById('assetFilename').textContent = data.filename;
+            document.getElementById('assetUrl').value = data.url;
             document.getElementById('uploadResult').style.display = 'block';
+            document.getElementById('uploadError').style.display = 'none';
+            
+            // Reset the form
+            document.getElementById('assetUploadForm').reset();
         } else {
-            alert('Error: ' + data.error);
+            document.getElementById('errorMessage').textContent = data.error;
+            document.getElementById('uploadError').style.display = 'block';
+            document.getElementById('uploadResult').style.display = 'none';
         }
     })
     .catch(error => {
-        alert('Upload failed: ' + error);
+        document.getElementById('errorMessage').textContent = error.toString();
+        document.getElementById('uploadError').style.display = 'block';
+        document.getElementById('uploadResult').style.display = 'none';
     });
 });
 </script>

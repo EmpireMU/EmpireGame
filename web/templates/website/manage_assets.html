@@ -1,0 +1,156 @@
+{% extends "website/base.html" %}
+
+{% block titleblock %}Manage Site Assets{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4>Manage Site Assets</h4>
+                        <small class="text-muted">View and manage uploaded site assets (logos, icons, etc.)</small>
+                    </div>
+                    <a href="/admin/upload-assets/" class="btn btn-primary">Upload New Asset</a>
+                </div>
+                <div class="card-body">
+                    {% if files %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Preview</th>
+                                    <th>Filename</th>
+                                    <th>Size</th>
+                                    <th>Modified</th>
+                                    <th>URL</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                <tr id="file-row-{{ forloop.counter }}">
+                                    <td>
+                                        {% if file.is_image %}
+                                        <a href="{{ file.url }}" target="_blank">
+                                            <img src="{{ file.url }}" alt="{{ file.filename }}" 
+                                                 style="max-width: 80px; max-height: 80px; object-fit: contain;" 
+                                                 class="img-thumbnail">
+                                        </a>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ file.extension }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ file.filename }}</strong>
+                                    </td>
+                                    <td>{{ file.size_kb }} KB</td>
+                                    <td>{{ file.modified|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" 
+                                               value="{{ file.url }}" readonly 
+                                               onclick="this.select();"
+                                               style="width: 300px; font-size: 0.85em;">
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info me-1" 
+                                                onclick="copyToClipboard('{{ file.url }}')">
+                                            Copy URL
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" 
+                                                onclick="deleteFile('{{ file.filename }}', {{ forloop.counter }})">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <strong>No assets found.</strong> Upload your first asset to get started!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Create a temporary success message
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.remove('btn-info');
+        btn.classList.add('btn-success');
+        
+        setTimeout(function() {
+            btn.textContent = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-info');
+        }, 2000);
+    }).catch(function(err) {
+        alert('Failed to copy: ' + err);
+    });
+}
+
+function deleteFile(filename, rowId) {
+    if (!confirm(`Are you sure you want to delete "${filename}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    fetch('/admin/delete-asset/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            filename: filename
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the row from the table
+            const row = document.getElementById('file-row-' + rowId);
+            row.style.opacity = '0';
+            setTimeout(() => row.remove(), 300);
+            
+            // Show success message
+            alert('File deleted successfully!');
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Delete failed: ' + error);
+    });
+}
+</script>
+
+<style>
+#file-row-1, #file-row-2, #file-row-3, #file-row-4, #file-row-5,
+#file-row-6, #file-row-7, #file-row-8, #file-row-9, #file-row-10,
+#file-row-11, #file-row-12, #file-row-13, #file-row-14, #file-row-15,
+#file-row-16, #file-row-17, #file-row-18, #file-row-19, #file-row-20 {
+    transition: opacity 0.3s ease;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.img-thumbnail {
+    border: 1px solid #dee2e6;
+    padding: 0.25rem;
+    background-color: #fff;
+}
+</style>
+{% endblock %}
+

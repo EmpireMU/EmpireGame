@@ -14,7 +14,7 @@ from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
 
 from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
-from .views import upload_site_asset
+from .views.assets import upload_site_asset, manage_site_assets, delete_site_asset
 
 def character_creation_disabled(request):
     """Return a 403 Forbidden response for character creation/management URLs."""
@@ -51,8 +51,10 @@ urlpatterns = [
         template_name='website/password_reset_complete.html'
     ), name='password_reset_complete'),
     
-    # Admin asset upload
+    # Admin asset management
     path('admin/upload-assets/', upload_site_asset, name='upload-assets'),
+    path('admin/manage-assets/', manage_site_assets, name='manage-assets'),
+    path('admin/delete-asset/', delete_site_asset, name='delete-asset'),
     
     # Custom app URLs
     path('characters/', include('web.roster.urls')),
