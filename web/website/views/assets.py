@@ -167,3 +167,62 @@ def delete_site_asset(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@staff_member_required
+@require_POST
+@csrf_protect
+def rename_site_asset(request):
+    """Rename a site asset file."""
+    try:
+        import json
+        data = json.loads(request.body)
+        old_filename = data.get('old_filename')
+        new_filename = data.get('new_filename')
+        
+        if not old_filename or not new_filename:
+            return JsonResponse({'error': 'Both old and new filenames required'}, status=400)
+        
+        # Sanitize new filename (remove path separators and special chars)
+        new_filename = os.path.basename(new_filename)
+        new_filename = new_filename.replace('..', '')
+        
+        if not new_filename:
+            return JsonResponse({'error': 'Invalid new filename'}, status=400)
+        
+        # Ensure the files are in the site_assets directory (security check)
+        old_file_path = os.path.join('site_assets/', old_filename)
+        new_file_path = os.path.join('site_assets/', new_filename)
+        
+        if not old_file_path.startswith('site_assets/') or not new_file_path.startswith('site_assets/'):
+            return JsonResponse({'error': 'Invalid file path'}, status=400)
+        
+        # Check if old file exists
+        if not default_storage.exists(old_file_path):
+            return JsonResponse({'error': 'Original file not found'}, status=404)
+        
+        # Check if new filename already exists
+        if default_storage.exists(new_file_path):
+            return JsonResponse({'error': f'File {new_filename} already exists'}, status=400)
+        
+        # Read the old file content
+        with default_storage.open(old_file_path, 'rb') as old_file:
+            file_content = old_file.read()
+        
+        # Write to new location
+        default_storage.save(new_file_path, ContentFile(file_content))
+        
+        # Delete old file
+        default_storage.delete(old_file_path)
+        
+        # Get new URL
+        new_url = default_storage.url(new_file_path) if hasattr(default_storage, 'url') else f"/media/{new_file_path}"
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'File renamed from {old_filename} to {new_filename}',
+            'new_filename': new_filename,
+            'new_url': new_url
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

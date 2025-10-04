@@ -43,7 +43,12 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <strong>{{ file.filename }}</strong>
+                                        <strong class="filename-display" id="filename-{{ forloop.counter }}">{{ file.filename }}</strong>
+                                        <div class="rename-form" id="rename-form-{{ forloop.counter }}" style="display: none;">
+                                            <input type="text" class="form-control form-control-sm" 
+                                                   id="rename-input-{{ forloop.counter }}" 
+                                                   value="{{ file.filename }}">
+                                        </div>
                                     </td>
                                     <td>{{ file.size_kb }} KB</td>
                                     <td>{{ file.modified|date:"Y-m-d H:i" }}</td>
@@ -58,7 +63,25 @@
                                                 onclick="copyToClipboard('{{ file.url }}')">
                                             Copy URL
                                         </button>
+                                        <button class="btn btn-sm btn-warning me-1" 
+                                                id="rename-btn-{{ forloop.counter }}"
+                                                onclick="toggleRename({{ forloop.counter }}, '{{ file.filename }}')">
+                                            Rename
+                                        </button>
+                                        <button class="btn btn-sm btn-success me-1" 
+                                                id="save-btn-{{ forloop.counter }}"
+                                                style="display: none;"
+                                                onclick="saveRename({{ forloop.counter }}, '{{ file.filename }}')">
+                                            Save
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary me-1" 
+                                                id="cancel-btn-{{ forloop.counter }}"
+                                                style="display: none;"
+                                                onclick="cancelRename({{ forloop.counter }}, '{{ file.filename }}')">
+                                            Cancel
+                                        </button>
                                         <button class="btn btn-sm btn-danger" 
+                                                id="delete-btn-{{ forloop.counter }}"
                                                 onclick="deleteFile('{{ file.filename }}', {{ forloop.counter }})">
                                             Delete
                                         </button>
@@ -96,6 +119,106 @@ function copyToClipboard(text) {
         }, 2000);
     }).catch(function(err) {
         alert('Failed to copy: ' + err);
+    });
+}
+
+function toggleRename(rowId, currentFilename) {
+    // Hide the filename display and show the input
+    document.getElementById('filename-' + rowId).style.display = 'none';
+    document.getElementById('rename-form-' + rowId).style.display = 'block';
+    
+    // Show save/cancel buttons, hide rename/delete buttons
+    document.getElementById('rename-btn-' + rowId).style.display = 'none';
+    document.getElementById('delete-btn-' + rowId).style.display = 'none';
+    document.getElementById('save-btn-' + rowId).style.display = 'inline-block';
+    document.getElementById('cancel-btn-' + rowId).style.display = 'inline-block';
+    
+    // Focus the input
+    const input = document.getElementById('rename-input-' + rowId);
+    input.focus();
+    
+    // Select the filename without extension
+    const lastDotIndex = input.value.lastIndexOf('.');
+    if (lastDotIndex > 0) {
+        input.setSelectionRange(0, lastDotIndex);
+    } else {
+        input.select();
+    }
+}
+
+function cancelRename(rowId, originalFilename) {
+    // Reset the input to original value
+    document.getElementById('rename-input-' + rowId).value = originalFilename;
+    
+    // Show the filename display and hide the input
+    document.getElementById('filename-' + rowId).style.display = 'block';
+    document.getElementById('rename-form-' + rowId).style.display = 'none';
+    
+    // Show rename/delete buttons, hide save/cancel buttons
+    document.getElementById('rename-btn-' + rowId).style.display = 'inline-block';
+    document.getElementById('delete-btn-' + rowId).style.display = 'inline-block';
+    document.getElementById('save-btn-' + rowId).style.display = 'none';
+    document.getElementById('cancel-btn-' + rowId).style.display = 'none';
+}
+
+function saveRename(rowId, oldFilename) {
+    const newFilename = document.getElementById('rename-input-' + rowId).value.trim();
+    
+    if (!newFilename) {
+        alert('Filename cannot be empty');
+        return;
+    }
+    
+    if (newFilename === oldFilename) {
+        cancelRename(rowId, oldFilename);
+        return;
+    }
+    
+    fetch('/admin/rename-asset/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            old_filename: oldFilename,
+            new_filename: newFilename
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the display with new filename
+            document.getElementById('filename-' + rowId).textContent = data.new_filename;
+            
+            // Update the URL field
+            const row = document.getElementById('file-row-' + rowId);
+            const urlInput = row.querySelector('input[type="text"][readonly]');
+            if (urlInput) {
+                urlInput.value = data.new_url;
+            }
+            
+            // Update all onclick handlers that reference the old filename
+            document.getElementById('rename-btn-' + rowId).setAttribute('onclick', 
+                `toggleRename(${rowId}, '${data.new_filename}')`);
+            document.getElementById('save-btn-' + rowId).setAttribute('onclick', 
+                `saveRename(${rowId}, '${data.new_filename}')`);
+            document.getElementById('cancel-btn-' + rowId).setAttribute('onclick', 
+                `cancelRename(${rowId}, '${data.new_filename}')`);
+            document.getElementById('delete-btn-' + rowId).setAttribute('onclick', 
+                `deleteFile('${data.new_filename}', ${rowId})`);
+            
+            // Reset to display mode
+            cancelRename(rowId, data.new_filename);
+            
+            // Show success message
+            alert('File renamed successfully!');
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Rename failed: ' + error);
     });
 }
 
