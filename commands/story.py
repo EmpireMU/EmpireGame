@@ -17,27 +17,16 @@ class CmdStory(MuxCommand):
     
     Usage:
         story                           - Show story timeline
-        story <id>                      - Read story update (book-scoped number)
+        story <id>                      - Read story update from current book
         story "<book>" <id>             - Read story update from specific book
-        story/read <id>                 - Read story update (book-scoped number)
+        story/read <id>                 - Read story update from current book
         story/read "<book>" <id>        - Read story update from specific book
-        story/create <title>=<content> - Create new story update (staff only)
-        story/edit <id>=<content>      - Edit story update (staff only)
-        story/edit "<book>" <id>=<content> - Edit update from specific book (staff only)
-        story/delete <id>               - Delete story update (staff only)
-        story/delete "<book>" <id>      - Delete update from specific book (staff only)
-        story/list                      - Show all story updates (staff only)
         
     Examples:
-        story
-        story 3                         (3rd update in current book)
-        story "A New Book" 1            (1st update in "A New Book")
-        story/read 3
-        story/create Tensions Rise=The Duke's mysterious visitors continue to arrive...
-        story/edit 5=The Duke's mysterious visitors arrived under cover of darkness...
-        story/edit "A New Book" 1=New content for first update in A New Book...
-        story/delete 5
-        story/delete "Boop" 15
+        story                           - View the full story timeline
+        story 3                         - Read 3rd update in current book
+        story "A New Book" 1            - Read 1st update in "A New Book"
+        story/read 3                    - Same as 'story 3'
         
     Story updates use book-scoped numbering for user convenience. Each book
     has its own sequence (1, 2, 3...) while maintaining global IDs internally.
@@ -47,6 +36,42 @@ class CmdStory(MuxCommand):
     locks = "cmd:all();create:perm(Builder);edit:perm(Builder);delete:perm(Builder);list:perm(Builder);read:all()"
     help_category = "General"
     switch_options = ("create", "edit", "delete", "list", "read")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yBuilder Commands:|n
+        story/create <title>=<content>         - Create new story update
+        story/edit <id>=<content>              - Edit story update
+        story/edit "<book>" <id>=<content>     - Edit update from specific book
+        story/delete <id>                      - Delete story update
+        story/delete "<book>" <id>             - Delete update from specific book
+        story/list                             - Show all story updates
+        
+    Builder Examples:
+        story/create Tensions Rise=The Duke's mysterious visitors continue...
+        story/edit 5=The Duke's mysterious visitors arrived under cover...
+        story/edit "A New Book" 1=New content for first update...
+        story/delete 5                         - Delete update #5
+        story/list                             - List all updates
+            """
+        
+        return help_text
     
     def func(self):
         """Execute the command."""
@@ -343,23 +368,10 @@ class CmdChapter(MuxCommand):
     Usage:
         chapter                           - Show current chapter info
         chapter <id>                      - Show specific chapter info
-        chapter/create <title>            - Create new chapter (staff only)
-        chapter/setcurrent <id>           - Set current chapter (staff only)
-        chapter/edit <id> <title>         - Edit chapter title (staff only)
-        chapter/book <id> <book_title>    - Set chapter's book (staff only)
-        chapter/volume <id> <volume_title> - Set chapter's volume (staff only)
-        chapter/time <id> <time_desc>     - Set chapter's time (staff only)
-        chapter/list                      - List all chapters (staff only)
         
     Examples:
-        chapter
-        chapter 2
-        chapter/create Chapter 1: Gathering Storm - Spring 632 AF
-        chapter/setcurrent 3
-        chapter/edit 3 Chapter 1: The Gathering Storm - Spring 632 AF
-        chapter/book 3 The Imperial Crisis
-        chapter/volume 3 Volume I: Seeds of Rebellion
-        chapter/time 3 Three days after the siege began
+        chapter                           - View current chapter
+        chapter 2                         - View chapter #2
         
     Chapters represent major story divisions. Books and volumes are 
     organisational labels for grouping chapters in the larger narrative.
@@ -369,6 +381,47 @@ class CmdChapter(MuxCommand):
     locks = "cmd:all();create:perm(Builder);setcurrent:perm(Builder);edit:perm(Builder);book:perm(Builder);volume:perm(Builder);time:perm(Builder);delete:perm(Builder);list:perm(Builder);debug:perm(Builder)"
     help_category = "General"
     switch_options = ("create", "setcurrent", "edit", "book", "volume", "time", "delete", "list", "debug")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yBuilder Commands:|n
+        chapter/create <title>            - Create new chapter
+        chapter/setcurrent <id>           - Set current chapter
+        chapter/edit <id> <title>         - Edit chapter title
+        chapter/book <id> <book_title>    - Set chapter's book
+        chapter/volume <id> <volume_title> - Set chapter's volume
+        chapter/time <id> <time_desc>     - Set chapter's time
+        chapter/delete <id>               - Delete chapter
+        chapter/list                      - List all chapters
+        chapter/debug                     - Show chapter debug info
+        
+    Builder Examples:
+        chapter/create Chapter 1: Gathering Storm - Spring 632 AF
+        chapter/setcurrent 3                      - Set chapter 3 as current
+        chapter/edit 3 Chapter 1: The Gathering Storm
+        chapter/book 3 The Imperial Crisis        - Set book title
+        chapter/volume 3 Volume I: Seeds          - Set volume title
+        chapter/time 3 Three days after siege     - Set time description
+        chapter/list                              - List all chapters
+            """
+        
+        return help_text
     
     def func(self):
         """Execute the command."""

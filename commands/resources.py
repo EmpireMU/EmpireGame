@@ -13,22 +13,24 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
     Manage organisation resources.
     
     Usage:
-        resource                    - List all resources you can access
-        resource/org <org>,<name>=<value>  - Create org resource (Admin)
-        resource/char <char>,<name>=<value> - Create character resource (Admin)
-        resource/transfer <from>,<to>,<name>[=<die_size>] - Transfer resource (Admin)
-        resource/delete <owner>,<name>     - Delete a resource (Admin)
+        resource                                      - List all resources you can access
+        resource/transfer <from>,<to>,<name>[=<size>] - Transfer Wealth or Political Capital
         
-    Examples:
-        resource/org "Knights Custodian",Wealth=8    # Creates a d8 Wealth resource
-        resource/char Bob,Wealth=6                   # Creates a d6 Wealth resource
-        resource/transfer "Knights Custodian",Bob,Wealth=10  # Transfers a d10 Wealth resource
-        resource/delete "Knights Custodian",Sanctuary Chapter
-        
-    Valid die sizes: 4, 6, 8, 10, 12
+    Resources represent assets that can be owned by organisations or characters
+    and transferred between them. These resources are shown on your character 
+    sheet and can be used in dice rolls.
     
-    Resources represent assets that can be owned by organisations
-    or characters and transferred between them.
+    Transfer Restrictions:
+    - You can only transfer Wealth and Political Capital resources
+    - To transfer from an org, you must be rank 1 or 2 in that organization
+    - To transfer from a character, it must be your own character
+    
+    Examples:
+        resource                                      - List your resources
+        resource/transfer Self,Bob,Wealth=8           - Transfer d8 Wealth to Bob
+        resource/transfer "House Otrese",Alice,Political Capital=6
+    
+    Valid die sizes: 4, 6, 8, 10, 12
     """
     
     key = "resource"
@@ -41,6 +43,41 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
         "delete:perm(Admin)"     # Deleting resources requires Admin
     )
     help_category = "Resources"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add admin commands if caller has Admin permissions
+        if caller.check_permstring("Admin"):
+            help_text += """
+    
+    |yAdmin Commands:|n
+        resource/org <org>,<name>=<value>              - Create org resource
+        resource/char <char>,<name>=<value>            - Create character resource
+        resource/transfer <from>,<to>,<name>[=<size>]  - Transfer ANY resource (no restrictions)
+        resource/delete <owner>,<name>                 - Delete a resource
+        
+    Admin Examples:
+        resource/org "Knights Custodian",Wealth=8      - Create d8 org resource
+        resource/char Bob,Wealth=6                     - Create d6 char resource
+        resource/transfer "Knights Custodian",Bob,Sanctuary=10  - Transfer ANY resource
+        resource/delete "Knights Custodian",Sanctuary  - Delete a resource
+        
+    Note: Admins can transfer any resource type, not just Wealth and Political Capital.
+            """
+        
+        return help_text
     
     def _get_org(self, org_name):
         """Helper method to find and validate an organisation."""

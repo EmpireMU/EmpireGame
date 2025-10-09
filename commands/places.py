@@ -19,7 +19,7 @@ class CmdPlace(MuxCommand):
         place                           - List places in current room
         place/create <name>             - Create a new place
         place/create <name> = <desc>    - Create a place with description
-        place/delete <name>             - Delete a place (creator or staff only)
+        place/delete <name>             - Delete a place you created
         place/desc <name> = <desc>      - Set place description
         place/look <name>               - Look at a specific place
         
@@ -27,7 +27,7 @@ class CmdPlace(MuxCommand):
         place                           - Show all places here
         place/create bar                - Create "bar" place
         place/create corner table = A small wooden table in a quiet corner
-        place/delete bar                - Delete the bar place
+        place/delete bar                - Delete your place
         place/desc bar = A polished oak bar with brass fittings
         place/look bar                  - Look at the bar
         
@@ -38,6 +38,30 @@ class CmdPlace(MuxCommand):
     key = "place"
     locks = "cmd:all()"
     help_category = "Building"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff information if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yStaff Note:|n
+        Staff can delete any place in the room, not just their own creations.
+            """
+        
+        return help_text
     
     def func(self):
         """Execute the command."""

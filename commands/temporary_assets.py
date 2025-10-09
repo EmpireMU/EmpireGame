@@ -11,25 +11,18 @@ class CmdTemporaryAsset(CharacterLookupMixin, MuxCommand):
     Add, remove, or list temporary assets.
     
     Usage:
-        asset/add <name>=<die size>     - Add a temporary asset
-        asset/remove <name>             - Remove a temporary asset
+        asset/add <name>=<die size>     - Add a temporary asset to yourself
+        asset/remove <name>             - Remove a temporary asset from yourself
         asset                           - List your temporary assets
-        asset/gmadd <character>/<name>=<die size>  - (Staff) Add asset to another character
-        asset/gmrem <character>/<name>  - (Staff) Remove asset from another character
         
     Examples:
         asset/add High Ground=8         - Add "High Ground" as a d8 asset
         asset/remove High Ground        - Remove the "High Ground" asset
         asset                           - List all your temporary assets
-        asset/gmadd John/Prepared=6     - Add "Prepared" d6 asset to John
-        asset/gmrem John/Prepared       - Remove "Prepared" asset from John
         
     Temporary assets are short-term advantages that can be used in rolls.
     They are marked with (T) in roll outputs to distinguish them from
     permanent assets.
-    
-    The GM commands (gmadd/gmrem) require staff permissions and use the format
-    character_name/asset_name.
     """
     
     key = "asset"
@@ -37,6 +30,37 @@ class CmdTemporaryAsset(CharacterLookupMixin, MuxCommand):
     locks = "cmd:all()"
     help_category = "Game"
     switch_options = ("add", "remove", "gmadd", "gmrem")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add GM commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yGM Commands:|n
+        asset/gmadd <character>/<name>=<die size>  - Add asset to another character
+        asset/gmrem <character>/<name>             - Remove asset from another character
+        
+    GM Examples:
+        asset/gmadd John/Prepared=6     - Add "Prepared" d6 asset to John
+        asset/gmrem John/Prepared       - Remove "Prepared" asset from John
+        
+    Note: GM commands use the format character_name/asset_name.
+            """
+        
+        return help_text
     
     def func(self):
         """Handle all temporary asset functionality based on switches."""

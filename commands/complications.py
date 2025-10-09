@@ -11,20 +11,16 @@ class CmdComplication(CharacterLookupMixin, MuxCommand):
     Add, remove, or list complications.
     
     Usage:
-        complication/add <name>=<die size>     - Add a complication
-        complication/remove <name>             - Remove a complication
+        complication/add <name>=<die size>     - Add a complication to yourself
+        complication/remove <name>             - Remove a complication from yourself
         complication                           - List your complications
         complication/here                      - List all complications in the room
-        complication/gmadd <character>/<name>=<die size>  - (Staff) Add complication to another character
-        complication/gmrem <character>/<name>  - (Staff) Remove complication from another character
         
     Examples:
         complication/add Injured=8         - Add "Injured" as a d8 complication
         complication/remove Injured        - Remove the "Injured" complication
         complication                       - List all your complications
         complication/here                  - List all complications of characters in the room
-        complication/gmadd John/Exhausted=6     - Add "Exhausted" d6 complication to John
-        complication/gmrem John/Exhausted       - Remove "Exhausted" complication from John
         
     Complications are hindrances that make actions more difficult. When included
     in dice rolls:
@@ -33,9 +29,6 @@ class CmdComplication(CharacterLookupMixin, MuxCommand):
     
     Unlike other traits, complications don't add dice to your pool or contribute
     to the roll result - they only make things harder or provide narrative cues.
-    
-    The GM commands (gmadd/gmrem) require staff permissions and use the format
-    character_name/complication_name.
     """
     
     key = "complication"
@@ -43,6 +36,37 @@ class CmdComplication(CharacterLookupMixin, MuxCommand):
     locks = "cmd:all()"
     help_category = "Game"
     switch_options = ("add", "remove", "gmadd", "gmrem", "here")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add GM commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yGM Commands:|n
+        complication/gmadd <character>/<name>=<die size>  - Add complication to another character
+        complication/gmrem <character>/<name>             - Remove complication from another character
+        
+    GM Examples:
+        complication/gmadd John/Exhausted=6     - Add "Exhausted" d6 complication to John
+        complication/gmrem John/Exhausted       - Remove "Exhausted" complication from John
+        
+    Note: GM commands use the format character_name/complication_name.
+            """
+        
+        return help_text
     
     def func(self):
         """Handle all complication functionality based on switches."""

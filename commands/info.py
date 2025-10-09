@@ -17,10 +17,6 @@ class CmdInfo(CharacterLookupMixin, Command):
         info/set <field_name> = <value>         - Set a custom field on yourself
         info/clear <field_name>                 - Remove a custom field from yourself
         
-    Staff Usage:
-        info/set <character> = <field_name> = <value>  - Set field on another character
-        info/clear <character> = <field_name>          - Remove field from another character
-        
     This command shows a character's basic information including their full name,
     web profile link, and any custom fields they've set up. Custom fields can be
     used for things like "Online Times", "Roleplay Hooks", etc.
@@ -35,16 +31,41 @@ class CmdInfo(CharacterLookupMixin, Command):
         info/set Online Times = Usually evenings EST, weekends
         info/set Roleplay Hooks = Looking for adventure companions
         info/clear Online Times             - Remove the Online Times field
-        
-    Staff Examples:
-        info/set Alice = Online Times = Usually evenings EST
-        info/clear Alice = Online Times     - Remove Alice's Online Times field
     """
     
     key = "info"
     aliases = ["finger"]
     locks = "cmd:all()"
     help_category = "Character"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Admin permissions
+        if caller.check_permstring("Admin"):
+            help_text += """
+    
+    |yStaff Usage:|n
+        info/set <character> = <field_name> = <value>  - Set field on another character
+        info/clear <character> = <field_name>          - Remove field from another character
+        
+    Staff Examples:
+        info/set Alice = Online Times = Usually evenings EST
+        info/clear Alice = Online Times     - Remove Alice's Online Times field
+            """
+        
+        return help_text
     
     def func(self):
         """Execute the command."""

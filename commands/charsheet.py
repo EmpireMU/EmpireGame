@@ -175,14 +175,9 @@ class CmdSheet(CharacterLookupMixin, Command):
     View a character sheet.
     
     Usage:
-        sheet [character]
-        sheet/all                              - Staff only: export all finished characters
-
+        sheet
         
-    Without arguments, shows your own character sheet.
-    Staff members can view other characters' sheets by specifying their name.
-    The /all switch exports all finished character sheets for game balancing analysis.
-
+    Shows your character sheet with all traits, abilities, and statistics.
     
     Sheet Sections:
     1. Basic Information
@@ -212,16 +207,46 @@ class CmdSheet(CharacterLookupMixin, Command):
        - Powers: Supernatural or extraordinary abilities
     
     Die Size Guide:
-       d4: Untrained/Weak
-       d6: Average/Basic Training
-       d8: Professional/Well Trained       d10: Expert/Exceptional
-       d12: Master/Peak Human
+       d4: Untrained/Novice
+       d6: Reasonable Competence
+       d8: Expert/Exceptional
+       d10: Fantastic/Peak Ability
+       d12: The Stuff of Legend
     """
     
     key = "sheet"
     locks = "cmd:all();view_other:perm(Builder)"
     help_category = "Character"
     switch_options = ("all",)
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yStaff Usage:|n
+        sheet <character>  - View another character's sheet
+        sheet/all          - Export all finished characters for game balance analysis
+        
+    Staff Examples:
+        sheet Alice        - View Alice's character sheet
+        sheet/all          - Export all finished character data
+            """
+        
+        return help_text
 
     def func(self):
         """Execute the command."""

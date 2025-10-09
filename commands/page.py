@@ -6,6 +6,7 @@ that removes the "Account" prefix and keeps all recipients on one line.
 """
 
 from evennia.commands.default.comms import CmdPage as DefaultCmdPage
+from evennia.utils.search import search_account
 
 
 class CmdPage(DefaultCmdPage):
@@ -83,25 +84,47 @@ class CmdPage(DefaultCmdPage):
             recipients = [args[0]]
             message = args[1]
         
-        # Get the recipient objects
+        # Get the recipient account objects
         recipient_objs = []
         for recipient in recipients:
-            obj = self.caller.search(recipient, global_search=True)
-            if not obj:
+            # Search specifically for accounts, not general objects
+            account = search_account(recipient)
+            if not account:
+                self.caller.msg(f"No account found with the name '{recipient}'.")
                 continue
-            recipient_objs.append(obj)
+            # search_account returns a list, get the first match
+            if isinstance(account, list):
+                if len(account) > 1:
+                    self.caller.msg(f"Multiple accounts match '{recipient}'. Please be more specific.")
+                    continue
+                account = account[0]
+            recipient_objs.append(account)
         
         if not recipient_objs:
-            self.caller.msg("No valid recipients found.")
             return
         
-        # Send the message to each recipient
+        # Check which recipients are online and send the message
+        online_recipients = []
         for recipient in recipient_objs:
+            # Check if the recipient has any active sessions (is online)
+            if hasattr(recipient, 'sessions') and recipient.sessions.all():
+                online_recipients.append(recipient)
+            else:
+                # Notify sender that recipient is offline
+                self.caller.msg(f"|c{recipient.key}|n is not online. Message not sent.")
+        
+        # If no recipients were online, return early
+        if not online_recipients:
+            return
+        
+        # Send the message to online recipients only
+        for recipient in online_recipients:
             self.msg_receiver = recipient
-            formatted_msg = self.format_message(message, recipient_objs)
+            formatted_msg = self.format_message(message, online_recipients)
             recipient.msg(formatted_msg, from_obj=self.caller)
         
-        # Also send a copy to the sender
-        self.msg_receiver = self.caller
-        sender_msg = self.format_message(message, recipient_objs)
-        self.caller.msg(sender_msg) 
+        # Send a copy to the sender (only if they weren't already a recipient)
+        if self.caller not in online_recipients:
+            self.msg_receiver = self.caller
+            sender_msg = self.format_message(message, online_recipients)
+            self.caller.msg(sender_msg) 

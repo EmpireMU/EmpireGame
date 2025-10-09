@@ -26,14 +26,6 @@ class CmdNote(CharacterLookupMixin, MuxCommand):
         note/filter tag                - Filter by tag
         note/category ooc or ic        - Show notes of specific category
         
-    GM commands:
-        note/gm character                       - List character's notes
-        note/gmshow character id                - Show specific note details  
-        note/gmedit character id=content        - Edit any note
-        note/gmdelete character id              - Delete any note
-        note/gmooc character title=content      - Add OOC GM note
-        note/gmic character title=content       - Add IC GM note
-        
     Public notes:
         note/view character                     - List character's public IC notes
         note/view character id                  - Read specific public IC note
@@ -45,7 +37,6 @@ class CmdNote(CharacterLookupMixin, MuxCommand):
         note/public 2                             - Make IC note #2 public
         note/search stranger                      - Find notes mentioning "stranger"
         note/filter journal                       - Show notes tagged "journal"
-        note/gmooc John Background=Noble family connections
         note/view John                            - List John's public IC notes
         note/view John 2                          - Read John's public note #2
         
@@ -64,6 +55,41 @@ class CmdNote(CharacterLookupMixin, MuxCommand):
     switch_options = ("ooc", "ic", "edit", "delete", "show", "tag", "public", 
                      "search", "filter", "category", "view", "gm", "gmshow", 
                      "gmic", "gmooc", "gmedit", "gmdelete")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add GM commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yGM Commands:|n
+        note/gm character                       - List character's notes
+        note/gmshow character id                - Show specific note details
+        note/gmedit character id=content        - Edit any note
+        note/gmdelete character id              - Delete any note
+        note/gmooc character title=content      - Add OOC GM note
+        note/gmic character title=content       - Add IC GM note
+        
+    GM Examples:
+        note/gmooc John Background=Noble family connections
+        note/gm Alice                           - List all of Alice's notes
+        note/gmshow Alice 3                     - Show Alice's note #3
+        note/gmedit Bob 5=Updated content       - Edit Bob's note #5
+            """
+        
+        return help_text
     
     def func(self):
         """Handle all note functionality based on switches."""

@@ -8,27 +8,54 @@ from typeclasses.time import NarrativeTime
 
 class CmdTime(MuxCommand):
     """
-    View or set the current narrative time.
+    View the current time.
     
     Usage:
-        time                - View current narrative time
-        time/set <time>     - Set narrative time (staff only)
+        time                - View current time
         
-    The narrative time is completely freeform and advances only when
-    staff explicitly changes it to match story progression.
+    Time advances at the speed of story.
     
-    Examples:
-        time
-        time/set Spring of 632 AF
-        time/set Dawn on the 15th day of Harvestmoon, 632 AF
-        time/set Three hours after the siege began
-        time/set The morning after the betrayal
+    Example:
+        time                - View current time
     """
     
     key = "time"
     locks = "cmd:all();set:perm(Builder)"
     help_category = "General"
     switch_options = ("set",)
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yBuilder Commands:|n
+        time/set <time>     - Set narrative time
+        
+    Builder Examples:
+        time/set Spring of 632 AF                        - Set simple time
+        time/set Dawn on the 15th day of Harvestmoon     - Set detailed time
+        time/set Three hours after the siege began       - Set relative time
+        time/set The morning after the betrayal          - Set narrative time
+        
+    Note: Narrative time is freeform text and can be any description that
+    fits the story progression.
+            """
+        
+        return help_text
     
     def func(self):
         """Execute the command."""

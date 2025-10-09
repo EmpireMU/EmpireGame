@@ -244,28 +244,63 @@ class CmdRoster(MuxCommand):
     View and manage the character roster.
     
     Usage:
-        roster               - Show available characters
-        roster/unfinished   - Show unfinished characters
-        roster/active       - Show active characters
-        roster/gone        - Show gone characters
-        roster <n>       - Filter available characters by name
-        roster/gender <gender> - Filter available characters by gender
-        roster/gender <gender>/<n> - Filter by gender and name
-        roster/realm <realm> - Filter available characters by realm
-        roster/realm <realm>/<n> - Filter by realm and name
-        roster/apply <character>/<email>=<application text>
+        roster                      - Show available characters
+        roster/active               - Show active characters
+        roster/gone                 - Show gone characters
+        roster <name>               - Filter available characters by name
+        roster/gender <gender>      - Filter available characters by gender
+        roster/gender <gender>/<name> - Filter by gender and name
+        roster/realm <realm>        - Filter available characters by realm
+        roster/realm <realm>/<name> - Filter by realm and name
+        roster/apply <character>/<email>=<application text> - Apply for a character
         
-    Staff only:
-        roster/setunfinished <character> - Set character as Unfinished
-        roster/setavailable <character>  - Set character as Available
-        roster/setactive <character>     - Set character as Active
-        roster/setgone <character>       - Set character as Gone
+    Examples:
+        roster                      - View all available characters
+        roster Alice                - Search for available characters named Alice
+        roster/gender Female        - Show female available characters
+        roster/realm Empire         - Show Empire realm characters
+        roster/active               - View actively played characters
+        roster/gone                 - View gone/inactive characters
     """
     
     key = "roster"
     aliases = ["roster/unfinished", "roster/active", "roster/gone"]
     locks = "cmd:all()"  # Base command available to all
     help_category = "General"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add admin commands if caller has Admin permissions
+        if caller.check_permstring("Admin"):
+            help_text += """
+    
+    |yAdmin Commands:|n
+        roster/unfinished            - Show unfinished character applications
+        roster/setunfinished <character> - Set character status to Unfinished
+        roster/setavailable <character>  - Set character status to Available
+        roster/setactive <character>     - Set character status to Active
+        roster/setgone <character>       - Set character status to Gone
+        
+    Admin Examples:
+        roster/unfinished            - View unfinished character apps
+        roster/setavailable Bob      - Make Bob available for applications
+        roster/setactive Alice       - Mark Alice as actively played
+        roster/setgone John          - Mark John as gone/inactive
+            """
+        
+        return help_text
     
     def _get_characters(self, status):
         """

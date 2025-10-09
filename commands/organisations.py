@@ -22,24 +22,15 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
     
     Usage:
         org                     - List organisations you're a member of
-        org <name>             - View organisation details
-        org/create <name>      - Create a new organisation (Admin)
-        org/delete <name>      - Delete an organisation (Admin)
-        org/member <org>,<char>[,<rank>] - Add/update member (Admin)
-        org/remove <org>,<char> - Remove member (Admin)
-        org/rankname <org>,<rank>=<name> - Set rank name (Admin)
+        org <name>              - View organisation details
         
     Examples:
-        org House Otrese                   - View House Otrese's info
-        org/create House Anadun            - Create new noble house
-        org/member House Otrese,Koline,3   - Add Koline as Senior Member
-        org/member House Otrese,Koline,2   - Promote Koline to Deputy
-        org/remove House Otrese,Koline     - Remove Koline from house
-        org/rankname House Otrese,5=Knight - Set rank 5 name to Knight
-        org/delete House Otrese            - Delete the organization
+        org                     - List your organisations
+        org House Otrese        - View House Otrese's information
         
     Organisations represent formal groups like guilds, companies,
-    or military units. Each has a hierarchy of numbered ranks (1-10).    """
+    or military units. Each has a hierarchy of numbered ranks (1-10).
+    """
     key = "org"
     locks = (
         "cmd:all();"           # Base command available to all
@@ -51,6 +42,42 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
     )
     help_category = "Organizations"
     switch_options = ("create", "member", "remove", "rankname", "delete")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add admin commands if caller has Admin permissions
+        if caller.check_permstring("Admin"):
+            help_text += """
+    
+    |yAdmin Commands:|n
+        org/create <name>                    - Create a new organisation
+        org/delete <name>                    - Delete an organisation
+        org/member <org>,<char>[,<rank>]     - Add/update member
+        org/remove <org>,<char>              - Remove member
+        org/rankname <org>,<rank>=<name>     - Set rank name
+        
+    Admin Examples:
+        org/create House Anadun              - Create new noble house
+        org/member House Otrese,Koline,3     - Add Koline as rank 3
+        org/member House Otrese,Koline,2     - Promote Koline to rank 2
+        org/remove House Otrese,Koline       - Remove Koline from house
+        org/rankname House Otrese,5=Knight   - Set rank 5 name to Knight
+        org/delete House Otrese              - Delete the organization
+            """
+        
+        return help_text
 
     def _check_admin(self, operation):
         """Helper method to check for Admin permission."""

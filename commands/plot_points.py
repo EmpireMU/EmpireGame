@@ -11,20 +11,13 @@ class CmdPlotPoints(CharacterLookupMixin, MuxCommand):
     Check and manage plot points.
     
     Usage:
-        pp [character]              - Check plot points
-        pp/give <character>         - Give a plot point to someone (staff only)
-        pp/spend [reason]           - Spend a plot point, optionally noting what for
-        pp/set <character>=<amount> - Set someone's plot points (staff only)
-        pp/room <amount>            - Set plot points for everyone in room (staff only)
+        pp                  - Check your plot points
+        pp/spend [reason]   - Spend a plot point, optionally noting what for
         
     Examples:
-        pp                  - Check your plot points
-        pp Bob             - Check Bob's plot points (staff only)
-        pp/give Bob        - Give Bob a plot point
-        pp/spend           - Spend a plot point
-        pp/spend for extra die - Spend a plot point, noting what it's for
-        pp/set Bob=3       - Set Bob's plot points to 3
-        pp/room 2          - Set everyone's plot points to 2
+        pp                          - Check your plot points
+        pp/spend                    - Spend a plot point
+        pp/spend for extra die      - Spend a plot point with reason
     """
     
     key = "pp"
@@ -32,6 +25,39 @@ class CmdPlotPoints(CharacterLookupMixin, MuxCommand):
     locks = "cmd:all();give:perm(Builder);set:perm(Builder);room:perm(Builder);view_other:perm(Builder)"
     help_category = "Game"
     switch_options = ("give", "spend", "set", "room")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yBuilder Commands:|n
+        pp <character>              - Check another character's plot points
+        pp/give <character>         - Give a plot point to someone
+        pp/set <character>=<amount> - Set someone's plot points
+        pp/room <amount>            - Set plot points for everyone in room
+        
+    Builder Examples:
+        pp Bob                      - Check Bob's plot points
+        pp/give Bob                 - Give Bob a plot point
+        pp/set Bob=3                - Set Bob's plot points to 3
+        pp/room 2                   - Set everyone in room to 2 plot points
+            """
+        
+        return help_text
     
     def func(self):
         """Handle all plot point functionality based on switches."""

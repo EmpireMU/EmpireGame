@@ -43,15 +43,46 @@ class CmdBoard(MuxCommand):
         |wboard/delete <board>/<post #>|n - Delete a post
         |wboard/search <text>|n - Search posts
         |wboard/archive <board>|n - View archived posts on a board
-        |wboard/pin <board>/<post #>|n - Pin a post (Admin only)
-        |wboard/unpin <board>/<post #>|n - Unpin a post (Admin only)
         |wboard/sub <board>|n - Subscribe to a board
         |wboard/unsub <board>|n - Unsubscribe from a board
         |wboard/mysubs|n - List your subscribed boards
         |wboard/markread <board>|n - Mark all posts on a board as read
         
-    Admin Commands:
-        |wboard/new <n>0|n - Create a new board
+    Examples:
+        board announcements
+        board announce/1
+        board/post announce=Welcome!/Welcome to the game!
+        board/sub announce
+        board/markread announce
+    """
+    
+    key = "board"
+    aliases = ["boards", "bb", "bbs"]
+    locks = "cmd:all()"
+    help_category = "Communication"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add admin commands if caller has Admin permissions
+        if caller.check_permstring("Admin"):
+            help_text += """
+    
+    |yAdmin Commands:|n
+        |wboard/pin <board>/<post #>|n - Pin a post to the top
+        |wboard/unpin <board>/<post #>|n - Unpin a post
+        |wboard/new <name>|n - Create a new board
         |wboard/config <board>=<lockstring>|n - Configure board permissions
         |wboard/destroy <board>|n - Delete a board
         |wboard/access <board>/<type>=<lockstring>|n - Set board access rules
@@ -61,21 +92,16 @@ class CmdBoard(MuxCommand):
         write - Who can make posts
         admin - Who can manage the board
         
-    Examples:
-        board announcements
-        board announce/1
-        board/post announce=Welcome!/Welcome to the game!
+    Admin Examples:
+        board/pin announce/5
+        board/new announcements
         board/config announce=read:all();write:perm(Builder)
-        board/sub announce
         board/access announce/read=all()
         board/access announce/write=perm(Builder)
-        board/markread announce
-    """
-    
-    key = "board"
-    aliases = ["boards", "bb", "bbs"]
-    locks = "cmd:all()"
-    help_category = "Communication"
+        board/destroy oldboard
+            """
+        
+        return help_text
     
     def func(self):
         """Handle board commands."""

@@ -17,20 +17,54 @@ class CmdRoomManagement(CharacterLookupMixin, MuxCommand):
     Manage rooms and their exits
     
     Usage:
-        room/owner <character/org>     - Add owner to current room (Builder+ only)
-        room/unowner <character/org>   - Remove owner from current room (Builder+ only)
         room/owners                    - List current room's owners
         room/givekey <character>       - Give a key to current room
         room/removekey <character>     - Remove key from current room
-        room/lock <exit>              - Lock an exit (must be owner)
-        room/unlock <exit>            - Unlock an exit (must have key or be owner)
-        room/invisible                 - Make room invisible in 'where' command (Builder+ only)
-        room/visible                   - Make room visible in 'where' command (Builder+ only)
+        room/lock <exit>               - Lock an exit (must be owner)
+        room/unlock <exit>             - Unlock an exit (must have key or be owner)
+        room/invisible                 - Make room invisible in 'where' (must be owner)
+        room/visible                   - Make room visible in 'where' (must be owner)
+        
+    Room owners can control access to their rooms. Owners can be characters
+    or organisations (requires rank 1 or 2 in the org).
     """
     
     key = "room"
     locks = "cmd:all()"
     help_category = "Building"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add builder commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yBuilder Commands:|n
+        room/owner <type>:<name>       - Add owner to current room
+        room/unowner <type>:<name>     - Remove owner from current room
+        
+    Builder Examples:
+        room/owner org:House Otrese    - Add organisation as owner
+        room/owner char:Alice          - Add character as owner
+        room/unowner org:House Otrese  - Remove organisation owner
+        
+    Note: Builders can also use invisible/visible on any room, and can
+    manage ownership of all rooms.
+            """
+        
+        return help_text
 
     def _get_owner(self, owner_spec):
         """

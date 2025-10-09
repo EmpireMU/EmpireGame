@@ -19,23 +19,20 @@ class CmdRequest(MuxCommand):
     
     Usage:
         request                     - List your active requests
-        request <#>                - View a specific request
+        request <#>                 - View a specific request
         request/new <title>=<text>  - Create a new request
         request/comment <#>=<text>  - Comment on a request
         request/close <#>=<text>    - Close your request with resolution
-        request/archive            - List your archived requests
-        request/archive <#>        - View a specific archived request
+        request/archive             - List your archived requests
+        request/archive <#>         - View a specific archived request
         
-    Staff commands:
-        request/all                 - List all active requests
-        request/assign <#>=<staff>  - Assign request to staff member
-        request/status <#>=<status> - Change request status
-        request/cat <#>=<category>  - Change request category
-        request/archive/all        - List all archived requests
-        request/unarchive <#>      - Unarchive a request
-        request/cleanup            - Delete archived requests older than 30 days
+    Examples:
+        request                                         - List your requests
+        request 5                                       - View request #5
+        request/new Bug Report=Character sheet not loading
+        request/comment 5=Still having this issue
+        request/close 5=Issue resolved, thank you
         
-    Valid statuses: Open, In Progress, Closed
     Valid categories: Bug, Feature, Question, Character, General
     """
     
@@ -43,6 +40,46 @@ class CmdRequest(MuxCommand):
     aliases = ["requests"]
     locks = "cmd:pperm(Player)"  # Only accounts with Player permission or higher
     help_category = "Communication"
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Admin permissions
+        if caller.check_permstring("Admin"):
+            help_text += """
+    
+    |yStaff Commands:|n
+        request/all                 - List all active requests
+        request/assign <#>=<staff>  - Assign request to staff member
+        request/status <#>=<status> - Change request status
+        request/cat <#>=<category>  - Change request category
+        request/archive/all         - List all archived requests
+        request/unarchive <#>       - Unarchive a request
+        request/cleanup             - Delete archived requests older than 30 days
+        
+    Valid statuses: Open, In Progress, Closed
+    
+    Staff Examples:
+        request/all                             - View all requests
+        request/assign 5=StaffName              - Assign request #5
+        request/status 5=In Progress            - Update status
+        request/cat 5=Bug                       - Change category
+        request/unarchive 10                    - Restore archived request
+        request/cleanup                         - Clean old archived requests
+            """
+        
+        return help_text
     
     def find_request(self, request_id):
         """Find a request by its ID number."""
