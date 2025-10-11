@@ -143,4 +143,10 @@ SECURE_SSL_REDIRECT = False  # handled by Caddy to avoid redirect loops
 # Tighten browser security headers
 SECURE_REFERRER_POLICY = 'same-origin'
 
-
+######################################################################
+# Game Index Connection Settings
+######################################################################
+try:
+    from server.conf.connection_settings import *
+except ImportError:
+    print("connection_settings.py file not found or failed to import.")

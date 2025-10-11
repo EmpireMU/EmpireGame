@@ -35,7 +35,8 @@ class CmdBoard(MuxCommand):
     |cBulletin Board System|n
     
     Usage:
-        |wboard|n - List all available boards
+        |wboard|n - List your subscribed boards
+        |wboard/all|n - List all available boards
         |wboard <board>|n - View posts on a specific board
         |wboard <board>/<post #>|n - Read a specific post
         |wboard/post <board>=<title>/<text>|n - Create a new post
@@ -45,10 +46,11 @@ class CmdBoard(MuxCommand):
         |wboard/archive <board>|n - View archived posts on a board
         |wboard/sub <board>|n - Subscribe to a board
         |wboard/unsub <board>|n - Unsubscribe from a board
-        |wboard/mysubs|n - List your subscribed boards
         |wboard/markread <board>|n - Mark all posts on a board as read
         
     Examples:
+        board
+        board/all
         board announcements
         board announce/1
         board/post announce=Welcome!/Welcome to the game!
@@ -108,6 +110,28 @@ class CmdBoard(MuxCommand):
         caller = self.caller
         
         if not self.args and not self.switches:
+            # List subscribed boards by default
+            boards = ScriptDB.objects.filter(db_typeclass_path="typeclasses.boards.BulletinBoardScript")
+            subscribed = [b for b in boards if caller in b.db.subscribers]
+            
+            if not subscribed:
+                caller.msg("You are not subscribed to any boards. Use |wboard/all|n to see all available boards.")
+                return
+                
+            table = EvTable("|wBoard|n", "|wUnread|n", "|wLatest Post|n", align="l", width=78)
+            for board in subscribed:
+                # Use cached summary for performance
+                summary = board.get_cached_summary(caller)
+                if summary:
+                    unread = summary["unread"]
+                    unread_str = f"|g{unread}|n" if unread > 0 else "-"
+                    latest = summary["latest"]
+                    table.add_row(board.key, unread_str, latest)
+            caller.msg("|wYour Subscribed Boards:|n")
+            caller.msg(str(table))
+            return
+        
+        if "all" in self.switches:
             # List all boards
             boards = ScriptDB.objects.filter(db_typeclass_path="typeclasses.boards.BulletinBoardScript")
             boards = list(boards)  # Convert QuerySet to list
@@ -126,6 +150,7 @@ class CmdBoard(MuxCommand):
                         unread_str = f"|g{unread}|n" if unread > 0 else "-"
                         latest = summary["latest"]
                         table.add_row(board.key, unread_str, latest)
+            caller.msg("|wAll Available Boards:|n")
             caller.msg(str(table))
             return
             
@@ -506,23 +531,6 @@ class CmdBoard(MuxCommand):
             else:
                 caller.msg("You weren't subscribed to that board.")
                 
-        elif "mysubs" in self.switches:
-            boards = search_script("", typeclass=BulletinBoardScript)
-            subscribed = [b for b in boards if caller in b.db.subscribers]
-            
-            if not subscribed:
-                caller.msg("You are not subscribed to any boards.")
-                return
-                
-            table = EvTable("|wBoard|n", "|wUnread|n", align="l", width=78)
-            for board in subscribed:
-                posts = board.get_posts(caller)
-                unread = sum(1 for _, is_unread in posts if is_unread)
-                unread_str = f"|g{unread}|n" if unread else "-"
-                table.add_row(board.key, unread_str)
-            caller.msg("|wYour Subscribed Boards:|n")
-            caller.msg(str(table))
-            
         elif "access" in self.switches:
             if not self.args or "/" not in self.args or "=" not in self.args:
                 caller.msg("Usage: board/access <board>/<type>=<lockstring>")
