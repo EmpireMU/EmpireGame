@@ -21,21 +21,26 @@ class CmdStory(MuxCommand):
         story "<book>" <id>             - Read story update from specific book
         story/read <id>                 - Read story update from current book
         story/read "<book>" <id>        - Read story update from specific book
+        story/plots                     - List all plots
+        story/plot <name>               - View updates in a plot
+        story/plot "<name>" <id>        - Read specific update in plot
         
     Examples:
         story                           - View the full story timeline
         story 3                         - Read 3rd update in current book
         story "A New Book" 1            - Read 1st update in "A New Book"
-        story/read 3                    - Same as 'story 3'
+        story/plots                     - List all plot threads
+        story/plot "Rin"                - View all Rin plot updates
+        story/plot "Rin" 3              - Read 3rd update in Rin plot
         
     Story updates use book-scoped numbering for user convenience. Each book
     has its own sequence (1, 2, 3...) while maintaining global IDs internally.
     """
     
     key = "story"
-    locks = "cmd:all();create:perm(Builder);edit:perm(Builder);delete:perm(Builder);list:perm(Builder);read:all()"
+    locks = "cmd:all();create:perm(Builder);edit:perm(Builder);delete:perm(Builder);list:perm(Builder);read:all();plots:all();plot:all();tag:perm(Builder)"
     help_category = "General"
-    switch_options = ("create", "edit", "delete", "list", "read")
+    switch_options = ("create", "edit", "delete", "list", "read", "plots", "plot", "tag")
     
     def get_help(self, caller, cmdset):
         """
@@ -100,6 +105,15 @@ class CmdStory(MuxCommand):
                 self._list_all_updates()
             elif switch == "read":
                 self._read_update()
+            elif switch == "plots":
+                self._list_plots()
+            elif switch == "plot":
+                self._view_plot()
+            elif switch == "tag":
+                if not self.access(self.caller, "tag"):
+                    self.msg("You don't have permission to tag story updates.")
+                    return
+                self._tag_update()
             else:
                 self.msg(f"Unknown switch: {switch}")
         else:
@@ -127,52 +141,53 @@ class CmdStory(MuxCommand):
         lines.append(f"Current Time: |g{time_tracker.current_time}|n")
         lines.append("")
         
-        # Group chapters by book and volume
-        from collections import defaultdict, OrderedDict
+        # Group chapters by book
+        from collections import OrderedDict
         
-        # Create hierarchical structure: book -> volume -> chapters
+        # Create hierarchical structure: book -> chapters
         book_structure = OrderedDict()
         
         for chapter in all_chapters:
             book = chapter.db.book_title or "Untitled Book"
-            volume = chapter.db.volume_title or "Untitled Volume"
             
             if book not in book_structure:
-                book_structure[book] = OrderedDict()
-            if volume not in book_structure[book]:
-                book_structure[book][volume] = []
+                book_structure[book] = []
             
-            book_structure[book][volume].append(chapter)
+            book_structure[book].append(chapter)
+        
+        # Get all plots for reference
+        all_plots = StoryManager.get_all_plots()
+        plot_map = {s.db.story_id: s.db.title for s in all_plots}
         
         # Display hierarchically
-        for book_title, volumes in book_structure.items():
+        for book_title, chapters in book_structure.items():
             lines.append(f"|yBook: {book_title}|n")
             
-            for volume_title, chapters in volumes.items():
-                lines.append(f"  |cVolume: {volume_title}|n")
+            for chapter in chapters:
+                current_marker = " |g[CURRENT]|n" if chapter.db.is_current else ""
+                lines.append(f"  |wChapter {chapter.db.story_id}: {chapter.db.title}{current_marker}|n")
                 
-                for chapter in chapters:
-                    lines.append(f"    |wChapter {chapter.db.story_id}: {chapter.db.title}|n")
-                    
-                    # Show key updates for this chapter
-                    updates = StoryManager.get_chapter_updates(chapter.db.story_id)
-                    if updates:
-                        # Show first and last update if multiple, or just the updates if few
-                        if len(updates) <= 3:
-                            for update in updates:
-                                book_scoped = StoryManager.get_book_scoped_number(update.db.story_id, book_title)
-                                lines.append(f"      - |c{update.db.title} ({book_scoped})|n")
+                # Show updates for this chapter with plot tags
+                updates = StoryManager.get_chapter_updates(chapter.db.story_id)
+                if updates:
+                    for update in updates[:10]:  # Show first 10
+                        book_scoped = StoryManager.get_book_scoped_number(update.db.story_id, book_title)
+                        
+                        # Get plot tags for this update
+                        update_plots = StoryManager.get_update_plots(update.db.story_id)
+                        plot_tags = [p.db.title for p in update_plots]
+                        
+                        # Format plot tags
+                        if plot_tags:
+                            tag_str = " | ".join(plot_tags)
+                            lines.append(f"    [{tag_str}] |c{update.db.title} ({book_scoped})|n")
                         else:
-                            # Show first, middle indicator, and last
-                            first_scoped = StoryManager.get_book_scoped_number(updates[0].db.story_id, book_title)
-                            last_scoped = StoryManager.get_book_scoped_number(updates[-1].db.story_id, book_title)
-                            lines.append(f"      - |c{updates[0].db.title} ({first_scoped})|n")
-                            lines.append(f"      - |w... {len(updates)-2} more updates ...|n")
-                            lines.append(f"      - |c{updates[-1].db.title} ({last_scoped})|n")
-                    else:
-                        lines.append("      |w(No story updates yet)|n")
-                
-                lines.append("")  # Space between volumes
+                            lines.append(f"    [Uncategorized] |c{update.db.title} ({book_scoped})|n")
+                    
+                    if len(updates) > 10:
+                        lines.append(f"    |w... and {len(updates) - 10} more updates ...|n")
+                else:
+                    lines.append("    |w(No story updates yet)|n")
             
             lines.append("")  # Space between books
         
@@ -181,6 +196,7 @@ class CmdStory(MuxCommand):
         current_pos = f"Chapter {current_chapter.db.story_id}" if current_chapter else "No current chapter"
         lines.append(f"|wSummary:|n {len(all_chapters)} chapters, {total_updates} story updates")
         lines.append(f"Currently at: |y{current_pos}|n")
+        lines.append(f"Plots: {len(all_plots)} (use |wstory/plots|n to view)")
         
         self.msg("\n".join(lines))
     
@@ -188,6 +204,7 @@ class CmdStory(MuxCommand):
         """Create a new story update."""
         if not self.args or "=" not in self.args:
             self.msg("Usage: story/create <title>=<content>")
+            self.msg("After creation, you'll be prompted to tag plots.")
             return
             
         title, content = self.args.split("=", 1)
@@ -207,10 +224,21 @@ class CmdStory(MuxCommand):
             self.msg("No current chapter set. Use chapter/create to create one first.")
             return
             
-        # Create the update
+        # Create the update (without plots for now)
         try:
             update = StoryManager.create_story_update(title, content, current_chapter.db.story_id)
             self.msg(f"Created story update #{update.db.story_id}: |c{title}|n")
+            
+            # Show available plots and prompt
+            all_plots = StoryManager.get_all_plots()
+            if all_plots:
+                self.msg("\n|wAvailable plots:|n")
+                for plot in all_plots:
+                    self.msg(f"  {plot.db.story_id}. {plot.db.title}")
+                self.msg(f"\nTo tag plots, use: |wstory/tag {update.db.story_id} <plot_ids>|n")
+                self.msg(f"Example: |wstory/tag {update.db.story_id} 1,3|n (tags plots 1 and 3)")
+            else:
+                self.msg("\n|yNo plots exist yet.|n Use |wplot/create|n to create plot threads.")
             
         except Exception as e:
             self.msg(f"Error creating story update: {e}")
@@ -359,6 +387,219 @@ class CmdStory(MuxCommand):
         lines.append(update.db.content)
         
         self.msg("\n".join(lines))
+    
+    def _tag_update(self):
+        """Tag a story update with plot(s)."""
+        if not self.args:
+            self.msg("Usage: story/tag <update_id> <plot_ids>")
+            self.msg("Example: story/tag 5 1,3  (tags update #5 with plots 1 and 3)")
+            return
+        
+        parts = self.args.split(None, 1)
+        if len(parts) < 2:
+            self.msg("Usage: story/tag <update_id> <plot_ids>")
+            return
+        
+        # Parse update ID
+        try:
+            update_id = int(parts[0])
+        except ValueError:
+            self.msg("Update ID must be a number.")
+            return
+        
+        # Find the update
+        update = StoryManager.find_story_update(update_id)
+        if not update:
+            self.msg(f"Story update #{update_id} not found.")
+            return
+        
+        # Parse plot IDs (comma-separated)
+        plot_ids_input = parts[1].strip()
+        
+        # Handle "none" to clear plots
+        if plot_ids_input.lower() == "none":
+            # Remove from all plots
+            removed = StoryManager.remove_update_from_plots(update_id)
+            self.msg(f"Removed update #{update_id} from {removed} plot(s): |c{update.db.title}|n")
+            return
+        
+        # Parse plot IDs
+        plot_ids = []
+        for pid_str in plot_ids_input.split(','):
+            try:
+                pid = int(pid_str.strip())
+                # Verify plot exists
+                plot = StoryManager.find_plot(pid)
+                if plot:
+                    plot_ids.append(pid)
+                else:
+                    self.msg(f"|yWarning:|n Plot #{pid} not found, skipping.")
+            except ValueError:
+                self.msg(f"|yWarning:|n Invalid plot ID '{pid_str}', skipping.")
+        
+        if not plot_ids:
+            self.msg("No valid plot IDs provided.")
+            return
+        
+        # First, remove from all plots
+        StoryManager.remove_update_from_plots(update_id)
+        
+        # Then add to specified plots
+        added_plot_names = StoryManager.add_update_to_plots(update_id, plot_ids)
+        
+        if added_plot_names:
+            tag_str = ", ".join(added_plot_names)
+            self.msg(f"Tagged update #{update_id} with: |c{tag_str}|n")
+        else:
+            self.msg(f"No plots were updated.")
+    
+    def _list_plots(self):
+        """List all plots and their info."""
+        all_plots = StoryManager.get_all_plots()
+        
+        if not all_plots:
+            self.msg("No plots have been created yet.")
+            return
+        
+        lines = ["|wActive Plot Threads|n", ""]
+        
+        for plot in all_plots:
+            # Get update count for this plot
+            updates = StoryManager.get_plot_updates(plot.db.story_id)
+            
+            # Get chapter span
+            if updates:
+                chapters = set()
+                for update in updates:
+                    if update.db.parent_id:
+                        chapters.add(update.db.parent_id)
+                
+                if chapters:
+                    min_chapter = min(chapters)
+                    max_chapter = max(chapters)
+                    if min_chapter == max_chapter:
+                        span_text = f"Chapter {min_chapter}"
+                    else:
+                        span_text = f"Chapters {min_chapter}-{max_chapter}"
+                    
+                    latest_update = updates[-1]
+                    latest_chapter = StoryManager.find_chapter(latest_update.db.parent_id) if latest_update.db.parent_id else None
+                    latest_chapter_num = latest_chapter.db.story_id if latest_chapter else "?"
+                    
+                    lines.append(f"|c{plot.db.title}|n ({len(updates)} updates)")
+                    lines.append(f"  Spans: {span_text}")
+                    lines.append(f"  Latest: \"{latest_update.db.title}\" (Chapter {latest_chapter_num})")
+                    if plot.db.description:
+                        lines.append(f"  |w{plot.db.description}|n")
+                    lines.append("")
+                else:
+                    lines.append(f"|c{plot.db.title}|n ({len(updates)} updates)")
+                    lines.append(f"  |w(No chapter data)|n")
+                    if plot.db.description:
+                        lines.append(f"  |w{plot.db.description}|n")
+                    lines.append("")
+            else:
+                lines.append(f"|c{plot.db.title}|n (0 updates)")
+                if plot.db.description:
+                    lines.append(f"  |w{plot.db.description}|n")
+                lines.append("")
+        
+        lines.append(f"Type |wstory/plot \"<name>\"|n to view updates in a specific plot.")
+        
+        self.msg("\n".join(lines))
+    
+    def _view_plot(self):
+        """View all updates in a specific plot thread."""
+        if not self.args:
+            self.msg("Usage: story/plot <name> OR story/plot \"<name>\" <id>")
+            return
+        
+        args = self.args.strip()
+        
+        # Check if there's a number at the end (reading specific update)
+        parts = args.rsplit(None, 1)
+        read_index = None
+        plot_name = args
+        
+        if len(parts) == 2:
+            try:
+                read_index = int(parts[1])
+                plot_name = parts[0]
+            except ValueError:
+                pass
+        
+        # Remove quotes if present
+        if plot_name.startswith('"') and plot_name.endswith('"'):
+            plot_name = plot_name[1:-1]
+        
+        # Find the plot
+        plot = StoryManager.find_plot_by_name(plot_name)
+        if not plot:
+            self.msg(f"Plot '{plot_name}' not found. Use |wstory/plots|n to see available plots.")
+            return
+        
+        # Get all updates in this plot
+        updates = StoryManager.get_plot_updates(plot.db.story_id)
+        
+        if not updates:
+            self.msg(f"|wPlot: {plot.db.title}|n\n\nNo updates in this plot yet.")
+            return
+        
+        # If reading a specific update
+        if read_index is not None:
+            if read_index < 1 or read_index > len(updates):
+                self.msg(f"Update #{read_index} not found in '{plot.db.title}'. This plot has {len(updates)} updates.")
+                return
+            
+            update = updates[read_index - 1]
+            chapter = StoryManager.find_chapter(update.db.parent_id) if update.db.parent_id else None
+            
+            lines = [f"|wPlot: {plot.db.title}|n"]
+            if chapter:
+                book = chapter.db.book_title or "Untitled Book"
+                lines.append(f"|wBook: {book}|n")
+                lines.append(f"|wChapter {chapter.db.story_id}: {chapter.db.title}|n")
+            lines.append(f"|wUpdate #{read_index} of {len(updates)}: {update.db.title}|n")
+            lines.append(f"|wDate:|n {update.db.timestamp.strftime('%Y-%m-%d %H:%M')}")
+            lines.append("")
+            lines.append(update.db.content)
+            
+            self.msg("\n".join(lines))
+            return
+        
+        # Otherwise, list all updates in the plot
+        lines = [f"|wPlot: {plot.db.title}|n"]
+        if plot.db.description:
+            lines.append(f"{plot.db.description}")
+        lines.append("")
+        
+        # Group by chapter
+        from collections import OrderedDict
+        updates_by_chapter = OrderedDict()
+        
+        for update in updates:
+            chapter_id = update.db.parent_id
+            if chapter_id not in updates_by_chapter:
+                updates_by_chapter[chapter_id] = []
+            updates_by_chapter[chapter_id].append(update)
+        
+        update_index = 1
+        for chapter_id, chapter_updates in updates_by_chapter.items():
+            chapter = StoryManager.find_chapter(chapter_id) if chapter_id else None
+            if chapter:
+                lines.append(f"|yChapter {chapter.db.story_id}: {chapter.db.title}|n")
+            else:
+                lines.append(f"|y(No Chapter)|n")
+            
+            for update in chapter_updates:
+                lines.append(f"  {update_index}. |c{update.db.title}|n")
+                update_index += 1
+            
+            lines.append("")
+        
+        lines.append(f"Type |wstory/plot \"{plot.db.title}\" <number>|n to read a specific update.")
+        
+        self.msg("\n".join(lines))
 
 
 class CmdChapter(MuxCommand):
@@ -373,14 +614,14 @@ class CmdChapter(MuxCommand):
         chapter                           - View current chapter
         chapter 2                         - View chapter #2
         
-    Chapters represent major story divisions. Books and volumes are 
-    organisational labels for grouping chapters in the larger narrative.
+    Chapters represent mechanical game periods (action budget units). Books 
+    are organizational labels for grouping chapters chronologically.
     """
     
     key = "chapter"
-    locks = "cmd:all();create:perm(Builder);setcurrent:perm(Builder);edit:perm(Builder);book:perm(Builder);volume:perm(Builder);time:perm(Builder);delete:perm(Builder);list:perm(Builder);debug:perm(Builder)"
+    locks = "cmd:all();create:perm(Builder);setcurrent:perm(Builder);edit:perm(Builder);book:perm(Builder);time:perm(Builder);delete:perm(Builder);list:perm(Builder);debug:perm(Builder)"
     help_category = "General"
-    switch_options = ("create", "setcurrent", "edit", "book", "volume", "time", "delete", "list", "debug")
+    switch_options = ("create", "setcurrent", "edit", "book", "time", "delete", "list", "debug")
     
     def get_help(self, caller, cmdset):
         """
@@ -405,18 +646,16 @@ class CmdChapter(MuxCommand):
         chapter/setcurrent <id>           - Set current chapter
         chapter/edit <id> <title>         - Edit chapter title
         chapter/book <id> <book_title>    - Set chapter's book
-        chapter/volume <id> <volume_title> - Set chapter's volume
         chapter/time <id> <time_desc>     - Set chapter's time
         chapter/delete <id>               - Delete chapter
         chapter/list                      - List all chapters
         chapter/debug                     - Show chapter debug info
         
     Builder Examples:
-        chapter/create Chapter 1: Gathering Storm - Spring 632 AF
+        chapter/create Prologue
         chapter/setcurrent 3                      - Set chapter 3 as current
         chapter/edit 3 Chapter 1: The Gathering Storm
         chapter/book 3 The Imperial Crisis        - Set book title
-        chapter/volume 3 Volume I: Seeds          - Set volume title
         chapter/time 3 Three days after siege     - Set time description
         chapter/list                              - List all chapters
             """
@@ -448,11 +687,6 @@ class CmdChapter(MuxCommand):
                     self.msg("You don't have permission to set chapter books.")
                     return
                 self._set_book()
-            elif switch == "volume":
-                if not self.access(self.caller, "volume"):
-                    self.msg("You don't have permission to set chapter volumes.")
-                    return
-                self._set_volume()
             elif switch == "time":
                 if not self.access(self.caller, "time"):
                     self.msg("You don't have permission to set chapter times.")
@@ -680,34 +914,6 @@ class CmdChapter(MuxCommand):
         target_chapter.db.book_title = book_title
         self.msg(f"Set chapter #{chapter_id} book to: |c{book_title}|n")
     
-    def _set_volume(self):
-        """Set a chapter's volume."""
-        if not self.args:
-            self.msg("Usage: chapter/volume <id> <volume_title>")
-            return
-            
-        parts = self.args.split(" ", 1)
-        if len(parts) < 2:
-            self.msg("Usage: chapter/volume <id> <volume_title>")
-            return
-            
-        try:
-            chapter_id = int(parts[0])
-        except ValueError:
-            self.msg("Chapter ID must be a number.")
-            return
-            
-        volume_title = parts[1].strip()
-        
-        # Find the chapter
-        target_chapter = StoryManager.find_chapter(chapter_id)
-        if not target_chapter:
-            self.msg(f"Chapter #{chapter_id} not found.")
-            return
-            
-        target_chapter.db.volume_title = volume_title
-        self.msg(f"Set chapter #{chapter_id} volume to: |c{volume_title}|n")
-    
     def _set_chapter_time(self):
         """Set a chapter's time description."""
         if not self.args:
@@ -766,15 +972,14 @@ class CmdChapter(MuxCommand):
             self.msg("No chapters found.")
             return
             
-        table = evtable.EvTable("ID", "Title", "Book", "Volume", "Time", "Current", border="cells")
+        table = evtable.EvTable("ID", "Title", "Book", "Time", "Current", border="cells")
         
         for chapter in all_chapters:
             current_marker = "|gYes|n" if chapter.db.is_current else "No"
             book = chapter.db.book_title or "-"
-            volume = chapter.db.volume_title or "-"
             chapter_time = getattr(chapter.db, 'chapter_time', '') or "-"
             
-            table.add_row(chapter.db.story_id, chapter.db.title, book, volume, chapter_time, current_marker)
+            table.add_row(chapter.db.story_id, chapter.db.title, book, chapter_time, current_marker)
             
         self.msg(table) 
 
@@ -801,4 +1006,269 @@ class CmdChapter(MuxCommand):
         time_tracker = NarrativeTime.get_instance()
         self.msg(f"Current Time: {time_tracker.current_time}")
         
-        self.msg("Debug complete.") 
+        self.msg("Debug complete.")
+
+
+class CmdPlot(MuxCommand):
+    """
+    Manage plot threads for organizing story updates.
+    
+    Usage:
+        plot                              - List all plots
+        plot <id>                         - View specific plot info
+        
+    Plots are thematic story threads that span across chapters and books.
+    Story updates can be tagged with a plot to organize concurrent storylines.
+    """
+    
+    key = "plot"
+    locks = "cmd:all();create:perm(Builder);edit:perm(Builder);delete:perm(Builder);activate:perm(Builder);deactivate:perm(Builder)"
+    help_category = "General"
+    switch_options = ("create", "edit", "delete", "activate", "deactivate")
+    
+    def get_help(self, caller, cmdset):
+        """
+        Return help text, customized based on caller's permissions.
+        
+        Args:
+            caller: The object requesting help
+            cmdset: The cmdset this command belongs to
+            
+        Returns:
+            str: The help text
+        """
+        # Get base help text from docstring
+        help_text = super().get_help(caller, cmdset)
+        
+        # Add staff commands if caller has Builder permissions
+        if caller.check_permstring("Builder"):
+            help_text += """
+    
+    |yBuilder Commands:|n
+        plot/create <title>=<description>    - Create new plot thread
+        plot/edit <id>=<new description>     - Edit plot description
+        plot/delete <id>                     - Delete plot thread
+        plot/activate <id>                   - Mark plot as active
+        plot/deactivate <id>                 - Mark plot as inactive
+        
+    Builder Examples:
+        plot/create Rin's Journey=Following Rin's adventures in the city
+        plot/edit 1=Updated description of Rin's story arc
+        plot/delete 3                        - Remove unused plot
+        plot/activate 1                      - Mark plot as active
+            """
+        
+        return help_text
+    
+    def func(self):
+        """Execute the command."""
+        if self.switches:
+            switch = self.switches[0]
+            
+            if switch == "create":
+                if not self.access(self.caller, "create"):
+                    self.msg("You don't have permission to create plots.")
+                    return
+                self._create_plot()
+            elif switch == "edit":
+                if not self.access(self.caller, "edit"):
+                    self.msg("You don't have permission to edit plots.")
+                    return
+                self._edit_plot()
+            elif switch == "delete":
+                if not self.access(self.caller, "delete"):
+                    self.msg("You don't have permission to delete plots.")
+                    return
+                self._delete_plot()
+            elif switch == "activate":
+                if not self.access(self.caller, "activate"):
+                    self.msg("You don't have permission to activate plots.")
+                    return
+                self._activate_plot()
+            elif switch == "deactivate":
+                if not self.access(self.caller, "deactivate"):
+                    self.msg("You don't have permission to deactivate plots.")
+                    return
+                self._deactivate_plot()
+            else:
+                self.msg(f"Unknown switch: {switch}")
+        else:
+            # Default: list all plots or show specific plot
+            if self.args:
+                self._show_plot()
+            else:
+                self._list_plots()
+    
+    def _list_plots(self):
+        """List all plots."""
+        all_plots = StoryManager.get_all_plots()
+        
+        if not all_plots:
+            self.msg("No plots have been created yet.")
+            return
+        
+        lines = ["|wPlot Threads|n", ""]
+        
+        for plot in all_plots:
+            active_marker = "|g[ACTIVE]|n" if plot.db.is_active else "|x[INACTIVE]|n"
+            updates = StoryManager.get_plot_updates(plot.db.story_id)
+            lines.append(f"|cPlot {plot.db.story_id}: {plot.db.title}|n {active_marker}")
+            lines.append(f"  Updates: {len(updates)}")
+            if plot.db.description:
+                lines.append(f"  {plot.db.description}")
+            lines.append("")
+        
+        self.msg("\n".join(lines))
+    
+    def _show_plot(self):
+        """Show specific plot information."""
+        if not self.args:
+            self.msg("Usage: plot <id>")
+            return
+        
+        try:
+            plot_id = int(self.args.strip())
+        except ValueError:
+            self.msg("Plot ID must be a number.")
+            return
+        
+        # Find the plot
+        plot = StoryManager.find_plot(plot_id)
+        if not plot:
+            self.msg(f"Plot #{plot_id} not found.")
+            return
+        
+        lines = [f"|wPlot {plot.db.story_id}: {plot.db.title}|n"]
+        lines.append(f"Status: {'|gActive|n' if plot.db.is_active else '|xInactive|n'}")
+        
+        if plot.db.description:
+            lines.append(f"\n{plot.db.description}")
+        
+        lines.append("")
+        
+        # Show updates in this plot
+        updates = StoryManager.get_plot_updates(plot.db.story_id)
+        if updates:
+            lines.append(f"|wStory Updates ({len(updates)}):|n")
+            for i, update in enumerate(updates[:10], 1):
+                chapter = StoryManager.find_chapter(update.db.parent_id) if update.db.parent_id else None
+                chapter_text = f"(Chapter {chapter.db.story_id})" if chapter else ""
+                timestamp = update.db.timestamp.strftime("%Y-%m-%d")
+                lines.append(f"  {i}. |c{update.db.title}|n {chapter_text} ({timestamp})")
+            
+            if len(updates) > 10:
+                lines.append(f"  ... and {len(updates) - 10} more")
+        else:
+            lines.append("No story updates in this plot yet.")
+        
+        self.msg("\n".join(lines))
+    
+    def _create_plot(self):
+        """Create a new plot."""
+        if not self.args or "=" not in self.args:
+            self.msg("Usage: plot/create <title>=<description>")
+            return
+        
+        title, description = self.args.split("=", 1)
+        title = title.strip()
+        description = description.strip()
+        
+        if not title:
+            self.msg("Title cannot be empty.")
+            return
+        
+        # Create the plot
+        try:
+            plot = StoryManager.create_plot(title, description)
+            self.msg(f"Created plot #{plot.db.story_id}: |c{title}|n")
+            
+        except Exception as e:
+            self.msg(f"Error creating plot: {e}")
+    
+    def _edit_plot(self):
+        """Edit a plot's description."""
+        if not self.args or "=" not in self.args:
+            self.msg("Usage: plot/edit <id>=<new description>")
+            return
+        
+        id_part, description = self.args.split("=", 1)
+        description = description.strip()
+        
+        try:
+            plot_id = int(id_part.strip())
+        except ValueError:
+            self.msg("Plot ID must be a number.")
+            return
+        
+        # Find the plot
+        plot = StoryManager.find_plot(plot_id)
+        if not plot:
+            self.msg(f"Plot #{plot_id} not found.")
+            return
+        
+        plot.db.description = description
+        self.msg(f"Updated plot #{plot_id}: |c{plot.db.title}|n")
+    
+    def _delete_plot(self):
+        """Delete a plot."""
+        if not self.args:
+            self.msg("Usage: plot/delete <id>")
+            return
+        
+        try:
+            plot_id = int(self.args.strip())
+        except ValueError:
+            self.msg("Plot ID must be a number.")
+            return
+        
+        # Use StoryManager to delete the plot
+        success, message, unlinked_count = StoryManager.delete_plot(plot_id)
+        
+        if success:
+            self.msg(f"|gSuccess:|n {message}")
+            if unlinked_count > 0:
+                self.msg(f"|yNote:|n This unlinked {unlinked_count} story updates from this plot.")
+        else:
+            self.msg(f"|rError:|n {message}")
+    
+    def _activate_plot(self):
+        """Mark a plot as active."""
+        if not self.args:
+            self.msg("Usage: plot/activate <id>")
+            return
+        
+        try:
+            plot_id = int(self.args.strip())
+        except ValueError:
+            self.msg("Plot ID must be a number.")
+            return
+        
+        # Find the plot
+        plot = StoryManager.find_plot(plot_id)
+        if not plot:
+            self.msg(f"Plot #{plot_id} not found.")
+            return
+        
+        plot.db.is_active = True
+        self.msg(f"Marked plot #{plot_id} as |gactive|n: |c{plot.db.title}|n")
+    
+    def _deactivate_plot(self):
+        """Mark a plot as inactive."""
+        if not self.args:
+            self.msg("Usage: plot/deactivate <id>")
+            return
+        
+        try:
+            plot_id = int(self.args.strip())
+        except ValueError:
+            self.msg("Plot ID must be a number.")
+            return
+        
+        # Find the plot
+        plot = StoryManager.find_plot(plot_id)
+        if not plot:
+            self.msg(f"Plot #{plot_id} not found.")
+            return
+        
+        plot.db.is_active = False
+        self.msg(f"Marked plot #{plot_id} as |xinactive|n: |c{plot.db.title}|n") 

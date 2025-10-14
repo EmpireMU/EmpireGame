@@ -40,12 +40,13 @@ from commands.info import CmdInfo
 from commands.notes import NotesCmdSet
 from commands.visibility import CmdInvisible, CmdVisible
 from commands.time import CmdTime
-from commands.story import CmdStory, CmdChapter
+from commands.story import CmdStory, CmdChapter, CmdPlot
 from commands.family import CmdFamily
 from commands.balance import BalanceCmdSet
 from commands.directions import CmdDirections
 from commands.emit import CmdEmit
 from commands.ooc import CmdOOC, CmdUnpuppet
+from commands.wiki import CmdWiki
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -93,11 +94,13 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdTime())
         self.add(CmdStory())
         self.add(CmdChapter())
+        self.add(CmdPlot())
         self.add(CmdFamily())
         self.add(BalanceCmdSet)
         self.add(CmdDirections())
         self.add(CmdEmit())
         self.add(CmdOOC())
+        self.add(CmdWiki())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

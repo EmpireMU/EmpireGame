@@ -11,13 +11,47 @@ class StoryManager:
     """Handles story system workflow logic."""
     
     @classmethod
-    def create_chapter(cls, title, book_title="", volume_title=""):
+    def create_plot(cls, title, description=""):
+        """Create a new plot.
+        
+        Args:
+            title (str): Plot title
+            description (str, optional): Plot description
+            
+        Returns:
+            StoryElement: The created plot
+        
+        Raises:
+            ValueError: If title is empty
+        """
+        if not title.strip():
+            raise ValueError("Plot title cannot be empty")
+            
+        plot_id = cls.get_next_plot_id()
+        plot = create_script(
+            "typeclasses.story.StoryElement",
+            key=f"Plot-{plot_id}"
+        )
+        
+        if not plot:
+            raise RuntimeError("Failed to create plot")
+            
+        plot.db.story_id = plot_id
+        plot.db.story_type = "plot"
+        plot.db.title = title.strip()
+        plot.db.description = description.strip()
+        plot.db.is_active = True
+        plot.db.timestamp = datetime.now()
+        
+        return plot
+    
+    @classmethod
+    def create_chapter(cls, title, book_title=""):
         """Create a new chapter.
         
         Args:
             title (str): Chapter title
             book_title (str, optional): Book title
-            volume_title (str, optional): Volume title
             
         Returns:
             StoryElement: The created chapter
@@ -45,7 +79,6 @@ class StoryManager:
         chapter.db.story_type = "chapter"
         chapter.db.title = title.strip()
         chapter.db.book_title = book_title.strip()
-        chapter.db.volume_title = volume_title.strip()
         chapter.db.order = next_order
         chapter.db.is_current = False
         chapter.db.timestamp = datetime.now()
@@ -96,6 +129,26 @@ class StoryManager:
         return update
         
     @classmethod
+    def get_next_plot_id(cls):
+        """Get the next available plot ID."""
+        plots = ScriptDB.objects.filter(
+            db_typeclass_path__contains="story.StoryElement",
+            db_key__startswith="Plot-"
+        )
+        if not plots.exists():
+            return 1
+            
+        max_id = 0
+        for plot in plots:
+            try:
+                if hasattr(plot.db, 'story_id') and plot.db.story_id and plot.db.story_id > max_id:
+                    max_id = plot.db.story_id
+            except AttributeError:
+                continue
+                
+        return max_id + 1
+    
+    @classmethod
     def get_next_chapter_id(cls):
         """Get the next available chapter ID."""
         chapters = ScriptDB.objects.filter(
@@ -135,6 +188,38 @@ class StoryManager:
                 
         return max_id + 1
         
+    @classmethod
+    def find_plot(cls, plot_id):
+        """Find a plot by its story ID number."""
+        try:
+            id_num = int(str(plot_id).lstrip('#'))
+            key = f"Plot-{id_num}"
+            results = ScriptDB.objects.filter(
+                db_typeclass_path__contains="story.StoryElement",
+                db_key=key
+            )
+            return results[0] if results else None
+        except (ValueError, IndexError):
+            return None
+    
+    @classmethod
+    def find_plot_by_name(cls, name):
+        """Find a plot by its title (case-insensitive partial match)."""
+        plots = cls.get_all_plots()
+        name_lower = name.lower()
+        
+        # Try exact match first
+        for plot in plots:
+            if plot.db.title.lower() == name_lower:
+                return plot
+        
+        # Try partial match
+        for plot in plots:
+            if name_lower in plot.db.title.lower():
+                return plot
+                
+        return None
+    
     @classmethod
     def find_chapter(cls, chapter_id):
         """Find a chapter by its story ID number."""
@@ -199,6 +284,33 @@ class StoryManager:
                 updates.append(script)
         return sorted(updates, key=lambda x: getattr(x.db, 'order', 0))
         
+    @classmethod
+    def get_all_plots(cls):
+        """Get all plots, ordered by creation."""
+        scripts = ScriptDB.objects.filter(
+            db_typeclass_path__contains="story.StoryElement",
+            db_key__startswith="Plot-"
+        )
+        plots = [s for s in scripts if hasattr(s.db, 'story_type') and s.db.story_type == "plot"]
+        return sorted(plots, key=lambda x: getattr(x.db, 'story_id', 0))
+    
+    @classmethod
+    def get_plot_updates(cls, plot_id):
+        """Get all story updates for a specific plot, ordered by timestamp."""
+        # Find the plot
+        plot = cls.find_plot(plot_id)
+        if not plot or not hasattr(plot.db, 'update_ids'):
+            return []
+        
+        # Get the updates from the plot's list
+        updates = []
+        for update_id in plot.db.update_ids:
+            update = cls.find_story_update(update_id)
+            if update:
+                updates.append(update)
+        
+        return sorted(updates, key=lambda x: getattr(x.db, 'timestamp', datetime.min))
+    
     @classmethod
     def get_recent_updates(cls, limit=5):
         """Get the most recent story updates across all chapters."""
@@ -359,6 +471,100 @@ class StoryManager:
                     return None, None
             except ValueError:
                 return None, None
+    
+    @classmethod
+    def delete_plot(cls, plot_id):
+        """Delete a plot.
+        
+        Note: This does NOT delete the story updates that were in this plot.
+        They remain in the system, just no longer tagged with this plot.
+        
+        Args:
+            plot_id (int): The plot ID to delete
+            
+        Returns:
+            tuple: (success, message, unlinked_count) where:
+                - success (bool): Whether the deletion succeeded
+                - message (str): Status message
+                - unlinked_count (int): Number of story updates that were in this plot
+        """
+        # Find the plot
+        plot = cls.find_plot(plot_id)
+        if not plot:
+            return False, f"Plot #{plot_id} not found", 0
+        
+        # Count how many updates were in this plot
+        update_count = len(plot.db.update_ids) if hasattr(plot.db, 'update_ids') else 0
+        
+        # Delete the plot itself (updates remain untouched)
+        plot_title = plot.db.title
+        plot.delete()
+        
+        return True, f"Deleted plot #{plot_id}: {plot_title}", update_count
+    
+    @classmethod
+    def add_update_to_plots(cls, update_id, plot_ids):
+        """Add an update to one or more plots.
+        
+        Args:
+            update_id (int): The update ID to add
+            plot_ids (list): List of plot IDs to add the update to
+            
+        Returns:
+            list: Successfully added plot names
+        """
+        added_plots = []
+        for plot_id in plot_ids:
+            plot = cls.find_plot(plot_id)
+            if plot:
+                if not hasattr(plot.db, 'update_ids'):
+                    plot.db.update_ids = []
+                if update_id not in plot.db.update_ids:
+                    plot.db.update_ids.append(update_id)
+                added_plots.append(plot.db.title)
+        return added_plots
+    
+    @classmethod
+    def remove_update_from_plots(cls, update_id, plot_ids=None):
+        """Remove an update from plots.
+        
+        Args:
+            update_id (int): The update ID to remove
+            plot_ids (list, optional): Specific plot IDs to remove from. If None, removes from all plots.
+            
+        Returns:
+            int: Number of plots the update was removed from
+        """
+        if plot_ids is None:
+            # Remove from all plots
+            all_plots = cls.get_all_plots()
+            plot_ids = [p.db.story_id for p in all_plots]
+        
+        removed_count = 0
+        for plot_id in plot_ids:
+            plot = cls.find_plot(plot_id)
+            if plot and hasattr(plot.db, 'update_ids') and update_id in plot.db.update_ids:
+                plot.db.update_ids.remove(update_id)
+                removed_count += 1
+        
+        return removed_count
+    
+    @classmethod
+    def get_update_plots(cls, update_id):
+        """Get all plots that contain a specific update.
+        
+        Args:
+            update_id (int): The update ID to search for
+            
+        Returns:
+            list: List of plot objects containing this update
+        """
+        all_plots = cls.get_all_plots()
+        containing_plots = []
+        for plot in all_plots:
+            if hasattr(plot.db, 'update_ids') and update_id in plot.db.update_ids:
+                containing_plots.append(plot)
+        return containing_plots
     
     @classmethod
     def delete_chapter(cls, chapter_id):

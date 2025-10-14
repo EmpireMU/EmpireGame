@@ -2,11 +2,16 @@
 Story System
 
 This module implements a hierarchical story system for tracking narrative
-progression through Books, Volumes, Chapters, and Story Updates.
+progression through Books, Plots, Chapters, and Story Updates.
 
-The system uses a single Script typeclass with different story_type values
-to represent chapters and story updates. Books and volumes are stored as
-text labels on chapters rather than separate entities.
+Structure:
+- Books: High-level chronological groupings
+- Plots: Thematic plot threads that span chapters/books
+- Chapters: Mechanical game periods (action budget units)
+- Story Updates: Individual narrative posts tagged with plot
+
+The system uses Scripts with different story_type values to represent
+plots, chapters, and story updates.
 """
 
 from evennia.scripts.scripts import DefaultScript
@@ -15,20 +20,22 @@ from datetime import datetime
 
 class StoryElement(DefaultScript):
     """
-    A story element - either a chapter or story update.
+    A story element - either a plot, chapter, or story update.
     
-    This typeclass handles both chapters (major story divisions) and 
-    story updates (frequent narrative content within chapters).
+    This typeclass handles plots (plot threads), chapters (mechanical 
+    game periods), and story updates (narrative content).
     
     Attributes:
-        story_type (str): "chapter" or "update"
-        title (str): Title of the chapter/update
+        story_type (str): "plot", "chapter", or "update"
+        title (str): Title of the plot/chapter/update
         content (str): Content text (for updates only)
+        description (str): Description (for plots only)
+        update_ids (list): List of update IDs (for plots only)
         book_title (str): Book this belongs to (for chapters)
-        volume_title (str): Volume this belongs to (for chapters) 
         parent_id (int): Chapter ID (for updates only)
         order (int): Order within parent/sequence
         is_current (bool): Whether this chapter is current (chapters only)
+        is_active (bool): Whether this plot is active (plots only)
         timestamp (datetime): When this was created
     """
     
@@ -39,18 +46,20 @@ class StoryElement(DefaultScript):
         now = datetime.now()
         
         # Core properties
-        self.db.story_type = "chapter"  # "chapter" or "update"
+        self.db.story_type = "chapter"  # "plot", "chapter", or "update"
         self.db.title = ""
         self.db.content = ""  # For updates only
+        self.db.description = ""  # For plots only
+        self.db.update_ids = []  # For plots - which updates they contain (list)
         
         # Hierarchy info
         self.db.book_title = ""  # For chapters - which book they belong to
-        self.db.volume_title = ""  # For chapters - which volume they belong to  
         self.db.parent_id = None  # For updates - which chapter they belong to
         
         # Ordering and status
         self.db.order = 1
         self.db.is_current = False  # For chapters only
+        self.db.is_active = True  # For plots only
         self.db.timestamp = now
         
         # Make sure this script persists and doesn't repeat
@@ -68,6 +77,11 @@ class StoryElement(DefaultScript):
         return self.db.title
         
     @property
+    def is_plot(self):
+        """Check if this is a plot."""
+        return self.db.story_type == "plot"
+    
+    @property
     def is_chapter(self):
         """Check if this is a chapter."""
         return self.db.story_type == "chapter"
@@ -81,7 +95,9 @@ class StoryElement(DefaultScript):
         """
         Returns the display name - used in listings.
         """
-        if self.is_chapter:
+        if self.is_plot:
+            return f"Plot: {self.db.title}"
+        elif self.is_chapter:
             return f"Chapter #{self.id}: {self.db.title}"
         else:
             return f"Update #{self.id}: {self.db.title}"
