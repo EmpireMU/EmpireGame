@@ -48,23 +48,29 @@ class CmdWiki(Command):
         else:
             all_pages = WorldInfoPage.objects.filter(is_public=True)
         
-        # Handle /search switch
-        if "search" in self.switches:
-            if not self.args or len(self.args.strip()) < 2:
-                self.msg("Usage: wiki/search <query> (minimum 2 characters)")
+        # Handle switches
+        if self.switches:
+            switch = self.switches[0].lower()
+            
+            if switch == "search":
+                if not self.args or len(self.args.strip()) < 2:
+                    self.msg("Usage: wiki/search <query> (minimum 2 characters)")
+                    return
+                
+                self.search_pages(all_pages, self.args.strip())
                 return
             
-            self.search_pages(all_pages, self.args.strip())
-            return
-        
-        # Handle /list switch
-        if "list" in self.switches:
-            if not self.args:
-                self.msg("Usage: wiki/list <category>")
+            elif switch == "list":
+                if not self.args:
+                    self.msg("Usage: wiki/list <category>")
+                    return
+                
+                self.list_category(all_pages, self.args.strip())
                 return
             
-            self.list_category(all_pages, self.args.strip())
-            return
+            else:
+                self.msg(f"Unknown switch '{switch}'. Use /search or /list.")
+                return
         
         # No arguments - show category index
         if not self.args:
