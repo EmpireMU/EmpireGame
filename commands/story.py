@@ -13,15 +13,13 @@ from datetime import datetime
 
 class CmdStory(MuxCommand):
     """
-    Manage story updates and view story timeline.
+    View story updates and timeline.
     
     Usage:
         story                           - Show story timeline
         story <id>                      - Read story update from current book
         story "<book>" <id>             - Read story update from specific book
-        story/read <id>                 - Read story update from current book
-        story/read "<book>" <id>        - Read story update from specific book
-        story/plots                     - List all plots
+        story/plots                     - List all plot threads
         story/plot <name>               - View updates in a plot
         story/plot "<name>" <id>        - Read specific update in plot
         
@@ -32,15 +30,12 @@ class CmdStory(MuxCommand):
         story/plots                     - List all plot threads
         story/plot "Rin"                - View all Rin plot updates
         story/plot "Rin" 3              - Read 3rd update in Rin plot
-        
-    Story updates use book-scoped numbering for user convenience. Each book
-    has its own sequence (1, 2, 3...) while maintaining global IDs internally.
     """
     
     key = "story"
-    locks = "cmd:all();create:perm(Builder);edit:perm(Builder);delete:perm(Builder);list:perm(Builder);read:all();plots:all();plot:all();tag:perm(Builder)"
+    locks = "cmd:all();create:perm(Builder);edit:perm(Builder);delete:perm(Builder);list:perm(Builder);plots:all();plot:all();tag:perm(Builder)"
     help_category = "General"
-    switch_options = ("create", "edit", "delete", "list", "read", "plots", "plot", "tag")
+    switch_options = ("create", "edit", "delete", "list", "plots", "plot", "tag")
     
     def get_help(self, caller, cmdset):
         """
@@ -62,6 +57,8 @@ class CmdStory(MuxCommand):
     
     |yBuilder Commands:|n
         story/create <title>=<content>         - Create new story update
+        story/tag <update_id> <plot_ids>       - Tag update with plots (comma-separated)
+        story/tag <update_id> none             - Remove from all plots
         story/edit <id>=<content>              - Edit story update
         story/edit "<book>" <id>=<content>     - Edit update from specific book
         story/delete <id>                      - Delete story update
@@ -70,6 +67,8 @@ class CmdStory(MuxCommand):
         
     Builder Examples:
         story/create Tensions Rise=The Duke's mysterious visitors continue...
+        story/tag 5 1,3                        - Tag update #5 with plots 1 and 3
+        story/tag 5 none                       - Remove update #5 from all plots
         story/edit 5=The Duke's mysterious visitors arrived under cover...
         story/edit "A New Book" 1=New content for first update...
         story/delete 5                         - Delete update #5
@@ -103,8 +102,6 @@ class CmdStory(MuxCommand):
                     self.msg("You don't have permission to list all story updates.")
                     return
                 self._list_all_updates()
-            elif switch == "read":
-                self._read_update()
             elif switch == "plots":
                 self._list_plots()
             elif switch == "plot":
@@ -604,7 +601,7 @@ class CmdStory(MuxCommand):
 
 class CmdChapter(MuxCommand):
     """
-    Manage story chapters and view chapter information.
+    View story chapter information.
     
     Usage:
         chapter                           - Show current chapter info
@@ -613,9 +610,6 @@ class CmdChapter(MuxCommand):
     Examples:
         chapter                           - View current chapter
         chapter 2                         - View chapter #2
-        
-    Chapters represent mechanical game periods (action budget units). Books 
-    are organizational labels for grouping chapters chronologically.
     """
     
     key = "chapter"
@@ -1011,14 +1005,13 @@ class CmdChapter(MuxCommand):
 
 class CmdPlot(MuxCommand):
     """
-    Manage plot threads for organizing story updates.
+    View plot threads and their story updates.
     
     Usage:
         plot                              - List all plots
         plot <id>                         - View specific plot info
         
     Plots are thematic story threads that span across chapters and books.
-    Story updates can be tagged with a plot to organize concurrent storylines.
     """
     
     key = "plot"

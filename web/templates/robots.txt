@@ -3,7 +3,7 @@ User-agent: *
 # Allow indexing of public pages
 Allow: /
 Allow: /characters/
-Allow: /world/
+Allow: /information/
 
 # Block private/sensitive areas
 Disallow: /admin/

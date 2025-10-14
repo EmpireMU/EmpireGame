@@ -19,15 +19,14 @@ class CmdWiki(MuxCommand):
         wiki/list <category>        - List pages in a category
         wiki/search <query>         - Search wiki pages
         
-    The wiki contains setting information, game mechanics, house information,
-    and other reference material. All content is also available on the website
-    with full formatting, images, and character links.
+    The wiki contains setting information, game mechanics, and other reference material.
+    All content is also available on the website.
     
     Examples:
         wiki                        - Show all categories
         wiki House Otrese           - View the House Otrese page
-        wiki/list Houses            - List all pages in Houses category
-        wiki/search combat          - Search for pages about combat
+        wiki/list Setting Information - List all pages in the Setting Information category
+        wiki/search Greenwood          - Search for pages about Greenwood
     """
     
     key = "wiki"
@@ -123,7 +122,7 @@ class CmdWiki(MuxCommand):
         
         # Add web link
         domain = getattr(settings, 'WEB_PROFILE_DOMAIN', 'empiremush.org')
-        msg += f"\n\n|xFull wiki with images: |chttps://{domain}/worldinfo/|n"
+        msg += f"\n\n|xFull wiki: |chttps://{domain}/worldinfo/|n"
         
         self.msg(msg)
     
@@ -202,7 +201,7 @@ class CmdWiki(MuxCommand):
         domain = getattr(settings, 'WEB_PROFILE_DOMAIN', 'empiremush.org')
         web_url = f"https://{domain}/worldinfo/{page.slug}/"
         msg += f"\n\n|w{'=' * 78}|n"
-        msg += f"\n|xView on web with full formatting: |c{web_url}|n"
+        msg += f"\n|xView on web: |c{web_url}|n"
         
         self.msg(msg)
     
