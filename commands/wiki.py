@@ -2,14 +2,14 @@
 Wiki command for accessing worldinfo pages in-game.
 """
 
-from evennia import Command
+from evennia.commands.default.muxcommand import MuxCommand
 from django.conf import settings
 from django.db.models import Q
 import re
 import html
 
 
-class CmdWiki(Command):
+class CmdWiki(MuxCommand):
     """
     Access the game wiki/knowledge base.
     
