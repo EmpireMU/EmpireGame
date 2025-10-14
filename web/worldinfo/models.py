@@ -3,6 +3,33 @@ from django.urls import reverse
 from django.utils.text import slugify
 
 
+class News(models.Model):
+    """
+    A news/announcement item for the homepage.
+    Can be either Story Updates or Game News.
+    """
+    CATEGORY_CHOICES = [
+        ('story', 'Story Update'),
+        ('game', 'Game News'),
+    ]
+    
+    title = models.CharField(max_length=200)
+    content = models.TextField(help_text="Main content of the news item. HTML is allowed.")
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='game')
+    posted_date = models.CharField(max_length=50, help_text="e.g., 'September 2025' or 'October 13, 2025'")
+    is_active = models.BooleanField(default=True, help_text="Only active news items are shown on the homepage")
+    order = models.IntegerField(default=0, help_text="Lower numbers appear first within each category")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['category', 'order', '-created_at']
+        verbose_name_plural = "News"
+    
+    def __str__(self):
+        return f"{self.get_category_display()}: {self.title}"
+
+
 class WorldInfoPage(models.Model):
     """
     A page of worldinfo.

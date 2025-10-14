@@ -69,11 +69,16 @@
                 <h4 class="mb-0">Latest Story Updates</h4>
             </div>
             <div class="card-body">
-                <h5>Six Centuries</h5>
-                <p class="text-muted small">Posted: September 2025</p>
-                <p>It is spring of 632 AF, six centuries since the Empire of Adana was founded. The Empire has enjoyed a long period of relative stability, but events in recent years threaten to undo all that.
-                    The formal coronation of Koline Otrese, although empress since 631, is due. It is a formality, but one which gathers many people, and leads to a great deal of bustle in the capital.
-                </p>
+                {% if story_updates %}
+                    {% for update in story_updates %}
+                        <h5>{{ update.title }}</h5>
+                        <p class="text-muted small">Posted: {{ update.posted_date }}</p>
+                        <p>{{ update.content|safe }}</p>
+                        {% if not forloop.last %}<hr/>{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No story updates at this time.</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -85,10 +90,16 @@
                 <h4 class="mb-0">Game News</h4>
             </div>
             <div class="card-body">
-                <h5>Welcome to Empire!</h5>
-                <p class="text-muted small">Posted: September 2025</p>
-                <p>Empire will be opening on 31 October 2025.</p>
-                <p>Join the game's Discord server to ask questions and stay updated: <a href="https://discord.gg/YEVWv4nB" target="_blank">Join Discord</a></p>
+                {% if game_news %}
+                    {% for news in game_news %}
+                        <h5>{{ news.title }}</h5>
+                        <p class="text-muted small">Posted: {{ news.posted_date }}</p>
+                        <p>{{ news.content|safe }}</p>
+                        {% if not forloop.last %}<hr/>{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No game news at this time.</p>
+                {% endif %}
             </div>
         </div>
     </div>

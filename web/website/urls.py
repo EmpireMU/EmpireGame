@@ -15,6 +15,7 @@ from django.contrib.auth import views as auth_views
 
 from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
 from .views.assets import upload_site_asset, manage_site_assets, delete_site_asset, rename_site_asset
+from web.worldinfo.views import homepage
 
 def character_creation_disabled(request):
     """Return a 403 Forbidden response for character creation/management URLs."""
@@ -27,6 +28,9 @@ def custom_logout(request):
 
 # add patterns here
 urlpatterns = [
+    # Custom homepage with news items
+    path('', homepage, name='homepage'),
+    
     # Override Evennia's default character creation/management URLs to disable them
     path('accounts/characters/create/', character_creation_disabled, name='character-create'),
     path('accounts/characters/manage/', character_creation_disabled, name='character-manage'),

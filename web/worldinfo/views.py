@@ -25,7 +25,7 @@ except ImportError:
 
 import re
 import markdown
-from .models import WorldInfoPage
+from .models import WorldInfoPage, News
 
 
 def is_staff_user(user):
@@ -419,4 +419,27 @@ def worldinfo_search_view(request):
         'is_staff': is_staff_user(request.user),
     }
     
-    return render(request, 'worldinfo/search.html', context) 
+    return render(request, 'worldinfo/search.html', context)
+
+
+def homepage(request):
+    """
+    Custom homepage view that includes news items from the database.
+    """
+    # Get active news items separated by category
+    story_updates = News.objects.filter(is_active=True, category='story').order_by('order', '-created_at')
+    game_news = News.objects.filter(is_active=True, category='game').order_by('order', '-created_at')
+    
+    # Get the default context from Evennia's settings
+    from django.conf import settings
+    
+    context = {
+        'story_updates': story_updates,
+        'game_news': game_news,
+        'webclient_enabled': settings.WEBCLIENT_ENABLED,
+        'telnet_enabled': settings.TELNET_ENABLED,
+        'server_hostname': settings.SERVERNAME,
+        'telnet_ports': settings.TELNET_PORTS,
+    }
+    
+    return render(request, 'website/index.html', context) 
