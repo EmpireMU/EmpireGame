@@ -61,7 +61,7 @@ def colorize_words(message, word_colors, speech_color="|y"):
             if char == "\\":
                 escape = True
                 continue
-            if char in ('"', "'):
+            if char in ('"', "'"):
                 state[char] = not state[char]
 
     quote_state = {'"': False, "'": False}
