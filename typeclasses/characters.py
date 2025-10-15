@@ -110,7 +110,7 @@ class Character(ObjectParent, DefaultCharacter):
         """
         return TraitHandler(self, db_attribute_key="char_complications")
 
-    @lazy_property
+    @property
     def organisations(self):
         """
         Get all organisations this character belongs to.
@@ -258,7 +258,6 @@ class Character(ObjectParent, DefaultCharacter):
             _ = self.skills
             _ = self.signature_assets
             _ = self.powers
-            _ = self.organisations
             _ = self.char_resources
         except ValueError as e:
             if "instance is on database" in str(e):
@@ -305,7 +304,6 @@ class Character(ObjectParent, DefaultCharacter):
         _ = self.skills
         _ = self.signature_assets
         _ = self.powers
-        _ = self.organisations
         _ = self.char_resources
         
         # Check for unread mail
