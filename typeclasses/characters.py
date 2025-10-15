@@ -257,6 +257,26 @@ class Character(ObjectParent, DefaultCharacter):
             else:
                 raise
 
+    def return_appearance(self, looker, **kwargs):
+        """
+        This formats the character's appearance for display.
+        Adds worn items to the description.
+        """
+        # Get the base appearance
+        appearance = super().return_appearance(looker, **kwargs)
+        
+        # Add worn items if any
+        get_worn = getattr(self, "get_worn_items", None)
+        worn_items = get_worn() if callable(get_worn) else []
+        if worn_items:
+            worn_desc = "\n\n" + self.name + " is wearing:\n"
+            for item in worn_items:
+                name = item.get_display_name(looker) if hasattr(item, "get_display_name") else item.name
+                worn_desc += f"  {name}|n\n"
+            appearance += worn_desc
+        
+        return appearance
+    
     def at_post_puppet(self):
         """
         Called just after puppeting has completed.
