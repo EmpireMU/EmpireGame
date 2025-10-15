@@ -192,8 +192,11 @@ class Guest(DefaultGuest):
         For guests, ensure both account and character are properly deleted.
         """
         # Delete guest characters before account cleanup
-        for character in list(self.characters):
-            character.delete()
+        character_ids = [char.id for char in self.characters.all()]
+        for char_id in character_ids:
+            character = self.characters.get_character(char_id)
+            if character:
+                character.delete()
         
         # Clear any stale puppet references to prevent issues with reused guest names
         self.db._last_puppet = None

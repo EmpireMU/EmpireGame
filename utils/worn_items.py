@@ -2,7 +2,7 @@
 Utility helpers for managing worn items on characters.
 """
 
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from evennia.objects.models import ObjectDB
 
@@ -88,16 +88,4 @@ def remove_worn_item(character, item) -> bool:
         return False
     character.db.worn_items = updated
     return True
-
-
-def clear_worn_items(character, items: Iterable[object]) -> None:
-    """Remove multiple items from the worn list."""
-    ids = set(_normalize_entry(item) for item in items)
-    ids.discard(None)
-    if not ids:
-        return
-    current = _get_worn_ids(character)
-    updated = [existing for existing in current if existing not in ids]
-    if updated != current:
-        character.db.worn_items = updated
 

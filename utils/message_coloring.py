@@ -45,32 +45,49 @@ def colorize_words(message, word_colors, speech_color="|y"):
     """
     if not word_colors:
         return message
-        
-    # Apply word coloring (case-insensitive)
-    for word, color in word_colors.items():
-        # Use word boundary regex to match whole words only
-        pattern = r'\b' + re.escape(word) + r'\b'
-        
-        def replace_word(match):
-            matched_word = match.group(0)
-            # Check if we're inside quotes by looking at the context
-            start_pos = match.start()
-            before_word = message[:start_pos]
-            
-            # Count quotes before this word to see if we're inside quotes
-            quote_count = before_word.count('"') + before_word.count("'")
-            in_quotes = quote_count % 2 == 1
-            
-            if in_quotes:
-                # Inside quotes: restore speech color after word color
-                return f"{color}{matched_word}{speech_color}"
-            else:
-                # Outside quotes: reset color normally
-                return f"{color}{matched_word}|n"
-        
-        message = re.sub(pattern, replace_word, message, flags=re.IGNORECASE)
-    
-    return message
+
+    lowered = {word.lower(): color for word, color in word_colors.items() if word}
+    if not lowered:
+        return message
+
+    pattern = re.compile(r"\b(" + "|".join(re.escape(word) for word in lowered) + r")\b", re.IGNORECASE)
+
+    def update_quote_state(text, state):
+        escape = False
+        for char in text:
+            if escape:
+                escape = False
+                continue
+            if char == "\\":
+                escape = True
+                continue
+            if char in ('"', "'):
+                state[char] = not state[char]
+
+    quote_state = {'"': False, "'": False}
+    parts = []
+    cursor = 0
+
+    for match in pattern.finditer(message):
+        start, end = match.span()
+        prefix = message[cursor:start]
+        parts.append(prefix)
+        update_quote_state(prefix, quote_state)
+
+        matched_word = match.group(0)
+        color = lowered[matched_word.lower()]
+        inside_quotes = quote_state['"'] or quote_state["'"]
+        if inside_quotes:
+            parts.append(f"{color}{matched_word}{speech_color}")
+        else:
+            parts.append(f"{color}{matched_word}|n")
+
+        cursor = end
+
+    suffix = message[cursor:]
+    parts.append(suffix)
+
+    return ''.join(parts)
 
 
 def apply_character_coloring(message, character):

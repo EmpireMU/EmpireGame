@@ -63,6 +63,7 @@
                         <label for="related_name" class="form-label">Related Character Name:</label>
                         <input type="text" name="related_name" id="related_name" class="form-control" required 
                                placeholder="Enter character name" autocomplete="off">
+                        <input type="hidden" name="related_character_id" id="related_character_id" value="">
                         <div id="related_character_results" class="dropdown-menu" style="display: none; max-height: 200px; overflow-y: auto;"></div>
                     </div>
                 </div>
@@ -163,17 +164,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const characterResults = document.getElementById('character_results');
     
     let searchTimeout;
-    let selectedCharacter = null;
     
     // Update placeholder text based on PC/NPC selection
     function updatePlaceholder() {
         if (pcRadio.checked) {
             nameInput.placeholder = 'Enter PC character name';
             reciprocalCheck.disabled = false;
+            document.getElementById('related_character_id').value = '';
         } else {
             nameInput.placeholder = 'Enter NPC name';
             reciprocalCheck.disabled = true;
             reciprocalCheck.checked = false;
+            document.getElementById('related_character_id').value = '';
         }
     }
     
@@ -187,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (inputEl === nameInput && !pcRadio.checked) {
                 resultsEl.style.display = 'none';
+                document.getElementById('related_character_id').value = '';
                 return;
             }
             
@@ -228,14 +231,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function selectCharacter(char) {
-        selectedCharacter = char;
         characterSearch.value = char.display_name;
         characterId.value = char.id;
         characterResults.style.display = 'none';
     }
     
     function selectRelatedCharacter(char) {
-        nameInput.value = char.display_name;  // Show display name for better UX
+        nameInput.value = char.display_name;
+        document.getElementById('related_character_id').value = char.id;
         document.getElementById('related_character_results').style.display = 'none';
     }
     

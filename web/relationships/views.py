@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseForbidden
@@ -37,29 +38,23 @@ def character_search(request):
     query = query[:50]
     
     # Search for characters (case-insensitive)
-    characters = ObjectDB.objects.filter(
-        db_attributes__db_key='status',
-        db_key__icontains=query
-    ).exclude(
-        db_attributes__db_value='gone'
-    ).values('id', 'db_key').order_by('db_key')[:10]
-    
-    # Filter out staff accounts
+    matched_ids = list(
+        ObjectDB.objects
+        .filter(db_attributes__db_key='status', db_key__icontains=query)
+        .exclude(db_attributes__db_value='gone')
+        .order_by('db_key')
+        .values_list('id', flat=True)[:10]
+    )
+
     results = []
-    for char_data in characters:
-        try:
-            char = ObjectDB.objects.get(id=char_data['id'])
-            if not (char.account and char.account.check_permstring("Builder")):
-                # Get display name (full_name if available, otherwise db_key)
-                display_name = char.db.full_name or char.db_key
-                results.append({
-                    'id': char_data['id'],
-                    'name': char_data['db_key'],
-                    'display_name': display_name
-                })
-        except ObjectDB.DoesNotExist:
+    for char in ObjectDB.objects.filter(id__in=matched_ids):
+        account = getattr(char, 'account', None)
+        if account and account.check_permstring("Builder"):
             continue
-    
+        full_name = getattr(char.db, 'full_name', None)
+        display_name = full_name or char.db_key
+        results.append({'id': char.id, 'name': char.db_key, 'display_name': display_name})
+
     return JsonResponse(results, safe=False)
 
 
@@ -98,8 +93,7 @@ def relationship_list(request):
     if not is_staff_user(request.user):
         return HttpResponseForbidden("You must be staff to access family relationship management.")
     relationships = FamilyRelationship.objects.all()
-    
-    # No longer need to load all characters - autocomplete handles this
+
     context = {
         'relationships': relationships,
         'relationship_choices': FamilyRelationship._meta.get_field('relationship_type').choices,
@@ -137,74 +131,56 @@ def add_relationship(request):
         messages.error(request, "Selected character not found.")
         return redirect('relationships:list')
     
-    # Process based on related character type
-    related_character_id = None
+    related_character_dbid = None
     related_character_name = related_name
-    
+    related_display_name = related_name
+
     if related_type == 'pc':
-        # Find PC by name (search both db_key and full_name) - only among valid characters
-        related_char = None
-        
-        # Get all valid characters (same filter as autocomplete)
-        valid_characters = ObjectDB.objects.filter(
-            db_attributes__db_key='status'
-        ).exclude(
-            db_attributes__db_value='gone'
-        )
-        
-        # First try exact match on db_key
-        try:
-            related_char = valid_characters.get(db_key__iexact=related_name)
-        except ObjectDB.DoesNotExist:
-            # Then try to find by full_name - need to check each character
-            for char in valid_characters:
-                if hasattr(char, 'db') and char.db.full_name and char.db.full_name.lower() == related_name.lower():
-                    related_char = char
-                    break
-            
-            if not related_char:
-                messages.error(request, f"No player character found with name '{related_name}'.")
-                return redirect('relationships:list')
-        except ObjectDB.MultipleObjectsReturned:
-            messages.error(request, f"Multiple characters found with name '{related_name}'. Please be more specific.")
+        related_character_id = request.POST.get('related_character_id')
+        if not related_character_id:
+            messages.error(request, "Please select a player character from the suggestions list.")
             return redirect('relationships:list')
-        
-        related_character_id = related_char.id
-        related_character_name = ''  # Clear name since we have ID
-    
-    # Create the main relationship
+        try:
+            related_char = ObjectDB.objects.get(id=related_character_id)
+        except ObjectDB.DoesNotExist:
+            messages.error(request, "Selected related character not found.")
+            return redirect('relationships:list')
+
+        related_character_dbid = related_char.id
+        related_character_name = ''
+        related_display_name = related_char.db.full_name or related_char.name
+    else:
+        related_char = None
+
     try:
-        relationship = FamilyRelationship.objects.create(
-            character_id=character_id,
-            related_character_id=related_character_id,
-            related_character_name=related_character_name,
-            relationship_type=relationship_type
-        )
-        
-        char_name = character.db.full_name or character.name
-        related_display = related_name if related_type == 'npc' else f"{related_name} (PC)"
-        messages.success(request, f"Added {relationship.get_relationship_type_display().lower()} relationship: {char_name} → {related_display}")
-        
-        # Create reciprocal relationship if requested and it's a PC
-        if create_reciprocal and related_character_id and relationship_type in RECIPROCAL_RELATIONSHIPS:
-            reciprocal_type = RECIPROCAL_RELATIONSHIPS[relationship_type]
-            
-            # Check if reciprocal already exists
-            existing_reciprocal = FamilyRelationship.objects.filter(
-                character_id=related_character_id,
-                related_character_id=character_id,
-                relationship_type=reciprocal_type
-            ).first()
-            
-            if not existing_reciprocal:
-                FamilyRelationship.objects.create(
-                    character_id=related_character_id,
+        with transaction.atomic():
+            relationship = FamilyRelationship.objects.create(
+                character_id=character_id,
+                related_character_id=related_character_dbid,
+                related_character_name=related_character_name,
+                relationship_type=relationship_type
+            )
+
+            char_name = character.db.full_name or character.name
+            related_display = related_display_name if related_type == 'npc' else f"{related_display_name} (PC)"
+            messages.success(request, f"Added {relationship.get_relationship_type_display().lower()} relationship: {char_name} → {related_display}")
+
+            if create_reciprocal and related_character_dbid and relationship_type in RECIPROCAL_RELATIONSHIPS:
+                reciprocal_type = RECIPROCAL_RELATIONSHIPS[relationship_type]
+                existing_reciprocal = FamilyRelationship.objects.filter(
+                    character_id=related_character_dbid,
                     related_character_id=character_id,
-                    related_character_name='',
                     relationship_type=reciprocal_type
-                )
-                messages.success(request, f"Also created reciprocal relationship: {related_name} → {char_name}")
-        
+                ).first()
+
+                if not existing_reciprocal:
+                    FamilyRelationship.objects.create(
+                        character_id=related_character_dbid,
+                        related_character_id=character_id,
+                        related_character_name='',
+                        relationship_type=reciprocal_type
+                    )
+                    messages.success(request, f"Also created reciprocal relationship: {related_display_name} → {char_name}")
     except Exception as e:
         messages.error(request, f"Error creating relationship: {str(e)}")
     
