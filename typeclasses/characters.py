@@ -456,15 +456,19 @@ class Character(ObjectParent, DefaultCharacter):
         # Get the die size before removing
         die_size = trait.value
         
-        # Remove from self
-        self.char_resources.remove(resource_name)
-        
-        # Add to target
-        if isinstance(target, Organisation):
-            target.add_org_resource(resource_name, die_size)
+        # Add to target first so we can roll back if needed
+        try:
+            if isinstance(target, Organisation):
+                target.add_org_resource(resource_name, die_size)
+            else:
+                target.add_resource(resource_name, die_size)
+        except Exception:
+            # If target addition fails, keep the resource and re-raise
+            raise
         else:
-            target.add_resource(resource_name, die_size)
-            
+            # Remove from self only once addition succeeds
+            self.char_resources.remove(resource_name)
+        
         return True
         
     def get_resources(self):

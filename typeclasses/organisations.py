@@ -154,15 +154,17 @@ class Organisation(ObjectParent, DefaultObject):
         # Get the die size before removing
         die_size = trait.value
         
-        # Remove from self
-        self.org_resources.remove(resource_name)
-        
-        # Add to target
-        if isinstance(target, Character):
-            target.add_resource(resource_name, die_size)
+        # Add to target first so we can roll back if needed
+        try:
+            if isinstance(target, Character):
+                target.add_resource(resource_name, die_size)
+            else:
+                target.add_org_resource(resource_name, die_size)
+        except Exception:
+            raise
         else:
-            target.add_org_resource(resource_name, die_size)
-            
+            self.org_resources.remove(resource_name)
+        
         return True
         
     def get_resources(self):
@@ -192,7 +194,7 @@ class Organisation(ObjectParent, DefaultObject):
             
         self.db.members[character.id] = rank
         # Update character's organisations attribute
-        orgs = character.organisations
+        orgs = dict(character.organisations)
         orgs[self.id] = rank  # Store using org ID for consistency
         character.attributes.add('organisations', orgs, category='organisations')
         return True
@@ -209,7 +211,7 @@ class Organisation(ObjectParent, DefaultObject):
         if character.id in self.db.members:
             del self.db.members[character.id]
             # Update character's organisations attribute
-            orgs = character.organisations
+            orgs = dict(character.organisations)
             if self.id in orgs:  # Check org ID for consistency
                 del orgs[self.id]
                 character.attributes.add('organisations', orgs, category='organisations')
@@ -234,7 +236,7 @@ class Organisation(ObjectParent, DefaultObject):
             
         self.db.members[character.id] = rank
         # Update character's organisations attribute
-        orgs = character.organisations
+        orgs = dict(character.organisations)
         orgs[self.id] = rank  # Store using org ID for consistency
         character.attributes.add('organisations', orgs, category='organisations')
         return True
@@ -312,6 +314,9 @@ class Organisation(ObjectParent, DefaultObject):
             else:
                 # Remove stale membership entry
                 del self.db.members[char_id]
+        else:
+            # Ensure membership mapping is persisted empty
+            self.db.members = {}
         
         # Delete the organisation
         super().delete() 

@@ -49,16 +49,54 @@ def get_org(org_name, caller=None):
     Returns:
         Organisation or None: The found organisation or None if not found
     """
-    org = caller.search(org_name, global_search=True) if caller else search_object(org_name)
-    if not org:
+    if not org_name:
         return None
-        
-    if not isinstance(org, Organisation):
+
+    search_kwargs = {
+        "typeclass": Organisation,
+        "global_search": True,
+    }
+
+    if caller:
+        results = caller.search(org_name, quiet=True, **search_kwargs)
+    else:
+        results = search_object(org_name, **search_kwargs)
+
+    if not results:
         if caller:
-            caller.msg(f"{org.name} is not an organisation.")
+            caller.msg(f"No organisation named '{org_name}' found.")
         return None
-        
-    return org
+
+    # `search` may return a single object or a list; normalise to list.
+    if not isinstance(results, (list, tuple)):
+        matches = [results]
+    else:
+        matches = list(results)
+
+    matches = [obj for obj in matches if isinstance(obj, Organisation)]
+    if not matches:
+        if caller:
+            caller.msg(f"No organisation named '{org_name}' found.")
+        return None
+
+    # Prefer an exact name match if more than one result.
+    exact_matches = [obj for obj in matches if obj.key.lower() == org_name.lower()]
+    if len(exact_matches) == 1:
+        return exact_matches[0]
+
+    if len(matches) == 1:
+        return matches[0]
+
+    if caller:
+        display_names = ", ".join(
+            obj.get_display_name(caller)
+            if hasattr(obj, "get_display_name")
+            else obj.key
+            for obj in matches
+        )
+        caller.msg(f"Multiple organisations match '{org_name}': {display_names}.")
+        caller.msg("Please be more specific.")
+    return None
 
 
 def get_char(char_name, caller=None, check_resources=False):
@@ -72,10 +110,52 @@ def get_char(char_name, caller=None, check_resources=False):
     Returns:
         Character or None: The found character or None if not found
     """
-    char = caller.search(char_name, global_search=True) if caller else search_object(char_name)
-    if not char:
+    if not char_name:
         return None
-        
+
+    search_kwargs = {
+        "typeclass": Character,
+        "global_search": True,
+    }
+
+    if caller:
+        results = caller.search(char_name, quiet=True, **search_kwargs)
+    else:
+        results = search_object(char_name, **search_kwargs)
+
+    if not results:
+        if caller:
+            caller.msg(f"No character named '{char_name}' found.")
+        return None
+
+    if not isinstance(results, (list, tuple)):
+        matches = [results]
+    else:
+        matches = list(results)
+
+    matches = [obj for obj in matches if isinstance(obj, Character)]
+    if not matches:
+        if caller:
+            caller.msg(f"No character named '{char_name}' found.")
+        return None
+
+    exact_matches = [obj for obj in matches if obj.key.lower() == char_name.lower()]
+    if len(exact_matches) == 1:
+        char = exact_matches[0]
+    elif len(matches) == 1:
+        char = matches[0]
+    else:
+        if caller:
+            display_names = ", ".join(
+                obj.get_display_name(caller)
+                if hasattr(obj, "get_display_name")
+                else obj.key
+                for obj in matches
+            )
+            caller.msg(f"Multiple characters match '{char_name}': {display_names}.")
+            caller.msg("Please be more specific.")
+        return None
+
     if check_resources and not validate_resource_owner(char, caller):
         return None
         
