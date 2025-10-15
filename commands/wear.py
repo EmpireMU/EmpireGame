@@ -5,6 +5,8 @@ Commands for wearing and removing items.
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia import CmdSet
 
+from utils import worn_items as worn_utils
+
 
 class CmdWear(MuxCommand):
     """
@@ -33,23 +35,15 @@ class CmdWear(MuxCommand):
             return
         
         # Clean and fetch worn items
-        worn_items = char.get_worn_items() if hasattr(char, "get_worn_items") else list(char.db.worn_items or [])
-
-        def _item_id(obj):
-            return getattr(obj, "id", getattr(obj, "pk", obj))
+        current_worn = worn_utils.get_worn_items(char)
 
         # Check if already wearing it
-        if any(_item_id(worn_item) == item.id for worn_item in worn_items):
+        if any(worn.id == item.id for worn in current_worn):
             char.msg(f"You're already wearing {item.name}.")
             return
         
         # Wear it
-        if hasattr(char, "add_worn_item"):
-            char.add_worn_item(item)
-        else:
-            updated = list(worn_items)
-            updated.append(item.id)
-            char.db.worn_items = updated
+        worn_utils.add_worn_item(char, item)
 
         char.msg(f"You wear {item.name}.")
 
@@ -82,19 +76,16 @@ class CmdRemove(MuxCommand):
         char = self.caller
 
         # Clean and fetch worn items
-        worn_items = char.get_worn_items() if hasattr(char, "get_worn_items") else list(char.db.worn_items or [])
-
-        def _item_id(obj):
-            return getattr(obj, "id", getattr(obj, "pk", obj))
+        current_worn = worn_utils.get_worn_items(char)
 
         # Check if we have any worn items
-        if not worn_items:
+        if not current_worn:
             char.msg("You're not wearing anything special.")
             return
         
         # Find the item in worn items
         item = None
-        for worn in worn_items:
+        for worn in current_worn:
             if self.args.lower() in worn.name.lower():
                 item = worn
                 break
@@ -104,11 +95,7 @@ class CmdRemove(MuxCommand):
             return
         
         # Remove it
-        if hasattr(char, "remove_worn_item"):
-            char.remove_worn_item(item)
-        else:
-            updated = [w for w in worn_items if _item_id(w) != item.id]
-            char.db.worn_items = updated
+        worn_utils.remove_worn_item(char, item)
 
         char.msg(f"You remove {item.name}.")
 

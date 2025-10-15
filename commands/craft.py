@@ -2,10 +2,13 @@
 Simple player item creation command.
 """
 
+from datetime import datetime
+
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia import CmdSet, create_object
+
 from typeclasses.player_items import PlayerItem
-from datetime import datetime, timedelta
+from utils import worn_items as worn_utils
 
 
 DAILY_ITEM_LIMIT = 5
@@ -47,12 +50,7 @@ class CmdCraft(MuxCommand):
                 return
                 
             # Ensure the item is no longer tracked as worn
-            if hasattr(char, "remove_worn_item"):
-                char.remove_worn_item(item)
-            else:
-                worn_items = [w for w in (char.db.worn_items or []) if w and w.id != item.id]
-                if worn_items != (char.db.worn_items or []):
-                    char.db.worn_items = worn_items
+            worn_utils.remove_worn_item(char, item)
 
             item.delete()
             char.msg(f"You destroy {item.name}.")

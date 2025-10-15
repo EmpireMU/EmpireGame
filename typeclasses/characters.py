@@ -14,6 +14,7 @@ from evennia.contrib.rpg.traits import TraitHandler
 from .objects import ObjectParent
 from utils.trait_definitions import ATTRIBUTES, SKILLS, DISTINCTIONS
 from utils.resource_utils import get_unique_resource_name, validate_die_size
+from utils import worn_items as worn_utils
 from evennia.comms.models import Msg
 
 # Character status constants
@@ -131,6 +132,18 @@ class Character(ObjectParent, DefaultCharacter):
         Set the notes list for this character.
         """
         self.db.notes = value
+
+    def get_worn_items(self):
+        """Return worn items as live objects, cleaning stale references."""
+        return worn_items.get_worn_items(self)
+
+    def add_worn_item(self, item):
+        """Track an item as worn."""
+        return worn_utils.add_worn_item(self, item)
+
+    def remove_worn_item(self, item):
+        """Stop tracking an item as worn."""
+        return worn_utils.remove_worn_item(self, item)
         
     def at_object_creation(self):
         """
@@ -266,8 +279,7 @@ class Character(ObjectParent, DefaultCharacter):
         appearance = super().return_appearance(looker, **kwargs)
         
         # Add worn items if any
-        get_worn = getattr(self, "get_worn_items", None)
-        worn_items = get_worn() if callable(get_worn) else []
+        worn_items = self.get_worn_items()
         if worn_items:
             worn_desc = "\n\n" + self.name + " is wearing:\n"
             for item in worn_items:
