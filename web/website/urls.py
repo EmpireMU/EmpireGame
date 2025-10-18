@@ -14,7 +14,10 @@ from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
 
 from evennia.web.website.urls import urlpatterns as evennia_website_urlpatterns
-from .views.assets import upload_site_asset, manage_site_assets, delete_site_asset, rename_site_asset, tile_map, view_map
+from .views.assets import (
+    upload_site_asset, manage_site_assets, delete_site_asset, rename_site_asset, 
+    tile_map, view_map, create_map_location, update_map_location, delete_map_location
+)
 from web.worldinfo.views import homepage
 
 def character_creation_disabled(request):
@@ -64,6 +67,11 @@ urlpatterns = [
     
     # Interactive map viewer
     path('map/<str:map_name>/', view_map, name='view-map'),
+    
+    # Map location management
+    path('api/map-locations/create/', create_map_location, name='create-map-location'),
+    path('api/map-locations/<int:location_id>/update/', update_map_location, name='update-map-location'),
+    path('api/map-locations/<int:location_id>/delete/', delete_map_location, name='delete-map-location'),
     
     # Custom app URLs
     path('characters/', include('web.roster.urls')),

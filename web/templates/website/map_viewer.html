@@ -11,13 +11,58 @@
                 <small>Click and drag to pan | Scroll to zoom | Click markers for information</small>
             </div>
             <div>
-                <a href="/admin/manage-assets/" class="btn btn-sm btn-light">Back to Assets</a>
+                {% if is_staff %}
+                <button id="addLocationBtn" onclick="toggleAddMode()" class="btn btn-sm btn-primary me-2">Add Location</button>
+                {% endif %}
+                <a href="/information/" class="btn btn-sm btn-light">Back to World Info</a>
             </div>
         </div>
     </div>
     
     <div id="map" style="width: 100%; height: calc(100vh - 120px);"></div>
 </div>
+
+<!-- Location Modal -->
+{% if is_staff %}
+<div id="locationModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+    <div style="background-color: white; margin: 5% auto; padding: 20px; border-radius: 8px; width: 500px; max-width: 90%;">
+        <h4 id="modalTitle">Add Location</h4>
+        <input type="hidden" id="locationId">
+        <input type="hidden" id="locationY">
+        <input type="hidden" id="locationX">
+        
+        <div class="mb-3">
+            <label class="form-label">Name:</label>
+            <input type="text" id="locationName" class="form-control" required>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Description:</label>
+            <textarea id="locationDescription" class="form-control" rows="3"></textarea>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Type:</label>
+            <select id="locationType" class="form-control">
+                <option value="settlement">Settlement</option>
+                <option value="landmark">Landmark</option>
+                <option value="polity">Polity</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Link URL (optional):</label>
+            <input type="text" id="locationLink" class="form-control" placeholder="https://...">
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="saveLocation()" class="btn btn-primary">Save</button>
+            <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
@@ -105,29 +150,30 @@ L.control.scale({
     imperial: false
 }).addTo(map);
 
-// Example location markers - You'll want to populate this from a database or JSON file
-// This is just a placeholder to show how markers work
-const exampleLocations = [
-    // { 
-    //     name: "Capital City", 
-    //     coords: [{{ center_y }}, {{ center_x }}],  // Example: center of map
-    //     description: "The grand capital of the realm",
-    //     type: "city"
-    // },
-    // Add your 50+ locations here or load from a separate JSON file
-];
+// Load locations from database
+const locations = {{ locations_json|safe }};
+const isStaff = {{ is_staff|lower }};
+const mapName = '{{ map_name|escapejs }}';
+let addLocationMode = false;
+const markers = {};
+
+const typeLabels = {
+    'settlement': 'Settlement',
+    'landmark': 'Landmark',
+    'polity': 'Polity',
+    'other': 'Other'
+};
 
 // Function to create custom marker icons
 function getMarkerIcon(type) {
     const colors = {
-        'city': '#e74c3c',
-        'town': '#3498db',
-        'dungeon': '#9b59b6',
+        'settlement': '#3498db',
         'landmark': '#f39c12',
-        'default': '#95a5a6'
+        'polity': '#9b59b6',
+        'other': '#95a5a6'
     };
     
-    const color = colors[type] || colors['default'];
+    const color = colors[type] || colors['other'];
     
     return L.divIcon({
         className: 'custom-marker',
@@ -138,37 +184,163 @@ function getMarkerIcon(type) {
     });
 }
 
-// Add markers to the map
-exampleLocations.forEach(location => {
-    const marker = L.marker(location.coords, {
-        icon: getMarkerIcon(location.type)
+// Add existing markers to the map
+function addMarker(location) {
+    const marker = L.marker([location.y_coord, location.x_coord], {
+        icon: getMarkerIcon(location.location_type)
     }).addTo(map);
     
-    marker.bindPopup(`
-        <div style="min-width: 200px;">
+    let popupContent = `
+        <div style="min-width: 250px;">
             <h4 style="margin-top: 0; color: #2c3e50;">${location.name}</h4>
-            <p style="margin-bottom: 0;">${location.description}</p>
-            ${location.type ? `<p style="margin-top: 5px; font-size: 12px; color: #7f8c8d;">Type: ${location.type}</p>` : ''}
-        </div>
-    `);
+            ${location.description ? `<p style="margin-bottom: 10px;">${location.description}</p>` : ''}
+            ${location.link_url ? `<p><a href="${location.link_url}" target="_blank">More info →</a></p>` : ''}
+            <p style="margin: 5px 0; font-size: 12px; color: #7f8c8d;">Type: ${typeLabels[location.location_type] || typeLabels['other']}</p>
+    `;
+    
+    if (isStaff) {
+        popupContent += `
+            <div style="margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;">
+                <button onclick="editLocation(${location.id})" class="btn btn-sm btn-warning" style="margin-right: 5px;">Edit</button>
+                <button onclick="deleteLocation(${location.id})" class="btn btn-sm btn-danger">Delete</button>
+            </div>
+        `;
+    }
+    
+    popupContent += '</div>';
+    
+    marker.bindPopup(popupContent);
+    markers[location.id] = marker;
+}
+
+// Load all locations
+locations.forEach(addMarker);
+
+// Handle map clicks for adding locations (staff only)
+map.on('click', function(e) {
+    console.log('Clicked coordinates:', [e.latlng.lat, e.latlng.lng]);
+    
+    if (isStaff && addLocationMode) {
+        showAddLocationModal(e.latlng.lat, e.latlng.lng);
+    }
 });
 
-// Add coordinates display on click (useful for finding marker positions)
-map.on('click', function(e) {
-    console.log('Clicked coordinates:', e.latlng);
-    // Uncomment to show popup with coordinates (useful for development)
-    // L.popup()
-    //     .setLatLng(e.latlng)
-    //     .setContent(`Coordinates: [${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}]`)
-    //     .openOn(map);
-});
+// CRUD functions for locations
+function showAddLocationModal(y, x) {
+    document.getElementById('locationId').value = '';
+    document.getElementById('locationName').value = '';
+    document.getElementById('locationDescription').value = '';
+    document.getElementById('locationType').value = 'other';
+    document.getElementById('locationLink').value = '';
+    document.getElementById('locationY').value = y;
+    document.getElementById('locationX').value = x;
+    document.getElementById('modalTitle').textContent = 'Add Location';
+    document.getElementById('locationModal').style.display = 'block';
+    // Reset add mode UI state
+    if (addLocationMode) {
+        toggleAddMode();
+    }
+}
+
+function editLocation(locationId) {
+    const location = locations.find(l => l.id === locationId);
+    if (!location) return;
+    
+    document.getElementById('locationId').value = location.id;
+    document.getElementById('locationName').value = location.name;
+    document.getElementById('locationDescription').value = location.description;
+    document.getElementById('locationType').value = location.location_type;
+    document.getElementById('locationLink').value = location.link_url || '';
+    document.getElementById('locationY').value = location.y_coord;
+    document.getElementById('locationX').value = location.x_coord;
+    document.getElementById('modalTitle').textContent = 'Edit Location';
+    document.getElementById('locationModal').style.display = 'block';
+}
+
+function saveLocation() {
+    const locationId = document.getElementById('locationId').value;
+    const data = {
+        map_name: mapName,
+        name: document.getElementById('locationName').value,
+        description: document.getElementById('locationDescription').value,
+        location_type: document.getElementById('locationType').value,
+        link_url: document.getElementById('locationLink').value,
+        y_coord: parseFloat(document.getElementById('locationY').value),
+        x_coord: parseFloat(document.getElementById('locationX').value)
+    };
+    
+    const url = locationId ? 
+        `/api/map-locations/${locationId}/update/` : 
+        '/api/map-locations/create/';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+function deleteLocation(locationId) {
+    if (!confirm('Are you sure you want to delete this location?')) return;
+    
+    fetch(`/api/map-locations/${locationId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    })
+    .catch(error => alert('Error: ' + error));
+}
+
+function toggleAddMode() {
+    addLocationMode = !addLocationMode;
+    const btn = document.getElementById('addLocationBtn');
+    if (addLocationMode) {
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-primary');
+        btn.textContent = 'Click Map to Add (Cancel)';
+    } else {
+        btn.classList.add('btn-primary');
+        btn.classList.remove('btn-success');
+        btn.textContent = 'Add Location';
+    }
+}
+
+function closeModal() {
+    document.getElementById('locationModal').style.display = 'none';
+    if (addLocationMode) {
+        toggleAddMode();
+    }
+}
 
 // Log map info for debugging
 console.log('Map initialized:', {
     bounds: [[0, 0], [zoom0Height, zoom0Width]],
     maxZoom: {{ max_zoom }},
     originalSize: [{{ original_width }}, {{ original_height }}],
-    tilesUrl: '{{ tiles_base_url|escapejs }}'
+    tilesUrl: '{{ tiles_base_url|escapejs }}',
+    locations: locations.length
 });
 </script>
 

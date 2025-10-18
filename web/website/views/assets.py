@@ -684,6 +684,12 @@ def view_map(request, map_name):
 
     zoom_levels = metadata.get('zoom_levels', [])
 
+    # Load map locations from database
+    from web.worldinfo.models import MapLocation
+    locations = MapLocation.objects.filter(map_name=map_name).values(
+        'id', 'name', 'description', 'location_type', 'x_coord', 'y_coord', 'link_url'
+    )
+    
     context = {
         'map_name': map_name,
         'tiles_base_url': tiles_base_url,
@@ -696,7 +702,101 @@ def view_map(request, map_name):
         'max_zoom_height': max_zoom_height,
         'center_y': center_y,
         'center_x': center_x,
-        'zoom_levels_json': json.dumps(zoom_levels)
+        'zoom_levels_json': json.dumps(zoom_levels),
+        'locations_json': json.dumps(list(locations)),
+        'is_staff': request.user.is_staff if request.user.is_authenticated else False
     }
     
     return render(request, 'website/map_viewer.html', context)
+
+
+# ==================== MAP LOCATION MANAGEMENT ====================
+
+@staff_member_required
+@require_POST
+@csrf_protect
+def create_map_location(request):
+    """Create a new map location."""
+    try:
+        from web.worldinfo.models import MapLocation
+        
+        data = json.loads(request.body)
+        location = MapLocation.objects.create(
+            map_name=data.get('map_name'),
+            name=data.get('name'),
+            description=data.get('description', ''),
+            location_type=data.get('location_type', 'other'),
+            x_coord=data.get('x_coord'),
+            y_coord=data.get('y_coord'),
+            link_url=data.get('link_url', '')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'location': {
+                'id': location.id,
+                'name': location.name,
+                'description': location.description,
+                'location_type': location.location_type,
+                'x_coord': location.x_coord,
+                'y_coord': location.y_coord,
+                'link_url': location.link_url
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@staff_member_required
+@require_POST
+@csrf_protect
+def update_map_location(request, location_id):
+    """Update an existing map location."""
+    try:
+        from web.worldinfo.models import MapLocation
+        
+        location = MapLocation.objects.get(id=location_id)
+        data = json.loads(request.body)
+        
+        location.name = data.get('name', location.name)
+        location.description = data.get('description', location.description)
+        location.location_type = data.get('location_type', location.location_type)
+        location.x_coord = data.get('x_coord', location.x_coord)
+        location.y_coord = data.get('y_coord', location.y_coord)
+        location.link_url = data.get('link_url', location.link_url)
+        location.save()
+        
+        return JsonResponse({
+            'success': True,
+            'location': {
+                'id': location.id,
+                'name': location.name,
+                'description': location.description,
+                'location_type': location.location_type,
+                'x_coord': location.x_coord,
+                'y_coord': location.y_coord,
+                'link_url': location.link_url
+            }
+        })
+    except MapLocation.DoesNotExist:
+        return JsonResponse({'error': 'Location not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@staff_member_required
+@require_POST
+@csrf_protect
+def delete_map_location(request, location_id):
+    """Delete a map location."""
+    try:
+        from web.worldinfo.models import MapLocation
+        
+        location = MapLocation.objects.get(id=location_id)
+        location.delete()
+        
+        return JsonResponse({'success': True})
+    except MapLocation.DoesNotExist:
+        return JsonResponse({'error': 'Location not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
