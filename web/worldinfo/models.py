@@ -14,8 +14,12 @@ class WorldInfoPage(SharedMemoryModel):
     content = models.TextField(help_text="Markdown-formatted content")
     category = models.CharField(max_length=100, blank=True, db_index=True,
                                 help_text="Optional category for grouping pages")
+    subcategory = models.CharField(max_length=100, blank=True, db_index=True,
+                                   help_text="Optional subcategory for grouping pages")
     emblem_image = models.CharField(max_length=500, blank=True,
                                     help_text="URL to emblem/icon image")
+    is_public = models.BooleanField(default=True, db_index=True,
+                                    help_text="Whether this page is visible to non-staff users")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -26,6 +30,33 @@ class WorldInfoPage(SharedMemoryModel):
     
     def __str__(self):
         return self.title
+
+
+class News(SharedMemoryModel):
+    """
+    News items for the homepage.
+    """
+    title = models.CharField(max_length=200, db_index=True)
+    content = models.TextField(help_text="News content")
+    category = models.CharField(max_length=50, choices=[
+        ('story', 'Story Update'),
+        ('game', 'Game News'),
+    ], default='game', db_index=True)
+    posted_date = models.DateField(help_text="Date to display for this news item")
+    is_active = models.BooleanField(default=True, db_index=True,
+                                    help_text="Whether this news item is displayed")
+    order = models.IntegerField(default=0, db_index=True,
+                               help_text="Display order (lower numbers first)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', '-posted_date']
+        verbose_name = "News Item"
+        verbose_name_plural = "News Items"
+    
+    def __str__(self):
+        return f"{self.title} ({self.category})"
 
 
 class MapLocation(SharedMemoryModel):

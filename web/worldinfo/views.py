@@ -427,8 +427,8 @@ def homepage(request):
     Custom homepage view that includes news items from the database.
     """
     # Get active news items separated by category
-    story_updates = News.objects.filter(is_active=True, category='story').order_by('order', '-created_at')
-    game_news = News.objects.filter(is_active=True, category='game').order_by('order', '-created_at')
+    story_updates = News.objects.filter(is_active=True, category='story').order_by('order', '-posted_date')
+    game_news = News.objects.filter(is_active=True, category='game').order_by('order', '-posted_date')
     
     # Get the default context from Evennia's settings
     from django.conf import settings
