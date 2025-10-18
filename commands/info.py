@@ -2,10 +2,11 @@
 Info/Finger command for displaying character information.
 """
 
-from evennia import Command
-from evennia.utils.search import search_object
-from utils.command_mixins import CharacterLookupMixin
 from django.conf import settings
+from django.utils import timezone
+
+from evennia import Command
+from utils.command_mixins import CharacterLookupMixin
 
 
 class CmdInfo(CharacterLookupMixin, Command):
@@ -213,10 +214,15 @@ class CmdInfo(CharacterLookupMixin, Command):
         # Format: https://empiremush.org/characters/detail/CharName/123/
         web_url = f"https://{domain}/characters/detail/{char.name.lower()}/{char.id}/"
         
+        # Determine online/idle status or last-online information
+        status_line = self._get_presence_status(char)
+
         # Start building the message
         msg = f"\n|w{char.name}'s Character Information|n"
         msg += f"\n|wCharacter Name:|n {display_name}"
         msg += f"\n|wWeb Profile:|n {web_url}"
+        if status_line:
+            msg += f"\n|wStatus:|n {status_line}"
         
         # Add custom fields if any exist
         custom_info = char.db.custom_info or {}
@@ -229,3 +235,33 @@ class CmdInfo(CharacterLookupMixin, Command):
                 msg += "\n\n|yNo custom fields set. Use 'info/set <field> = <value>' to add some!|n"
         
         self.msg(msg) 
+
+    def _get_presence_status(self, char):
+        """Return a string describing the character's online/idle or last-online status."""
+        account = getattr(char, "account", None)
+
+        # Character has no linked account; nothing to report
+        if not account:
+            return None
+
+        # Determine if the account is currently connected
+        if account.sessions.count():
+            idle_seconds = account.idle_time
+            if idle_seconds is None:
+                return "Online"
+
+            if idle_seconds >= 90 * 60:
+                return "Very Idle"
+            if idle_seconds >= 30 * 60:
+                return "Idle"
+            return "Online"
+
+        # Offline: show last login date if available
+        last_login = getattr(account, "last_login", None)
+        if last_login:
+            # Ensure timezone-aware for formatting
+            if timezone.is_naive(last_login):
+                last_login = timezone.make_aware(last_login, timezone.get_default_timezone())
+            return f"Last seen {last_login.date().isoformat()}"
+
+        return None

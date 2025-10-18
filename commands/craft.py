@@ -31,6 +31,7 @@ class CmdCraft(MuxCommand):
     
     key = "craft"
     locks = "cmd:all()"
+    help_category = "General"
     
     def func(self):
         char = self.caller

@@ -2,8 +2,13 @@
 Tests for the info/finger command.
 """
 
+from datetime import datetime
 from unittest.mock import MagicMock
+
+from django.utils import timezone
+
 from evennia.utils.test_resources import EvenniaTestCase
+
 from commands.info import CmdInfo
 
 
@@ -35,7 +40,10 @@ class TestInfoCommand(EvenniaTestCase):
         # Verify the content
         self.assertIn("Alice the Adventurer", output)
         self.assertIn("Web Profile:", output)
-        self.assertIn(f"https://yoursite.com/roster/character/{self.char1.name}/{self.char1.id}/", output)
+        self.assertIn(
+            f"https://yoursite.com/characters/detail/{self.char1.name.lower()}/{self.char1.id}/",
+            output,
+        )
         
     def test_info_no_full_name(self):
         """Test info display when no full name is set."""
@@ -243,3 +251,50 @@ class TestInfoCommand(EvenniaTestCase):
         output = self.cmd.msg.call_args[0][0]
         self.assertIn("Set custom field 'Online Times'", output)
         self.assertNotIn(" on ", output)  # Should not say "on CharName" 
+
+    def test_info_offline_last_seen(self):
+        """Offline characters should show last-seen date."""
+        # Remove sessions to simulate offline status
+        self.char1.account.sessions.all().delete()
+
+        last_seen = timezone.make_aware(datetime(2025, 1, 15, 13, 45))
+        self.char1.account.last_login = last_seen
+        self.char1.account.save()
+
+        self.cmd.args = ""
+        self.cmd.switches = []
+        self.cmd.func()
+
+        output = self.cmd.msg.call_args[0][0]
+        self.assertIn("Status:", output)
+        self.assertIn("Last seen 2025-01-15", output)
+
+    def test_info_online_idle_status(self):
+        """Online characters should show appropriate idle labels."""
+        account = self.char1.account
+
+        # Simulate idle times by monkeypatching idle_time property
+        account.idle_time = 20 * 60  # 20 minutes -> Online
+
+        self.cmd.args = ""
+        self.cmd.switches = []
+        self.cmd.func()
+        output = self.cmd.msg.call_args[0][0]
+        self.assertIn("Status:", output)
+        self.assertIn("Online", output)
+
+        # 45 minutes -> Idle
+        self.cmd.msg.reset_mock()
+        account.idle_time = 45 * 60
+        self.cmd.func()
+        output = self.cmd.msg.call_args[0][0]
+        self.assertIn("Status:", output)
+        self.assertIn("Idle", output)
+
+        # 2 hours -> Very Idle
+        self.cmd.msg.reset_mock()
+        account.idle_time = 120 * 60
+        self.cmd.func()
+        output = self.cmd.msg.call_args[0][0]
+        self.assertIn("Status:", output)
+        self.assertIn("Very Idle", output)

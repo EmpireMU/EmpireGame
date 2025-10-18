@@ -21,6 +21,7 @@ class CmdWear(MuxCommand):
     
     key = "wear"
     locks = "cmd:all()"
+    help_category = "General"
     
     def func(self):
         if not self.args:
@@ -67,6 +68,7 @@ class CmdRemove(MuxCommand):
     
     key = "remove"
     locks = "cmd:all()"
+    help_category = "General"
     
     def func(self):
         if not self.args:
