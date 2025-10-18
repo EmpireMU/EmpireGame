@@ -84,12 +84,12 @@ const map = L.map('map', {
 // Calculate max tile coordinates for each zoom level
 const tileSize = 256;
 function getMaxTiles(zoom) {
-    const scale = Math.pow(2, zoom - {{ max_zoom }});
-    const width = {{ original_width }} * scale;
-    const height = {{ original_height }} * scale;
+    const scale = Math.pow(2, zoom);
+    const width = Math.max(1, Math.ceil({{ original_width }} / scale));
+    const height = Math.max(1, Math.ceil({{ original_height }} / scale));
     return {
-        x: Math.ceil(width / tileSize),
-        y: Math.ceil(height / tileSize)
+        x: Math.max(1, Math.ceil(width / tileSize)),
+        y: Math.max(1, Math.ceil(height / tileSize))
     };
 }
 
