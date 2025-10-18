@@ -57,7 +57,7 @@ def validate_emblem_image(image_file):
 
 def process_emblem_image(image_file):
     """
-    Process emblem image - resize to reasonable emblem size (max 200px).
+    Process emblem image - resize to reasonable emblem size (max 400px).
     Preserves transparency for heraldic emblems.
     Returns processed image buffer.
     """
@@ -66,8 +66,8 @@ def process_emblem_image(image_file):
     # Preserve transparency for emblems - they often have irregular shapes
     # Don't convert to RGB, keep original mode including transparency
     
-    # Resize to max 200px (good size for article emblems)
-    img.thumbnail((200, 200), LANCZOS)
+    # Resize to max 400px (good size for article emblems)
+    img.thumbnail((400, 400), LANCZOS)
     
     # Save as PNG to preserve transparency
     buffer = io.BytesIO()
