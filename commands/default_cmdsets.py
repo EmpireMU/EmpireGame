@@ -47,6 +47,8 @@ from commands.directions import CmdDirections
 from commands.emit import CmdEmit
 from commands.ooc import CmdOOC, CmdUnpuppet
 from commands.wiki import CmdWiki
+from commands.craft import CraftCmdSet
+from commands.wear import WearCmdSet
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -101,6 +103,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdEmit())
         self.add(CmdOOC())
         self.add(CmdWiki())
+        self.add(CraftCmdSet)
+        self.add(WearCmdSet)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

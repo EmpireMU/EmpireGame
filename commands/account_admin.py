@@ -179,11 +179,7 @@ class CmdSetPassword(MuxCommand):
         account.set_password(password)
         account.save()
         
-        if "generate" in self.switches:
-            caller.msg(f"Password for account '{account.username}' has been set to: {password}")
-            caller.msg("|yMake sure to securely communicate this password and then clear your screen.|n")
-        else:
-            caller.msg(f"Password for account '{account.username}' has been updated successfully.")
+        caller.msg(f"Password for account '{account.username}' set to: {password}")
 
 
 class CmdCheckEmails(MuxCommand):
