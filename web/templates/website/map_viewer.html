@@ -76,8 +76,13 @@ const maxZoom = {{ max_zoom }};
 const zoom0Width = 256;
 const zoom0Height = 256;
 
+// Create CRS with Y-axis flipped to match image coordinates
+const customCRS = L.extend({}, L.CRS.Simple, {
+    transformation: new L.Transformation(1, 0, -1, zoom0Height)
+});
+
 const map = L.map('map', {
-    crs: L.CRS.Simple,
+    crs: customCRS,
     minZoom: 0,
     maxZoom: maxZoom,
     center: [zoom0Height/2, zoom0Width/2],
@@ -159,7 +164,7 @@ map.on('click', function(e) {
 
 // Log map info for debugging
 console.log('Map initialized:', {
-    bounds: mapBounds,
+    bounds: [[0, 0], [zoom0Height, zoom0Width]],
     maxZoom: {{ max_zoom }},
     originalSize: [{{ original_width }}, {{ original_height }}],
     tilesUrl: '{{ tiles_base_url|escapejs }}'
