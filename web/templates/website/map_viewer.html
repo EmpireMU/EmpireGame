@@ -111,16 +111,6 @@ const tileOptions = {
 };
 
 const tileLayer = L.tileLayer(urlTemplate, tileOptions);
-const originalGetTileUrl = tileLayer.getTileUrl.bind(tileLayer);
-
-tileLayer.getTileUrl = function(coords) {
-    const limits = getMaxTiles(coords.z);
-    if (coords.x < 0 || coords.y < 0 || coords.x >= limits.x || coords.y >= limits.y) {
-        return L.Util.emptyImageUrl;
-    }
-    return originalGetTileUrl(coords);
-};
-
 tileLayer.addTo(map);
 
 // Fit the map to the bounds
