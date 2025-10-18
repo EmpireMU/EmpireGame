@@ -81,15 +81,36 @@ const map = L.map('map', {
     maxBoundsViscosity: 1.0
 });
 
-// Add custom tile layer
-L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
+// Calculate max tile coordinates for each zoom level
+const tileSize = 256;
+function getMaxTiles(zoom) {
+    const scale = Math.pow(2, zoom - {{ max_zoom }});
+    const width = {{ original_width }} * scale;
+    const height = {{ original_height }} * scale;
+    return {
+        x: Math.ceil(width / tileSize),
+        y: Math.ceil(height / tileSize)
+    };
+}
+
+// Add custom tile layer with validation
+const tileLayer = L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
     minZoom: 0,
     maxZoom: {{ max_zoom }},
     tileSize: 256,
     noWrap: true,
     bounds: mapBounds,
     minNativeZoom: 0,
-    maxNativeZoom: {{ max_zoom }}
+    maxNativeZoom: {{ max_zoom }},
+    // Only load tiles with valid coordinates
+    getTileUrl: function(coords) {
+        const maxTiles = getMaxTiles(coords.z);
+        // Return empty tile if coordinates are invalid
+        if (coords.x < 0 || coords.y < 0 || coords.x >= maxTiles.x || coords.y >= maxTiles.y) {
+            return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        }
+        return '{{ tiles_base_url|escapejs }}/' + coords.z + '/' + coords.x + '/' + coords.y + '.png';
+    }
 }).addTo(map);
 
 // Fit the map to the bounds
