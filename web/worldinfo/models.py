@@ -46,7 +46,7 @@ class News(SharedMemoryModel):
         ('story', 'Story Update'),
         ('game', 'Game News'),
     ], default='game', db_index=True)
-    posted_date = models.DateField(help_text="Date to display for this news item")
+    posted_date = models.CharField(max_length=50, help_text="e.g., 'September 2025' or 'October 13, 2025'")
     is_active = models.BooleanField(default=True, db_index=True,
                                     help_text="Whether this news item is displayed")
     order = models.IntegerField(default=0, db_index=True,
