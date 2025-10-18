@@ -1,0 +1,39 @@
+{% extends "website/base.html" %}
+
+{% block titleblock %}Map Error{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">Map Not Available</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Error:</strong> {{ error }}
+                    </div>
+                    
+                    <p><strong>Map Name:</strong> {{ map_name }}</p>
+                    
+                    <h5 class="mt-4">What to do:</h5>
+                    <ol>
+                        <li>Go to <a href="/admin/manage-assets/">Manage Assets</a></li>
+                        <li>Find your map file ({{ map_name }}.png)</li>
+                        <li>Click the <strong>"Generate Tiles"</strong> button</li>
+                        <li>Wait 1-2 minutes for processing to complete</li>
+                        <li>Return here to view the interactive map</li>
+                    </ol>
+                    
+                    <div class="mt-4">
+                        <a href="/admin/manage-assets/" class="btn btn-primary">Go to Manage Assets</a>
+                        <a href="/" class="btn btn-secondary">Return Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

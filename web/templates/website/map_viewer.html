@@ -1,0 +1,168 @@
+{% extends "website/base.html" %}
+
+{% block titleblock %}{{ map_name }} - Interactive Map{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="padding: 0;">
+    <div class="map-header" style="background: #2c3e50; color: white; padding: 15px 30px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3 style="margin: 0;">{{ map_name|title }} - Interactive World Map</h3>
+                <small>Click and drag to pan | Scroll to zoom | Click markers for information</small>
+            </div>
+            <div>
+                <a href="/admin/manage-assets/" class="btn btn-sm btn-light">Back to Assets</a>
+            </div>
+        </div>
+    </div>
+    
+    <div id="map" style="width: 100%; height: calc(100vh - 120px);"></div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+      crossorigin=""/>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<style>
+/* Remove default page padding for full-width map */
+.container-fluid {
+    padding: 0 !important;
+}
+
+/* Leaflet controls styling */
+.leaflet-container {
+    background: #1a1a1a;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+}
+
+.leaflet-popup-content {
+    margin: 15px;
+    font-size: 14px;
+}
+
+.leaflet-popup-content h4 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+/* Custom marker cluster styling (if we add that later) */
+.location-marker {
+    background-color: #3498db;
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+</style>
+
+<script>
+// Initialize the map with CRS.Simple for non-geographic images
+const mapBounds = [[0, 0], [{{ original_height }}, {{ original_width }}]];
+
+const map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: 0,
+    maxZoom: {{ max_zoom }},
+    center: [{{ center_y }}, {{ center_x }}],
+    zoom: 1,
+    zoomControl: true,
+    attributionControl: false
+});
+
+// Add custom tile layer
+L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
+    minZoom: 0,
+    maxZoom: {{ max_zoom }},
+    tileSize: 256,
+    noWrap: true,
+    bounds: mapBounds
+}).addTo(map);
+
+// Fit the map to the bounds
+map.fitBounds(mapBounds);
+
+// Add scale control
+L.control.scale({
+    position: 'bottomright',
+    imperial: false
+}).addTo(map);
+
+// Example location markers - You'll want to populate this from a database or JSON file
+// This is just a placeholder to show how markers work
+const exampleLocations = [
+    // { 
+    //     name: "Capital City", 
+    //     coords: [{{ center_y }}, {{ center_x }}],  // Example: center of map
+    //     description: "The grand capital of the realm",
+    //     type: "city"
+    // },
+    // Add your 50+ locations here or load from a separate JSON file
+];
+
+// Function to create custom marker icons
+function getMarkerIcon(type) {
+    const colors = {
+        'city': '#e74c3c',
+        'town': '#3498db',
+        'dungeon': '#9b59b6',
+        'landmark': '#f39c12',
+        'default': '#95a5a6'
+    };
+    
+    const color = colors[type] || colors['default'];
+    
+    return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, -10]
+    });
+}
+
+// Add markers to the map
+exampleLocations.forEach(location => {
+    const marker = L.marker(location.coords, {
+        icon: getMarkerIcon(location.type)
+    }).addTo(map);
+    
+    marker.bindPopup(`
+        <div style="min-width: 200px;">
+            <h4 style="margin-top: 0; color: #2c3e50;">${location.name}</h4>
+            <p style="margin-bottom: 0;">${location.description}</p>
+            ${location.type ? `<p style="margin-top: 5px; font-size: 12px; color: #7f8c8d;">Type: ${location.type}</p>` : ''}
+        </div>
+    `);
+});
+
+// Add coordinates display on click (useful for finding marker positions)
+map.on('click', function(e) {
+    console.log('Clicked coordinates:', e.latlng);
+    // Uncomment to show popup with coordinates (useful for development)
+    // L.popup()
+    //     .setLatLng(e.latlng)
+    //     .setContent(`Coordinates: [${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}]`)
+    //     .openOn(map);
+});
+
+// Log map info for debugging
+console.log('Map initialized:', {
+    bounds: mapBounds,
+    maxZoom: {{ max_zoom }},
+    originalSize: [{{ original_width }}, {{ original_height }}],
+    tilesUrl: '{{ tiles_base_url|escapejs }}'
+});
+</script>
+
+{% endblock %}
+

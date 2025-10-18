@@ -22,6 +22,7 @@
                                 <tr>
                                     <th>Preview</th>
                                     <th>Filename</th>
+                                    <th>Type</th>
                                     <th>Size</th>
                                     <th>Modified</th>
                                     <th>URL</th>
@@ -50,7 +51,25 @@
                                                    value="{{ file.filename }}">
                                         </div>
                                     </td>
-                                    <td>{{ file.size_kb }} KB</td>
+                                    <td>
+                                        {% if file.is_map %}
+                                        <span class="badge bg-primary">World Map</span>
+                                        {% if file.has_tiles %}
+                                        <span class="badge bg-success">Tiled</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Not Tiled</span>
+                                        {% endif %}
+                                        {% else %}
+                                        <span class="badge bg-secondary">Asset</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if file.size_mb %}
+                                        {{ file.size_mb }} MB
+                                        {% else %}
+                                        {{ file.size_kb }} KB
+                                        {% endif %}
+                                    </td>
                                     <td>{{ file.modified|date:"Y-m-d H:i" }}</td>
                                     <td>
                                         <input type="text" class="form-control form-control-sm" 
@@ -59,10 +78,23 @@
                                                style="width: 300px; font-size: 0.85em;">
                                     </td>
                                     <td>
+                                        {% if file.is_map %}
+                                            {% if file.has_tiles %}
+                                            <a href="/map/{{ file.map_name }}/" class="btn btn-sm btn-success me-1" target="_blank">
+                                                View Map
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-sm btn-primary me-1" 
+                                                    onclick="generateTiles('{{ file.filename }}', {{ forloop.counter }})">
+                                                Generate Tiles
+                                            </button>
+                                            {% endif %}
+                                        {% else %}
                                         <button class="btn btn-sm btn-info me-1" 
                                                 onclick="copyToClipboard('{{ file.url }}')">
                                             Copy URL
                                         </button>
+                                        {% endif %}
                                         <button class="btn btn-sm btn-warning me-1" 
                                                 id="rename-btn-{{ forloop.counter }}"
                                                 onclick="toggleRename({{ forloop.counter }}, '{{ file.filename }}')">
@@ -253,6 +285,47 @@ function deleteFile(filename, rowId) {
     })
     .catch(error => {
         alert('Delete failed: ' + error);
+    });
+}
+
+function generateTiles(filename, rowId) {
+    if (!confirm(`Generate tiles for "${filename}"? This may take 1-2 minutes for large maps.`)) {
+        return;
+    }
+    
+    // Disable the button and show progress
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    
+    fetch('/admin/tile-map/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            filename: filename,
+            max_zoom: 5
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Success! Generated ${data.tile_count} tiles.\n\nThe map is now ready to view.`);
+            // Reload the page to show the new "View Map" button
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        alert('Tile generation failed: ' + error);
+        btn.disabled = false;
+        btn.textContent = originalText;
     });
 }
 </script>

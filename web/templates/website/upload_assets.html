@@ -30,9 +30,10 @@
                                 <option value="icon">Icon (preserves transparency)</option>
                                 <option value="emblem">Emblem (preserves transparency)</option>
                                 <option value="banner">Banner</option>
+                                <option value="map">World Map (full resolution, no resizing)</option>
                                 <option value="other">Other</option>
                             </select>
-                            <small class="text-muted">Logo/Icon/Emblem types preserve transparency and save as PNG</small>
+                            <small class="text-muted">Logo/Icon/Emblem preserve transparency. Maps preserve full resolution for tiling.</small>
                         </div>
                         <div class="mb-3">
                             <label for="asset" class="form-label">File:</label>
@@ -83,6 +84,18 @@ document.getElementById('assetUploadForm').addEventListener('submit', function(e
             document.getElementById('assetUrl').value = data.url;
             document.getElementById('uploadResult').style.display = 'block';
             document.getElementById('uploadError').style.display = 'none';
+            
+            // Show additional message for maps
+            if (data.is_map) {
+                document.getElementById('uploadResult').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>Map uploaded successfully!</strong><br>
+                        <strong>Filename:</strong> ${data.filename}<br>
+                        <p class="mt-2 mb-2"><strong>Next Step:</strong> Go to <a href="/admin/manage-assets/" class="alert-link">Manage Assets</a> and click "Generate Tiles" to make the map interactive.</p>
+                        <a href="/admin/manage-assets/" class="btn btn-sm btn-primary">Go to Manage Assets</a>
+                    </div>
+                `;
+            }
             
             // Reset the form
             document.getElementById('assetUploadForm').reset();
