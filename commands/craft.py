@@ -92,7 +92,6 @@ class CmdCraft(MuxCommand):
         skip_words = {'a', 'an', 'the', 'of', 'in', 'on', 'at', 'to', 'for'}
         words = item_name.lower().split()
         for word in words:
-            # Strip possessive apostrophes
             clean_word = word.rstrip("'s").strip("'")
             if clean_word and clean_word not in skip_words and len(clean_word) > 2:
                 item.aliases.add(clean_word)

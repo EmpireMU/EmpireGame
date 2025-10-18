@@ -512,6 +512,8 @@ def generate_map_tiles(map_filename, max_zoom=5):
 
         tile_count = 0
 
+        zoom_levels = []
+
         # Generate tiles for each zoom level (from lowest to highest resolution)
         for zoom in range(max_zoom + 1):
             # Calculate size for this zoom level
@@ -526,6 +528,14 @@ def generate_map_tiles(map_filename, max_zoom=5):
             # Calculate number of tiles needed
             tiles_x = math.ceil(zoom_width / tile_size)
             tiles_y = math.ceil(zoom_height / tile_size)
+
+            zoom_levels.append({
+                'zoom': zoom,
+                'width': zoom_width,
+                'height': zoom_height,
+                'tiles_x': tiles_x,
+                'tiles_y': tiles_y
+            })
 
             # Create tiles for this zoom level
             for x in range(tiles_x):
@@ -572,7 +582,10 @@ def generate_map_tiles(map_filename, max_zoom=5):
             'max_zoom': max_zoom,
             'tile_size': tile_size,
             'tile_count': tile_count,
-            'tiles_path': tiles_base_path
+            'tiles_path': tiles_base_path,
+            'max_zoom_width': max_zoom_width,
+            'max_zoom_height': max_zoom_height,
+            'zoom_levels': zoom_levels
         }
 
         metadata_path = _storage_join(tiles_base_path, 'metadata.json')
@@ -660,8 +673,14 @@ def view_map(request, map_name):
     
     tile_size = metadata.get('tile_size', 256)
     max_zoom = metadata['max_zoom']
-    max_zoom_width = math.ceil(metadata['original_width'] / tile_size) * tile_size
-    max_zoom_height = math.ceil(metadata['original_height'] / tile_size) * tile_size
+    max_zoom_width = metadata.get('max_zoom_width')
+    max_zoom_height = metadata.get('max_zoom_height')
+
+    if not max_zoom_width or not max_zoom_height:
+        max_zoom_width = math.ceil(metadata['original_width'] / tile_size) * tile_size
+        max_zoom_height = math.ceil(metadata['original_height'] / tile_size) * tile_size
+
+    zoom_levels = metadata.get('zoom_levels', [])
 
     context = {
         'map_name': map_name,
@@ -674,7 +693,8 @@ def view_map(request, map_name):
         'max_zoom_width': max_zoom_width,
         'max_zoom_height': max_zoom_height,
         'center_y': center_y,
-        'center_x': center_x
+        'center_x': center_x,
+        'zoom_levels_json': json.dumps(zoom_levels)
     }
     
     return render(request, 'website/map_viewer.html', context)

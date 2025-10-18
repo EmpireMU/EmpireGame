@@ -34,7 +34,7 @@ from evennia.settings_default import *
 # This is the name of your game. Make it catchy!
 SERVERNAME = "Empire"
 
-# Enable custom search handler for multi-keyword fuzzy matching
+# Hook in custom search handling
 SEARCH_AT_RESULT = "server.conf.at_search.at_search_result"
 
 # Account creation settings

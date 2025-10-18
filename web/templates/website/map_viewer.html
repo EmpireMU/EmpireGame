@@ -66,21 +66,11 @@
 </style>
 
 <script>
-// Initialize the map with a custom CRS so zoom levels align with tile pyramid
-const maxZoomLevel = {{ max_zoom }};
-const customCRS = L.extend({}, L.CRS.Simple, {
-    scale: function(zoom) {
-        return Math.pow(2, zoom - maxZoomLevel);
-    },
-    zoom: function(scale) {
-        return Math.log(scale) / Math.LN2 + maxZoomLevel;
-    }
-});
-
+// Initialize the map with CRS.Simple for image coordinates
 const mapBounds = [[0, 0], [{{ max_zoom_height }}, {{ max_zoom_width }}]];
 
 const map = L.map('map', {
-    crs: customCRS,
+    crs: L.CRS.Simple,
     minZoom: 0,
     maxZoom: {{ max_zoom }},
     center: [{{ center_y }}, {{ center_x }}],
@@ -93,13 +83,16 @@ const map = L.map('map', {
 
 // Calculate max tile coordinates for each zoom level
 const tileSize = {{ tile_size }};
+const zoomLevels = {{ zoom_levels_json|safe }};
+
 function getMaxTiles(zoom) {
-    const scale = Math.pow(2, {{ max_zoom }} - zoom);
-    const width = Math.ceil({{ max_zoom_width }} / scale);
-    const height = Math.ceil({{ max_zoom_height }} / scale);
+    const info = zoomLevels.find(level => level.zoom === zoom);
+    if (!info) {
+        return { x: 0, y: 0 };
+    }
     return {
-        x: Math.ceil(width / tileSize),
-        y: Math.ceil(height / tileSize)
+        x: info.tiles_x,
+        y: info.tiles_y
     };
 }
 
@@ -108,7 +101,7 @@ const urlTemplate = '{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png';
 const tileOptions = {
     minZoom: 0,
     maxZoom: {{ max_zoom }},
-    tileSize: 256,
+    tileSize: {{ tile_size }},
     noWrap: true,
     bounds: mapBounds,
     minNativeZoom: 0,
@@ -119,8 +112,8 @@ const tileLayer = L.tileLayer(urlTemplate, tileOptions);
 const originalGetTileUrl = tileLayer.getTileUrl.bind(tileLayer);
 
 tileLayer.getTileUrl = function(coords) {
-    const maxTiles = getMaxTiles(coords.z);
-    if (coords.x < 0 || coords.y < 0 || coords.x >= maxTiles.x || coords.y >= maxTiles.y) {
+    const limits = getMaxTiles(coords.z);
+    if (coords.x < 0 || coords.y < 0 || coords.x >= limits.x || coords.y >= limits.y) {
         return L.Util.emptyImageUrl;
     }
     return originalGetTileUrl(coords);
