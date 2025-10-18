@@ -92,7 +92,12 @@ class CmdCraft(MuxCommand):
         skip_words = {'a', 'an', 'the', 'of', 'in', 'on', 'at', 'to', 'for'}
         words = item_name.lower().split()
         for word in words:
-            clean_word = word.rstrip("'s").strip("'")
+            # Remove trailing possessive ('s) but leave other endings intact
+            if word.endswith("'s"):
+                clean_word = word[:-2]
+            else:
+                clean_word = word
+            clean_word = clean_word.strip("'")
             if clean_word and clean_word not in skip_words and len(clean_word) > 2:
                 item.aliases.add(clean_word)
         

@@ -19,14 +19,14 @@ class CharacterLookupMixin(MuxCommand):
         Returns:
             Character object or None if not found/invalid
         """
-        # Use global search to find both online and offline characters
-        char = self.caller.search(char_name, global_search=True)
+        # Only search for character typeclass to prevent information leakage
+        # This ensures rooms/objects are never revealed
+        char = self.caller.search(
+            char_name,
+            global_search=True,
+            typeclass="typeclasses.characters.Character"
+        )
         if not char:
-            return None
-        
-        # Verify it's actually a character, not just any object
-        if not char.is_typeclass("typeclasses.characters.Character", exact=False):
-            self.msg(f"{char.name} is not a character.")
             return None
             
         if require_traits and not hasattr(char, 'traits'):

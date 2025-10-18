@@ -238,7 +238,8 @@ class CmdInfo(CharacterLookupMixin, Command):
 
     def _get_presence_status(self, char):
         """Return a string describing the character's online/idle or last-online status."""
-        account = getattr(char, "account", None)
+        # Check both char.account (when puppeted) and char.db.account (roster system)
+        account = getattr(char, "account", None) or char.db.account
 
         # Character has no linked account; nothing to report
         if not account:
@@ -264,4 +265,5 @@ class CmdInfo(CharacterLookupMixin, Command):
                 last_login = timezone.make_aware(last_login, timezone.get_default_timezone())
             return f"Last seen {last_login.date().isoformat()}"
 
-        return None
+        # Has account but never logged in
+        return "Never logged in"

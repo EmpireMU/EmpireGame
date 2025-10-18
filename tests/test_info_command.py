@@ -300,11 +300,14 @@ class TestInfoCommand(EvenniaTestCase):
         self.assertIn("Very Idle", output)
 
     def test_info_rejects_non_character_objects(self):
-        """Info command should reject non-character objects."""
+        """Info command should reject non-character objects without revealing they exist."""
         # Try to view info on a non-character object (obj1 is a DefaultObject)
         self.cmd.args = self.obj1.name
         self.cmd.switches = []
         self.cmd.func()
 
         output = self.cmd.msg.call_args[0][0]
-        self.assertIn("is not a character", output)
+        # Should show same message as if object doesn't exist
+        self.assertIn("Could not find", output)
+        # Should NOT reveal the object name/existence
+        self.assertNotIn(self.obj1.name, output.replace(self.cmd.args, ""))
