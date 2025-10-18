@@ -276,6 +276,15 @@ class Character(ObjectParent, DefaultCharacter):
         """
         # Get the base appearance
         appearance = super().return_appearance(looker, **kwargs)
+
+        # Remove the default "You see:" block so worn items are the only things listed
+        lines = appearance.split("\n")
+        filtered_lines = []
+        for line in lines:
+            if line.strip().startswith("You see:"):
+                continue
+            filtered_lines.append(line)
+        appearance = "\n".join(filtered_lines)
         
         # Add worn items if any
         worn_items = self.get_worn_items()

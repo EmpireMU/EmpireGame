@@ -28,6 +28,51 @@ line to your settings file:
 from evennia.utils import logger
 
 
+def _find_character_in_context(caller, name_prefix):
+    """Find a character in caller's vicinity whose name starts with prefix."""
+    name_prefix = name_prefix.lower()
+    candidates = []
+
+    def consider(obj):
+        if obj and obj.is_typeclass("typeclasses.characters.Character", exact=False):
+            if obj.key.lower().startswith(name_prefix):
+                candidates.append(obj)
+
+    consider(caller if hasattr(caller, "is_typeclass") else None)
+
+    location = getattr(caller, "location", None)
+    if location:
+        for obj in location.contents:
+            consider(obj)
+
+    return candidates
+
+
+def _find_worn_items(owner, item_prefix):
+    """Return worn items on owner matching the given prefix."""
+    item_prefix = item_prefix.lower()
+    items = []
+
+    worn_items = []
+    if hasattr(owner, "get_worn_items"):
+        worn_items = owner.get_worn_items() or []
+    else:
+        worn_items = owner.db.worn_items or []
+
+    for item in worn_items:
+        if not item:
+            continue
+        if item.key.lower().startswith(item_prefix):
+            items.append(item)
+            continue
+        for alias in item.aliases.all():
+            if alias.lower().startswith(item_prefix):
+                items.append(item)
+                break
+
+    return items
+
+
 def at_search_result(matches, caller, query="", quiet=False, **kwargs):
     """
     This is a generic hook for handling all processing of a search
@@ -79,6 +124,41 @@ def at_search_result(matches, caller, query="", quiet=False, **kwargs):
 
             caller.msg(multimatch_msg.format(query=query, entries="\n".join(entries)))
         return None
+
+    # If no matches, try possessive/worn item lookup (e.g. "Ada's red dress")
+    if query:
+        owner_query = None
+        item_query = None
+
+        if "'s" in query:
+            owner_query, item_query = query.split("'s", 1)
+        elif " " in query:
+            owner_query, item_query = query.split(" ", 1)
+
+        if owner_query and item_query:
+            owner_query = owner_query.strip()
+            item_query = item_query.strip()
+
+            if owner_query and item_query:
+                owners = _find_character_in_context(caller, owner_query)
+                if len(owners) == 1:
+                    owner = owners[0]
+                    worn_matches = _find_worn_items(owner, item_query)
+                    if len(worn_matches) == 1:
+                        return worn_matches[0]
+                    elif len(worn_matches) > 1 and not quiet:
+                        entries = []
+                        for index, match in enumerate(worn_matches, start=1):
+                            display = match.get_display_name(caller) if hasattr(match, "get_display_name") else match.key
+                            entries.append(f"  {index}. {display}")
+                        caller.msg(
+                            "Multiple worn items match '{item}' on {owner}:\n{entries}".format(
+                                item=item_query,
+                                owner=owner.get_display_name(caller) if hasattr(owner, "get_display_name") else owner.key,
+                                entries="\n".join(entries)
+                            )
+                        )
+                        return None
 
     # No matches were found.
     if not quiet:
