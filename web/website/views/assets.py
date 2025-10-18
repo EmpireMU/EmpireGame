@@ -658,13 +658,21 @@ def view_map(request, map_name):
     center_y = metadata['original_height'] / 2
     center_x = metadata['original_width'] / 2
     
+    tile_size = metadata.get('tile_size', 256)
+    max_zoom = metadata['max_zoom']
+    max_zoom_width = math.ceil(metadata['original_width'] / tile_size) * tile_size
+    max_zoom_height = math.ceil(metadata['original_height'] / tile_size) * tile_size
+
     context = {
         'map_name': map_name,
         'tiles_base_url': tiles_base_url,
         'metadata': metadata,
-        'max_zoom': metadata['max_zoom'],
+        'max_zoom': max_zoom,
+        'tile_size': tile_size,
         'original_width': metadata['original_width'],
         'original_height': metadata['original_height'],
+        'max_zoom_width': max_zoom_width,
+        'max_zoom_height': max_zoom_height,
         'center_y': center_y,
         'center_x': center_x
     }

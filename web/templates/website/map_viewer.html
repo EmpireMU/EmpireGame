@@ -67,7 +67,7 @@
 
 <script>
 // Initialize the map with CRS.Simple for non-geographic images
-const mapBounds = [[0, 0], [{{ original_height }}, {{ original_width }}]];
+const mapBounds = [[0, 0], [{{ max_zoom_height }}, {{ max_zoom_width }}]];
 
 const map = L.map('map', {
     crs: L.CRS.Simple,
@@ -82,14 +82,14 @@ const map = L.map('map', {
 });
 
 // Calculate max tile coordinates for each zoom level
-const tileSize = 256;
+const tileSize = {{ tile_size }};
 function getMaxTiles(zoom) {
-    const scale = Math.pow(2, zoom);
-    const width = Math.max(1, Math.ceil({{ original_width }} / scale));
-    const height = Math.max(1, Math.ceil({{ original_height }} / scale));
+    const scale = Math.pow(2, {{ max_zoom }} - zoom);
+    const width = Math.ceil({{ max_zoom_width }} / scale);
+    const height = Math.ceil({{ max_zoom_height }} / scale);
     return {
-        x: Math.max(1, Math.ceil(width / tileSize)),
-        y: Math.max(1, Math.ceil(height / tileSize))
+        x: Math.ceil(width / tileSize),
+        y: Math.ceil(height / tileSize)
     };
 }
 
