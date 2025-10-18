@@ -66,58 +66,30 @@
 </style>
 
 <script>
-// Initialize the map with CRS.Simple for image coordinates
-const mapBounds = [[0, 0], [{{ max_zoom_height }}, {{ max_zoom_width }}]];
+// Map dimensions at max zoom
+const width = {{ original_width }};
+const height = {{ original_height }};
 
-// Create custom CRS that properly scales tiles
-const customCRS = L.extend({}, L.CRS.Simple, {
-    transformation: new L.Transformation(1, 0, -1, {{ max_zoom_height }})
-});
+// Leaflet uses [y, x] coordinates (lat, lng)
+const bounds = [[0, 0], [height, width]];
 
 const map = L.map('map', {
-    crs: customCRS,
+    crs: L.CRS.Simple,
     minZoom: 0,
     maxZoom: {{ max_zoom }},
-    center: [{{ center_y }}, {{ center_x }}],
-    zoom: 1,
     zoomControl: true,
-    attributionControl: false,
-    maxBounds: mapBounds,
-    maxBoundsViscosity: 1.0
+    attributionControl: false
 });
 
-// Calculate max tile coordinates for each zoom level
-const tileSize = {{ tile_size }};
-const zoomLevels = {{ zoom_levels_json|safe }};
+// Add tile layer
+L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
+    tileSize: 256,
+    noWrap: true
+}).addTo(map);
 
-function getMaxTiles(zoom) {
-    const info = zoomLevels.find(level => level.zoom === zoom);
-    if (!info) {
-        return { x: 0, y: 0 };
-    }
-    return {
-        x: info.tiles_x,
-        y: info.tiles_y
-    };
-}
-
-// Add tile layer with coordinate validation
-const urlTemplate = '{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png';
-const tileOptions = {
-    minZoom: 0,
-    maxZoom: {{ max_zoom }},
-    tileSize: {{ tile_size }},
-    noWrap: true,
-    bounds: mapBounds,
-    minNativeZoom: 0,
-    maxNativeZoom: {{ max_zoom }}
-};
-
-const tileLayer = L.tileLayer(urlTemplate, tileOptions);
-tileLayer.addTo(map);
-
-// Fit the map to the bounds
-map.fitBounds(mapBounds);
+// Fit map to image bounds
+map.fitBounds(bounds);
+map.setMaxBounds(bounds.pad(0.5));
 
 // Add scale control
 L.control.scale({
