@@ -28,7 +28,7 @@ class WorldInfoPage(SharedMemoryModel):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['title']
+        ordering = ['category', 'subcategory', 'title']
         verbose_name = "World Info Page"
         verbose_name_plural = "World Info Pages"
     
