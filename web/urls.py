@@ -14,6 +14,8 @@ Search the Django documentation for "URL dispatcher" for more help.
 """
 
 from django.urls import include, path
+from django.conf import settings
+from django.conf.urls.static import static
 
 # default evennia patterns
 from evennia.web.urls import urlpatterns as evennia_default_urlpatterns
@@ -32,3 +34,7 @@ urlpatterns = [
 
 # 'urlpatterns' must be named such for Django to find it.
 urlpatterns = urlpatterns + evennia_default_urlpatterns
+
+# Serve media files in development/production
+if settings.DEBUG or True:  # Always serve media files for now
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

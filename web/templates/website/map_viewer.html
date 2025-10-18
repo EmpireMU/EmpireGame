@@ -76,7 +76,9 @@ const map = L.map('map', {
     center: [{{ center_y }}, {{ center_x }}],
     zoom: 1,
     zoomControl: true,
-    attributionControl: false
+    attributionControl: false,
+    maxBounds: mapBounds,
+    maxBoundsViscosity: 1.0
 });
 
 // Add custom tile layer
@@ -85,7 +87,9 @@ L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
     maxZoom: {{ max_zoom }},
     tileSize: 256,
     noWrap: true,
-    bounds: mapBounds
+    bounds: mapBounds,
+    minNativeZoom: 0,
+    maxNativeZoom: {{ max_zoom }}
 }).addTo(map);
 
 // Fit the map to the bounds

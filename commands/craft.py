@@ -76,14 +76,26 @@ class CmdCraft(MuxCommand):
             return
         
         # Create the item
+        item_name = self.lhs.strip()
         item = create_object(
             PlayerItem,
-            key=self.lhs.strip(),
+            key=item_name,
             location=char.location
         )
         item.db.desc = self.rhs.strip()
         item.db.creator = char
         item.db.date_created = datetime.now()
+        
+        # Add key words as aliases for easier referencing
+        # e.g., "Ada's red dress" gets aliases: "red", "dress"
+        # Skip common words like "a", "an", "the", possessives
+        skip_words = {'a', 'an', 'the', 'of', 'in', 'on', 'at', 'to', 'for'}
+        words = item_name.lower().split()
+        for word in words:
+            # Strip possessive apostrophes
+            clean_word = word.rstrip("'s").strip("'")
+            if clean_word and clean_word not in skip_words and len(clean_word) > 2:
+                item.aliases.add(clean_word)
         
         # Update character's craft counter
         char.db.craft_count_today = craft_count + 1

@@ -135,7 +135,7 @@ class Character(ObjectParent, DefaultCharacter):
 
     def get_worn_items(self):
         """Return worn items as live objects, cleaning stale references."""
-        return worn_items.get_worn_items(self)
+        return worn_utils.get_worn_items(self)
 
     def add_worn_item(self, item):
         """Track an item as worn."""
