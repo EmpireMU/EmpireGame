@@ -72,9 +72,10 @@ const height = {{ original_height }};
 const maxZoom = {{ max_zoom }};
 
 // Calculate bounds at zoom 0 (the overview level)
-// At zoom 0, the entire map fits in 256x256 pixels
-const zoom0Width = 256;
+// Maintain aspect ratio of the original image
+const aspectRatio = width / height;
 const zoom0Height = 256;
+const zoom0Width = zoom0Height * aspectRatio;
 
 // Create CRS with Y-axis flipped to match image coordinates
 const customCRS = L.extend({}, L.CRS.Simple, {
