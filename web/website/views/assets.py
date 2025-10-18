@@ -514,13 +514,13 @@ def generate_map_tiles(map_filename, max_zoom=5):
 
         zoom_levels = []
 
-        # Generate tiles for each zoom level (from lowest to highest resolution)
+        # Generate tiles for each zoom level (Leaflet standard: 0 = full res, higher = more zoomed out)
         for zoom in range(max_zoom + 1):
             # Calculate size for this zoom level
-            # zoom 0 = smallest, max_zoom = largest (full res)
-            scale_factor = 2 ** (zoom - max_zoom)
-            zoom_width = max(tile_size, int(max_zoom_width * scale_factor))
-            zoom_height = max(tile_size, int(max_zoom_height * scale_factor))
+            # zoom 0 = largest (full res), max_zoom = smallest
+            scale_factor = 2 ** (max_zoom - zoom)
+            zoom_width = max(tile_size, int(max_zoom_width // scale_factor))
+            zoom_height = max(tile_size, int(max_zoom_height // scale_factor))
 
             # Resize image for this zoom level
             resized_img = img.resize((zoom_width, zoom_height), Image.LANCZOS)
