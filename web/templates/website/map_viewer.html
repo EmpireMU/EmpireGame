@@ -67,15 +67,18 @@
 
 <script>
 // Initialize the map with CRS.Simple for image coordinates
-// Leaflet's CRS.Simple has Y going up, but image coordinates have Y going down
-// So we need to use negative Y values
-const mapBounds = [[-{{ max_zoom_height }}, 0], [0, {{ max_zoom_width }}]];
+const mapBounds = [[0, 0], [{{ max_zoom_height }}, {{ max_zoom_width }}]];
+
+// Create custom CRS that properly scales tiles
+const customCRS = L.extend({}, L.CRS.Simple, {
+    transformation: new L.Transformation(1, 0, -1, {{ max_zoom_height }})
+});
 
 const map = L.map('map', {
-    crs: L.CRS.Simple,
+    crs: customCRS,
     minZoom: 0,
     maxZoom: {{ max_zoom }},
-    center: [-{{ center_y }}, {{ center_x }}],
+    center: [{{ center_y }}, {{ center_x }}],
     zoom: 1,
     zoomControl: true,
     attributionControl: false,
