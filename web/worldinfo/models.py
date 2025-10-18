@@ -16,8 +16,12 @@ class WorldInfoPage(SharedMemoryModel):
                                 help_text="Optional category for grouping pages")
     subcategory = models.CharField(max_length=100, blank=True, db_index=True,
                                    help_text="Optional subcategory for grouping pages")
-    emblem_image = models.CharField(max_length=500, blank=True,
-                                    help_text="URL to emblem/icon image")
+    emblem_image = models.ImageField(
+        upload_to='worldinfo/emblems/', 
+        blank=True, 
+        null=True,
+        help_text="Optional emblem/heraldry image that appears in the upper right of the article"
+    )
     is_public = models.BooleanField(default=True, db_index=True,
                                     help_text="Whether this page is visible to non-staff users")
     created_at = models.DateTimeField(auto_now_add=True)
