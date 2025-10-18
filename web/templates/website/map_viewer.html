@@ -70,11 +70,16 @@
 const width = {{ original_width }};
 const height = {{ original_height }};
 
+// Create custom CRS that flips Y-axis to match image coordinates
+const customCRS = L.extend({}, L.CRS.Simple, {
+    transformation: new L.Transformation(1, 0, -1, height)
+});
+
 // Leaflet uses [y, x] coordinates (lat, lng)
 const bounds = [[0, 0], [height, width]];
 
 const map = L.map('map', {
-    crs: L.CRS.Simple,
+    crs: customCRS,
     minZoom: 0,
     maxZoom: {{ max_zoom }},
     zoomControl: true,
