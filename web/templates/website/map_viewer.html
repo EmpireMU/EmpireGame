@@ -92,7 +92,7 @@ L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
     noWrap: true
 }).addTo(map);
 
-// Fit map to image bounds
+// Fit to bounds (will start at appropriate zoom level)
 map.fitBounds(bounds);
 map.setMaxBounds(bounds.pad(0.5));
 
