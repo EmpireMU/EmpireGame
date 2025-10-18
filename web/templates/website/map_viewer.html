@@ -66,22 +66,22 @@
 </style>
 
 <script>
-// Map dimensions at max zoom
+// Map dimensions
 const width = {{ original_width }};
 const height = {{ original_height }};
+const maxZoom = {{ max_zoom }};
 
-// Create custom CRS that flips Y-axis to match image coordinates
-const customCRS = L.extend({}, L.CRS.Simple, {
-    transformation: new L.Transformation(1, 0, -1, height)
-});
-
-// Leaflet uses [y, x] coordinates (lat, lng)
-const bounds = [[0, 0], [height, width]];
+// Calculate bounds at zoom 0 (the overview level)
+// At zoom 0, the entire map fits in 256x256 pixels
+const zoom0Width = 256;
+const zoom0Height = 256;
 
 const map = L.map('map', {
-    crs: customCRS,
+    crs: L.CRS.Simple,
     minZoom: 0,
-    maxZoom: {{ max_zoom }},
+    maxZoom: maxZoom,
+    center: [zoom0Height/2, zoom0Width/2],
+    zoom: 0,
     zoomControl: true,
     attributionControl: false
 });
@@ -89,13 +89,9 @@ const map = L.map('map', {
 // Add tile layer
 L.tileLayer('{{ tiles_base_url|escapejs }}/{z}/{x}/{y}.png', {
     tileSize: 256,
-    noWrap: true
+    noWrap: true,
+    bounds: [[0, 0], [zoom0Height, zoom0Width]]
 }).addTo(map);
-
-// Fit to bounds (will start at appropriate zoom level)
-map.fitBounds(bounds);
-const paddedBounds = L.latLngBounds(bounds).pad(0.5);
-map.setMaxBounds(paddedBounds);
 
 // Add scale control
 L.control.scale({
