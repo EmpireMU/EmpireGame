@@ -23,6 +23,11 @@ class CharacterLookupMixin(MuxCommand):
         char = self.caller.search(char_name, global_search=True)
         if not char:
             return None
+        
+        # Verify it's actually a character, not just any object
+        if not char.is_typeclass("typeclasses.characters.Character", exact=False):
+            self.msg(f"{char.name} is not a character.")
+            return None
             
         if require_traits and not hasattr(char, 'traits'):
             self.msg(f"{char.name} does not support traits (wrong typeclass?).")

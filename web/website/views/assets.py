@@ -108,7 +108,7 @@ def _storage_join(*parts):
     return '/'.join(cleaned)
 
 def resize_image_with_transparency(image_file, max_size):
-    """Resize image while preserving transparency for logos/icons/emblems."""
+    """Resize image while preserving transparency for logos and graphics."""
     img = Image.open(image_file)
     
     # Resize while preserving the original mode (including transparency)
@@ -168,8 +168,8 @@ def upload_site_asset(request):
                 return JsonResponse({'error': f'Could not save map: {e}'}, status=400)
         
         # Handle regular assets (logos, icons, etc.)
-        # Determine if we should preserve transparency
-        preserve_transparency = asset_type in ['logo', 'icon', 'emblem']
+        # Determine if we should preserve transparency (use 'logo' for any graphic needing transparency)
+        preserve_transparency = asset_type == 'logo'
         
         default_extension = '.png' if preserve_transparency else '.jpg'
 
@@ -182,7 +182,7 @@ def upload_site_asset(request):
         # Resize the image (800px max)
         try:
             if preserve_transparency:
-                # For logos/icons/emblems, preserve transparency
+                # For logos and graphics, preserve transparency
                 compressed_buffer = resize_image_with_transparency(asset_file, 800)
             else:
                 # For other assets, use white background like character images

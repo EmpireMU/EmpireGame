@@ -82,7 +82,7 @@ def at_search_result(matches, caller, query="", quiet=False, **kwargs):
 
     # No matches were found.
     if not quiet:
-        nofound_string = kwargs.get("nofound_string", "Could not find '{query}'.")
+        nofound_string = kwargs.get("nofound_string") or "Could not find '{query}'."
         caller.msg(nofound_string.format(query=query))
     return None
 
