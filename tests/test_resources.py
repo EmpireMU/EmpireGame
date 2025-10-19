@@ -5,7 +5,14 @@ Tests for resource system functionality.
 from unittest.mock import MagicMock, patch
 from evennia.utils.test_resources import EvenniaTest
 from commands.resources import CmdResource
-from utils.resource_utils import get_unique_resource_name, validate_resource_owner
+from utils.resource_utils import (
+    get_unique_resource_name,
+    validate_resource_owner,
+    set_resource_disbursement,
+    get_resource_disbursements,
+    increment_resource_disbursement,
+    clear_resource_disbursements,
+)
 from utils.org_utils import get_org, get_char
 from typeclasses.characters import Character
 from typeclasses.organisations import Organisation
@@ -209,6 +216,70 @@ class TestResources(EvenniaTest):
         obj = self.obj1  # Regular object without resources
         self.assertFalse(validate_resource_owner(obj))
         self.assertTrue(validate_resource_owner(self.char1))
+
+        # Test disbursement helpers
+        set_resource_disbursement(self.char1, "bonus", 6, 2)
+        disbursements = get_resource_disbursements(self.char1)
+        self.assertEqual(len(disbursements), 1)
+        key = next(iter(disbursements))
+        self.assertEqual(disbursements[key]["count"], 2)
+
+        increment_resource_disbursement(self.char1, "bonus", 6, -1)
+        disbursements = get_resource_disbursements(self.char1)
+        self.assertEqual(disbursements[key]["count"], 1)
+
+        increment_resource_disbursement(self.char1, "bonus", 6, -1)
+        self.assertEqual(get_resource_disbursements(self.char1), {})
+
+        set_resource_disbursement(self.char1, "bonus", 6, 3)
+        clear_resource_disbursements(self.char1)
+        self.assertEqual(get_resource_disbursements(self.char1), {})
+
+    def test_due_and_disburse_resources(self):
+        """Test managing pending disbursements and applying them."""
+        target = self.char2
+        if not hasattr(target, "char_resources"):
+            target.char_resources = TraitHandler(target, db_attribute_key="char_resources")
+
+        # Queue a disbursement
+        self.cmd.msg.reset_mock()
+        self.cmd.switches = ["due"]
+        self.cmd.args = f"{target.name},bonus=2/6"
+        self.cmd.func()
+        entries = get_resource_disbursements(target)
+        self.assertTrue(entries)
+        entry = next(iter(entries.values()))
+        self.assertEqual(entry["count"], 2)
+
+        # Increment queued amount
+        self.cmd.switches = ["due", "add"]
+        self.cmd.args = f"{target.name},bonus=1/6"
+        self.cmd.func()
+        entries = get_resource_disbursements(target)
+        entry = next(iter(entries.values()))
+        self.assertEqual(entry["count"], 3)
+
+        # Apply disbursements
+        self.cmd.switches = ["disburse"]
+        self.cmd.args = target.name
+        self.cmd.func()
+
+        bonus_keys = [key for key in target.char_resources.all() if key.startswith("bonus")]
+        self.assertEqual(len(bonus_keys), 3)
+        for key in bonus_keys:
+            self.assertEqual(int(target.char_resources.get(key).base), 6)
+        
+        # Disbursements should persist (not be cleared)
+        disbursements = get_resource_disbursements(target)
+        self.assertTrue(disbursements)
+        entry = next(iter(disbursements.values()))
+        self.assertEqual(entry["count"], 3)
+        
+        # Clear the recurring config manually
+        self.cmd.switches = ["due", "clear"]
+        self.cmd.args = target.name
+        self.cmd.func()
+        self.assertEqual(get_resource_disbursements(target), {})
 
 if __name__ == '__main__':
     unittest.main() 

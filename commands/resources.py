@@ -6,6 +6,12 @@ from evennia.commands.default.muxcommand import MuxCommand
 from evennia import CmdSet
 from utils.command_mixins import CharacterLookupMixin
 from utils.org_utils import get_org
+from utils.resource_utils import (
+    get_resource_disbursements,
+    set_resource_disbursement,
+    increment_resource_disbursement,
+    clear_resource_disbursements,
+)
 
 
 class CmdResource(CharacterLookupMixin, MuxCommand):
@@ -67,6 +73,11 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
         resource/char <char>,<name>=<value>            - Create character resource
         resource/transfer <from>,<to>,<name>[=<size>]  - Transfer ANY resource (no restrictions)
         resource/delete <owner>,<name>                 - Delete a resource
+        resource/due <target>                          - View recurring disbursements
+        resource/due <target>,<name>=<count>/<die>     - Set recurring amount (e.g. Wealth=3/6)
+        resource/due/add <target>,<name>=<count>/<die> - Adjust recurring amount
+        resource/due/clear <target>[,<name>=<die>]     - Remove recurring configuration
+        resource/disburse [<target1>,<target2>,...]    - Apply all recurring disbursements
         
     Admin Examples:
         resource/org "Knights Custodian",Wealth=8      - Create d8 org resource
@@ -122,6 +133,16 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
                 self.msg("You don't have permission to delete resources.")
                 return
             self.delete_resource()
+        elif switch == "due":
+            if not self.caller.permissions.check("Admin"):
+                self.msg("Only staff can manage resource disbursements.")
+                return
+            self.manage_due()
+        elif switch == "disburse":
+            if not self.caller.permissions.check("Admin"):
+                self.msg("Only staff can run bulk disbursements.")
+                return
+            self.disburse_resources()
         else:
             self.msg(f"Unknown switch: {switch}")
             
@@ -468,6 +489,207 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
             self.msg(f"Deleted resource '{resource_to_delete}' from {owner.name}.")
         else:
             self.msg(f"No resource found named '{name}' on {owner.name}.")
+
+    # ------------------------------------------------------------------
+    # Resource disbursement management
+    # ------------------------------------------------------------------
+
+    def _parse_due_args(self):
+        """Parse arguments for due management commands."""
+        if not self.args:
+            self.msg(
+                "Usage: resource/due <target>[,<name>=<count>/<die>]"
+                " or switches like /due/add,/due/clear"
+            )
+            return None, None, None
+        segments = [segment.strip() for segment in self.args.split(",", 1)]
+        target_spec = segments[0]
+        spec = segments[1] if len(segments) > 1 else None
+        return target_spec, spec, self.switches[1:] if len(self.switches) > 1 else []
+
+    def _find_due_target(self, target_spec):
+        from evennia.utils.search import search_object
+        from typeclasses.organisations import Organisation
+        from typeclasses.characters import Character
+
+        matches = search_object(target_spec)
+        if not matches:
+            self.msg(f"Target '{target_spec}' not found.")
+            return None
+        target = matches[0]
+        if not isinstance(target, (Character, Organisation)):
+            self.msg(f"{target.name} cannot receive resource disbursements.")
+            return None
+        return target
+
+    def manage_due(self):
+        """View or update queued resource disbursements for a target."""
+        target_spec, spec, sub_switches = self._parse_due_args()
+        if not target_spec:
+            return
+
+        target = self._find_due_target(target_spec)
+        if not target:
+            return
+
+        # Handle clearing all without a resource spec
+        if not spec and sub_switches and sub_switches[0] == "clear":
+            clear_resource_disbursements(target)
+            self.msg(f"Cleared all recurring disbursements for {target.name}.")
+            return
+
+        if not spec:
+            self._show_due(target)
+            return
+
+        parts = spec.split("/")
+        if len(parts) not in (1, 2):
+            self.msg("Specify <name>=<count>/<die> (e.g. Wealth=3/6 for 3x d6 Wealth).")
+            return
+
+        name_count = parts[0].strip()
+        die_size = None
+        if len(parts) == 2:
+            try:
+                die_size = int(parts[1])
+                if die_size not in [4, 6, 8, 10, 12]:
+                    self.msg("Die size must be one of: 4, 6, 8, 10, 12")
+                    return
+            except ValueError:
+                self.msg("Die size must be a number.")
+                return
+
+        if "=" not in name_count:
+            self.msg("Specify resource name and count as <name>=<count>/<die>.")
+            return
+        name_part, count_part = [p.strip() for p in name_count.split("=", 1)]
+        try:
+            count = int(count_part)
+        except ValueError:
+            self.msg("Count must be a number.")
+            return
+        
+        # If no die size in second part, we need both name and die from first part
+        if die_size is None:
+            self.msg("Specify die size after count: <name>=<count>/<die>")
+            return
+
+        if not sub_switches:
+            entry = set_resource_disbursement(target, name_part, die_size, count)
+            if entry:
+                self.msg(
+                    f"Set due {entry['name']} d{entry['die_size']} for {target.name} to {entry['count']} (will receive {entry['count']}x d{entry['die_size']})."
+                )
+            else:
+                self.msg(f"Removed due {name_part} d{die_size} for {target.name}.")
+            return
+
+        sub = sub_switches[0]
+        if sub == "add":
+            entry = increment_resource_disbursement(target, name_part, die_size, count)
+            if entry:
+                self.msg(
+                    f"Adjusted due {entry['name']} d{entry['die_size']} for {target.name} to {entry['count']} (will receive {entry['count']}x d{entry['die_size']})."
+                )
+            else:
+                self.msg(f"Cleared due {name_part} d{die_size} for {target.name}.")
+        elif sub == "clear":
+            set_resource_disbursement(target, name_part, die_size, 0)
+            self.msg(f"Cleared due {name_part} d{die_size} for {target.name}.")
+        else:
+            self.msg(f"Unknown resource/due sub-switch '{sub}'.")
+
+    def _show_due(self, target):
+        from evennia.utils.evtable import EvTable
+
+        disbursements = get_resource_disbursements(target)
+        if not disbursements:
+            self.msg(f"{target.name} has no recurring resource disbursements configured.")
+            return
+
+        table = EvTable("|wName|n", "|wDie|n", "|wCount|n", border="header")
+        for entry in disbursements.values():
+            table.add_row(entry["name"], f"d{entry['die_size']}", entry["count"])
+        self.msg(f"Recurring disbursements for {target.name}:")
+        self.msg(table)
+
+    def disburse_resources(self):
+        """Apply recurring resource disbursements for listed targets or all configured."""
+        targets = []
+        if self.args:
+            specs = [part.strip() for part in self.args.split(",") if part.strip()]
+            for spec in specs:
+                target = self._find_due_target(spec)
+                if target:
+                    targets.append(target)
+        else:
+            from evennia.objects.models import ObjectDB
+
+            seen = set()
+            for obj in ObjectDB.objects.filter(
+                db_attributes__db_key="resource_disbursements",
+                db_attributes__db_category="resources",
+            ).distinct():
+                target = obj.typeclass or obj
+                key = getattr(target, "id", id(target))
+                if key in seen:
+                    continue
+                seen.add(key)
+                targets.append(target)
+
+        if not targets:
+            self.msg("No targets found with recurring disbursements configured.")
+            return
+
+        total_allocated = 0
+        messages = []
+        for raw_target in targets:
+            target = raw_target
+            if hasattr(raw_target, "typeclass") and raw_target.typeclass:
+                target = raw_target.typeclass
+            if not target:
+                continue
+
+            disbursements = get_resource_disbursements(target)
+            if not disbursements:
+                continue
+            applied = []
+            for entry in disbursements.values():
+                count = entry.get("count", 0)
+                if count <= 0:
+                    continue
+                name = entry["name"]
+                die_size = entry["die_size"]
+                for _ in range(count):
+                    try:
+                        if hasattr(target, "add_resource"):
+                            target.add_resource(name, die_size)
+                        elif hasattr(target, "add_org_resource"):
+                            target.add_org_resource(name, die_size)
+                        else:
+                            self.msg(f"{target.name} cannot receive resources; skipping.")
+                            break
+                    except ValueError as err:
+                        self.msg(
+                            f"Failed to add {name} d{die_size} to {target.name}: {err}"
+                        )
+                        break
+                    else:
+                        total_allocated += 1
+                        applied.append((name, die_size))
+            if applied:
+                messages.append(
+                    f"{target.name}: added {len(applied)} resources ("
+                    + ", ".join(f"{n} d{d}" for n, d in applied)
+                    + ")"
+                )
+
+        if not messages:
+            self.msg("No disbursements were applied.")
+            return
+
+        self.msg("Processed resource disbursements:\n" + "\n".join(messages))
+        self.msg(f"Total resources allocated: {total_allocated}")
 
 
 class ResourceCmdSet(CmdSet):

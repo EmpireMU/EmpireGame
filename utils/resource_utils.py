@@ -3,6 +3,11 @@ Resource utility functions.
 """
 
 import re
+from copy import deepcopy
+
+
+RESOURCE_DUE_ATTR = "resource_disbursements"
+RESOURCE_DUE_CATEGORY = "resources"
 
 
 def get_unique_resource_name(name, existing_resources, caller=None):
@@ -90,4 +95,97 @@ def validate_die_size(die_size, caller=None):
     if not is_valid and caller:
         caller.msg(f"Die size must be one of: {', '.join(map(str, valid_sizes))}")
         
-    return is_valid 
+    return is_valid
+
+
+def _make_due_key(name, die_size):
+    """Create a normalized key for a due resource entry."""
+    if name is None:
+        return None
+    normalized_name = re.sub(r"\s+", " ", name.strip()).lower()
+    return f"{normalized_name}|{die_size}"
+
+
+def get_resource_disbursements(obj):
+    """Return a copy of the queued resource disbursements for an object."""
+    data = obj.attributes.get(
+        RESOURCE_DUE_ATTR,
+        default={},
+        category=RESOURCE_DUE_CATEGORY,
+    )
+    if not data:
+        return {}
+    # Ensure we always return a copy so callers don't mutate stored state.
+    return deepcopy(data)
+
+
+def save_resource_disbursements(obj, disbursements):
+    """Persist resource disbursement data, removing the attribute if empty."""
+    cleaned = {
+        key: value
+        for key, value in (disbursements or {}).items()
+        if value.get("count", 0) > 0
+    }
+    if cleaned:
+        obj.attributes.add(
+            RESOURCE_DUE_ATTR,
+            cleaned,
+            category=RESOURCE_DUE_CATEGORY,
+        )
+    else:
+        obj.attributes.remove(
+            RESOURCE_DUE_ATTR,
+            category=RESOURCE_DUE_CATEGORY,
+            raise_exception=False,
+        )
+
+
+def set_resource_disbursement(obj, name, die_size, count):
+    """Set the queued count for a specific resource disbursement."""
+    if count < 0:
+        raise ValueError("Count cannot be negative.")
+    key = _make_due_key(name, die_size)
+    if key is None:
+        raise ValueError("Resource name cannot be empty.")
+    disbursements = get_resource_disbursements(obj)
+    if count == 0:
+        disbursements.pop(key, None)
+    else:
+        disbursements[key] = {
+            "name": name.strip(),
+            "die_size": die_size,
+            "count": count,
+        }
+    save_resource_disbursements(obj, disbursements)
+    return disbursements.get(key)
+
+
+def increment_resource_disbursement(obj, name, die_size, delta):
+    """Adjust the queued count for a resource disbursement by delta."""
+    disbursements = get_resource_disbursements(obj)
+    key = _make_due_key(name, die_size)
+    if key is None:
+        raise ValueError("Resource name cannot be empty.")
+    current = disbursements.get(key, {"count": 0})
+    new_count = current.get("count", 0) + delta
+    if new_count < 0:
+        new_count = 0
+    if new_count == 0:
+        disbursements.pop(key, None)
+    else:
+        disbursements[key] = {
+            "name": current.get("name", name.strip()),
+            "die_size": current.get("die_size", die_size),
+            "count": new_count,
+        }
+    save_resource_disbursements(obj, disbursements)
+    return disbursements.get(key)
+
+
+def clear_resource_disbursements(obj):
+    """Remove all queued resource disbursements for the object."""
+    obj.attributes.remove(
+        RESOURCE_DUE_ATTR,
+        category=RESOURCE_DUE_CATEGORY,
+        raise_exception=False,
+    )
