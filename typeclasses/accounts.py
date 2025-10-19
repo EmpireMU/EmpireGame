@@ -186,6 +186,18 @@ class Guest(DefaultGuest):
         if character:
             self.db._last_puppet = character
 
+    def at_post_unpuppet(self, character, session=None, **kwargs):
+        """
+        Called just after unpuppeting. For guests, disconnect the session
+        entirely rather than leaving them in OOC mode.
+        """
+        super().at_post_unpuppet(character, session=session, **kwargs)
+        
+        # Disconnect all sessions for this guest account
+        for session in self.sessions.all():
+            session.msg("|yDisconnecting...|n")
+            self.disconnect_session_from_account(session)
+
     def at_post_disconnect(self, **kwargs):
         """
         Called just after user disconnects from this account.
