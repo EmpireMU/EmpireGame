@@ -171,47 +171,24 @@ class Guest(DefaultGuest):
     """
     This class is used for guest logins. Unlike Accounts, Guests and their
     characters are deleted after disconnection.
+    
+    The key issue this solves: When guest accounts are deleted and recreated
+    with the same name (Guest1, Guest2, etc.), stale db._last_puppet references
+    can point to deleted characters, causing "Object not found" errors.
     """
 
     def at_post_create(self):
         """
         Called when the guest account is first created.
-        Guests always get a character created, regardless of AUTO_CREATE_CHARACTER_WITH_ACCOUNT setting.
+        Clear any stale puppet references and ensure guest has a character.
         """
         super().at_post_create()
         
-        # Clear any stale puppet references and create character
+        # Clear stale references - critical for reused guest names
         self.db._last_puppet = None
-        character, errors = self.create_character(key=self.key)
-        if character:
-            self.db._last_puppet = character
-
-    def at_post_unpuppet(self, character, session=None, **kwargs):
-        """
-        Called just after unpuppeting. For guests, disconnect the session
-        entirely rather than leaving them in OOC mode.
-        """
-        super().at_post_unpuppet(character, session=session, **kwargs)
         
-        # Disconnect all sessions for this guest account
-        for session in self.sessions.all():
-            session.msg("|yDisconnecting...|n")
-            self.disconnect_session_from_account(session)
-
-    def at_post_disconnect(self, **kwargs):
-        """
-        Called just after user disconnects from this account.
-        For guests, ensure both account and character are properly deleted.
-        """
-        # Delete guest characters before account cleanup
-        character_ids = [char.id for char in self.characters.all()]
-        for char_id in character_ids:
-            character = self.characters.get_character(char_id)
+        # Ensure guest has a character (AUTO_CREATE_CHARACTER_WITH_ACCOUNT is False)
+        if not self.characters.all():
+            character, errors = self.create_character(key=self.key)
             if character:
-                character.delete()
-        
-        # Clear any stale puppet references to prevent issues with reused guest names
-        self.db._last_puppet = None
-        
-        # Call parent cleanup to delete the account
-        super().at_post_disconnect(**kwargs)
+                self.db._last_puppet = character

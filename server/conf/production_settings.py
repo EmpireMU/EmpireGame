@@ -39,6 +39,7 @@ SEARCH_AT_RESULT = "server.conf.at_search.at_search_result"
 
 # Account creation settings
 GUEST_ENABLED = True  # Allow guest accounts
+BASE_GUEST_TYPECLASS = "typeclasses.accounts.Guest"  # Fix stale puppet references
 CREATE_ACCOUNT_ON_CONNECT = False  # Disable automatic account creation
 RESTRICTED_CREATION = True  # Restrict account creation to staff only
 AUTO_PUPPET_ON_LOGIN = True  # Auto-puppet the last character on login
