@@ -237,9 +237,14 @@ class TestResources(EvenniaTest):
 
     def test_due_and_disburse_resources(self):
         """Test managing pending disbursements and applying them."""
+        from typeclasses.characters import STATUS_ACTIVE
+        
         target = self.char2
         if not hasattr(target, "char_resources"):
             target.char_resources = TraitHandler(target, db_attribute_key="char_resources")
+        
+        # Set character status to active so they receive disbursements
+        target.db.status = STATUS_ACTIVE
 
         # Queue a disbursement
         self.cmd.msg.reset_mock()
@@ -259,13 +264,23 @@ class TestResources(EvenniaTest):
         entry = next(iter(entries.values()))
         self.assertEqual(entry["count"], 3)
 
-        # Apply disbursements
+        # Apply disbursements (individual target)
         self.cmd.switches = ["disburse"]
         self.cmd.args = target.name
         self.cmd.func()
 
         bonus_keys = [key for key in target.char_resources.all() if key.startswith("bonus")]
         self.assertEqual(len(bonus_keys), 3)
+        for key in bonus_keys:
+            self.assertEqual(int(target.char_resources.get(key).base), 6)
+        
+        # Disburse using /disburse all should still keep config and add duplicates
+        self.cmd.switches = ["disburse"]
+        self.cmd.args = "all"
+        self.cmd.func()
+
+        bonus_keys = [key for key in target.char_resources.all() if key.startswith("bonus")]
+        self.assertEqual(len(bonus_keys), 6)
         for key in bonus_keys:
             self.assertEqual(int(target.char_resources.get(key).base), 6)
         

@@ -12,6 +12,7 @@ from utils.resource_utils import (
     increment_resource_disbursement,
     clear_resource_disbursements,
 )
+from typeclasses.characters import STATUS_ACTIVE
 
 
 class CmdResource(CharacterLookupMixin, MuxCommand):
@@ -73,11 +74,11 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
         resource/char <char>,<name>=<value>            - Create character resource
         resource/transfer <from>,<to>,<name>[=<size>]  - Transfer ANY resource (no restrictions)
         resource/delete <owner>,<name>                 - Delete a resource
-        resource/due <target>                          - View recurring disbursements
+        resource/due <target|all>                      - View recurring disbursements
         resource/due <target>,<name>=<count>/<die>     - Set recurring amount (e.g. Wealth=3/6)
         resource/due/add <target>,<name>=<count>/<die> - Adjust recurring amount
-        resource/due/clear <target>[,<name>=<die>]     - Remove recurring configuration
-        resource/disburse [<target1>,<target2>,...]    - Apply all recurring disbursements
+        resource/due/clear <target|all>[,<name>=<die>] - Remove recurring configuration
+        resource/disburse <all|target1,target2,...>    - Apply recurring disbursements (requires arg)
         
     Admin Examples:
         resource/org "Knights Custodian",Wealth=8      - Create d8 org resource
@@ -522,11 +523,67 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
             return None
         return target
 
+    def _get_all_disbursement_targets(self):
+        """Retrieve all objects with recurring disbursements configured."""
+        from evennia.objects.models import ObjectDB
+
+        seen = set()
+        targets = []
+        for obj in ObjectDB.objects.filter(
+            db_attributes__db_key="resource_disbursements",
+            db_attributes__db_category="resources",
+        ).distinct():
+            # obj is already the typeclass instance in this case
+            target = obj
+            key = getattr(target, "id", id(target))
+            if key in seen:
+                continue
+            seen.add(key)
+            targets.append(target)
+        return targets
+
     def manage_due(self):
         """View or update queued resource disbursements for a target."""
         target_spec, spec, sub_switches = self._parse_due_args()
         if not target_spec:
             return
+
+        # Handle viewing/clearing for all targets at once
+        if target_spec.lower() == "all":
+            from evennia.objects.models import ObjectDB
+
+            if not spec and sub_switches:
+                if sub_switches[0] == "clear":
+                    cleared = 0
+                    for obj in ObjectDB.objects.filter(
+                        db_attributes__db_key="resource_disbursements",
+                        db_attributes__db_category="resources",
+                    ).distinct():
+                        clear_resource_disbursements(obj)
+                        cleared += 1
+                    self.msg(f"Cleared recurring disbursements for {cleared} targets.")
+                    return
+            if not spec:
+                from evennia.utils.evtable import EvTable
+
+                table = EvTable("|wTarget|n", "|wName|n", "|wDie|n", "|wCount|n", border="header")
+                total_entries = 0
+                for obj in ObjectDB.objects.filter(
+                    db_attributes__db_key="resource_disbursements",
+                    db_attributes__db_category="resources",
+                ).distinct():
+                    disbursements = get_resource_disbursements(obj)
+                    if not disbursements:
+                        continue
+                    for entry in disbursements.values():
+                        table.add_row(obj.name, entry["name"], f"d{entry['die_size']}", entry["count"])
+                        total_entries += 1
+                if total_entries:
+                    self.msg("Recurring disbursements for all targets:")
+                    self.msg(table)
+                else:
+                    self.msg("No recurring disbursements configured for any targets.")
+                return
 
         target = self._find_due_target(target_spec)
         if not target:
@@ -615,27 +672,22 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
 
     def disburse_resources(self):
         """Apply recurring resource disbursements for listed targets or all configured."""
+        if not self.args:
+            self.msg("Usage: resource/disburse all  OR  resource/disburse <target1>,<target2>,...")
+            return
+            
         targets = []
-        if self.args:
+        if self.args.strip().lower() == "all":
+            targets = self._get_all_disbursement_targets()
+        else:
             specs = [part.strip() for part in self.args.split(",") if part.strip()]
             for spec in specs:
+                if spec.lower() == "all":
+                    targets.extend(self._get_all_disbursement_targets())
+                    continue
                 target = self._find_due_target(spec)
                 if target:
                     targets.append(target)
-        else:
-            from evennia.objects.models import ObjectDB
-
-            seen = set()
-            for obj in ObjectDB.objects.filter(
-                db_attributes__db_key="resource_disbursements",
-                db_attributes__db_category="resources",
-            ).distinct():
-                target = obj.typeclass or obj
-                key = getattr(target, "id", id(target))
-                if key in seen:
-                    continue
-                seen.add(key)
-                targets.append(target)
 
         if not targets:
             self.msg("No targets found with recurring disbursements configured.")
@@ -643,12 +695,15 @@ class CmdResource(CharacterLookupMixin, MuxCommand):
 
         total_allocated = 0
         messages = []
-        for raw_target in targets:
-            target = raw_target
-            if hasattr(raw_target, "typeclass") and raw_target.typeclass:
-                target = raw_target.typeclass
+        for target in targets:
             if not target:
                 continue
+
+            # Characters: skip non-active ones
+            from typeclasses.characters import Character
+            if isinstance(target, Character):
+                if getattr(target.db, "status", None) != STATUS_ACTIVE:
+                    continue
 
             disbursements = get_resource_disbursements(target)
             if not disbursements:
