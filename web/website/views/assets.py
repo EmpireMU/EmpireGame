@@ -131,7 +131,7 @@ def upload_site_asset(request):
         custom_name = request.POST.get('custom_name', '')  # Optional custom filename
         
         # Validate file type
-        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
         ext = os.path.splitext(asset_file.name)[1].lower()
         if ext not in valid_extensions:
             return JsonResponse({'error': 'Invalid file type'}, status=400)
@@ -167,7 +167,33 @@ def upload_site_asset(request):
             except Exception as e:
                 return JsonResponse({'error': f'Could not save map: {e}'}, status=400)
         
-        # Handle regular assets (logos, icons, etc.)
+        # Handle SVG files - save directly without processing
+        if ext == '.svg':
+            try:
+                # Use custom name if provided, otherwise use type + UUID
+                if custom_name:
+                    filename = f"{custom_name}.svg"
+                else:
+                    filename = f"{asset_type}_{uuid.uuid4()}.svg"
+                
+                # Save SVG directly without processing
+                path = f"site_assets/{filename}"
+                saved_path = default_storage.save(path, asset_file)
+                
+                url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else f"/media/{saved_path}"
+                actual_filename = os.path.basename(saved_path)
+                
+                return JsonResponse({
+                    'success': True,
+                    'filename': actual_filename,
+                    'url': url,
+                    'path': saved_path,
+                    'message': 'SVG uploaded successfully.'
+                })
+            except Exception as e:
+                return JsonResponse({'error': f'Could not save SVG: {e}'}, status=400)
+        
+        # Handle regular raster assets (logos, icons, etc.)
         # Determine if we should preserve transparency (use 'logo' for any graphic needing transparency)
         preserve_transparency = asset_type == 'logo'
         
