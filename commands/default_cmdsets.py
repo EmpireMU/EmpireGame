@@ -32,7 +32,8 @@ from commands import home
 from commands.page import CmdPage
 from commands.mail import CmdMailCharacterOOC
 from commands import where
-from commands.account_admin import CmdCreatePlayerAccount, CmdSetPassword, CmdCheckEmails
+from commands.account_admin import CmdCreatePlayerAccount, CmdSetPassword
+from commands.player_tracking import CmdCheckEmails, CmdEmailNote
 from commands.roster import CmdRoster, CmdApplication
 from commands.places import PlaceCmdSet
 from commands.channel_admin import ChannelAdminCmdSet
@@ -136,6 +137,7 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
         self.add(CmdRoster())
         self.add(CmdApplication())
         self.add(CmdCheckEmails())
+        self.add(CmdEmailNote())
         # Add channel admin commands
         self.add(ChannelAdminCmdSet)
         # Replace default ooc/unpuppet handling so `ooc` is free for chat
