@@ -2,7 +2,7 @@
 Commands for Cortex Prime dice rolling.
 """
 
-from evennia import Command
+from evennia.commands.default.muxcommand import MuxCommand
 from evennia import CmdSet
 from utils.cortex import (
     DIFFICULTIES,
@@ -72,7 +72,7 @@ def format_colored_roll(value, die, trait_info, extra_value=None):
         return f"|c{value}|n({display_name}: d{die}{mod_suffix})"
     return f"|c{value}|n(d{die})"
 
-class CmdCortexRoll(Command):
+class CmdCortexRoll(MuxCommand):
     """
     Roll dice using the Cortex Prime system.
     
