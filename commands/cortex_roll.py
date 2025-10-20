@@ -135,9 +135,11 @@ class CmdCortexRoll(Command):
         
     def parse(self):
         """Parse the dice input and difficulty."""
+        # Call parent parse first to initialize switches, args, etc.
+        super().parse()
+            
         # For rerolls, skip normal parsing - we'll use cached roll data
-        # Note: switches may not be populated yet, so we check the raw cmdstring
-        if hasattr(self, 'cmdstring') and '/reroll' in self.cmdstring.lower():
+        if "reroll" in self.switches:
             self.dice = None
             self.trait_info = None
             return
