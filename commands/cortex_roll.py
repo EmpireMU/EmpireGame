@@ -78,6 +78,8 @@ class CmdCortexRoll(Command):
     
     Usage:
         roll <trait1> [<trait2>...] [vs <difficulty>]
+        roll/keepextra <trait1> [<trait2>...] [vs <difficulty>]
+        roll/reroll <trait1> [<trait2>...] [d6/d8/etc]
         
     For multi-word traits, either:
     - Use quotes: roll "High Ground" prowess fighting
@@ -90,6 +92,8 @@ class CmdCortexRoll(Command):
         roll strength fighting(D) - Roll Strength + Fighting stepped down
         roll "High Ground" fighting vs hard - Roll High Ground + Fighting vs hard difficulty
         roll high_ground fighting vs hard - Same as above using underscore
+        roll/keepextra prowess fighting warrior - Keep 3rd highest die in total
+        roll/reroll prowess d6 - Reroll prowess die and raw d6 from last roll
         
     Dice Mechanics:
     - Each trait adds its die to the pool (e.g., d6, d8, d10, d12)
@@ -115,7 +119,7 @@ class CmdCortexRoll(Command):
     key = "roll"
     locks = "cmd:all()"  # Everyone can use this command
     help_category = "Game"
-    switch_options = ()  # No switches for this command
+    switch_options = ("reroll", "keepextra")
     
     def at_pre_cmd(self):
         """
@@ -131,6 +135,11 @@ class CmdCortexRoll(Command):
         
     def parse(self):
         """Parse the dice input and difficulty."""
+        if "reroll" in self.switches:
+            # Rerolls reuse the previous roll data; only arguments are needed later
+            self.dice = None
+            self.trait_info = None
+            return
         if not self.args:
             self.msg("What dice do you want to roll?")
             self.dice = None
@@ -347,12 +356,23 @@ class CmdCortexRoll(Command):
 
     def func(self):
         """Execute the dice roll."""
+        # Handle reroll switch
+        if "reroll" in self.switches:
+            self._handle_reroll()
+            return
+            
+        # Handle regular roll or keepextra
         if not self.dice:
             return
+            
+        keep_extra = "keepextra" in self.switches
             
         try:
             # Roll all dice and track results with their indices.
             rolls = [(roll_die(int(die)), int(die), i) for i, die in enumerate(self.dice)]
+            
+            # Store last roll for potential reroll
+            self._store_last_roll(rolls)
             
             # Check for botch (all 1s)
             all_values = [value for value, _, _ in rolls]
@@ -379,7 +399,7 @@ class CmdCortexRoll(Command):
             # Process results
             # Convert rolls to the format process_results expects (value, die_size).
             process_rolls = [(value, die) for value, die, _ in rolls]
-            total, effect_die, hitches = process_results(process_rolls)
+            total, effect_die, hitches, extra_die_value = process_results(process_rolls, keep_extra=keep_extra)
             
             # Format individual roll results with trait names
             roll_results = []
@@ -401,6 +421,12 @@ class CmdCortexRoll(Command):
             if effect_die == 4 and non_hitch_count < 3:
                 effect_die_text += " |y(defaulted to d4)|n"
             
+            # Build total text with keepextra indicator
+            if keep_extra and extra_die_value is not None:
+                total_text = f"|w{total}|n |c(keeping extra die: +{extra_die_value})|n"
+            else:
+                total_text = f"|w{total}|n"
+            
             if self.difficulty is not None:
                 success, heroic = get_success_level(total, self.difficulty)
                 if success:
@@ -410,9 +436,9 @@ class CmdCortexRoll(Command):
                         success_text = "|gSuccess|n"
                 else:
                     success_text = "|yFailure|n"
-                result_msg += f"Total: |w{total}|n (vs {self.difficulty}) - {success_text} | Effect Die: |w{effect_die_text}|n"
+                result_msg += f"Total: {total_text} (vs {self.difficulty}) - {success_text} | Effect Die: |w{effect_die_text}|n"
             else:
-                result_msg += f"Total: |w{total}|n | Effect Die: |w{effect_die_text}|n"
+                result_msg += f"Total: {total_text} | Effect Die: |w{effect_die_text}|n"
             
             # Track traits used from each category for GM notification
             category_count = defaultdict(int)
@@ -443,6 +469,201 @@ class CmdCortexRoll(Command):
         except Exception as e:
             self.msg(f"Error during dice roll: {e}")
             return
+    
+    def _store_last_roll(self, rolls):
+        """Store the last roll for potential reroll."""
+        char = self.caller
+        if not hasattr(char, 'traits'):
+            char = char.char
+        if not hasattr(char, 'ndb'):
+            return
+            
+        # Store roll data: (value, die_size, index, trait_info)
+        char.ndb.last_roll = {
+            'rolls': rolls,  # List of (value, die_size, index) tuples
+            'trait_info': self.trait_info,  # List of TraitDie objects
+            'difficulty': self.difficulty
+        }
+    
+    def _handle_reroll(self):
+        """Handle rerolling specific dice from the last roll."""
+        char = self.caller
+        if not hasattr(char, 'traits'):
+            char = char.char
+            
+        # Check if there's a last roll to reroll
+        if not hasattr(char, 'ndb') or not char.ndb.last_roll:
+            self.msg("You haven't made a roll yet to reroll.")
+            return
+            
+        last_roll_data = char.ndb.last_roll
+        rolls = last_roll_data['rolls']
+        trait_info = last_roll_data['trait_info']
+        # Ensure trait info is available for any subsequent rerolls
+        self.trait_info = trait_info
+        self.difficulty = last_roll_data['difficulty']
+        
+        if not self.args:
+            self.msg("Specify which dice to reroll (e.g., roll/reroll prowess d6)")
+            return
+            
+        # Parse which dice to reroll
+        args = []
+        current_arg = []
+        in_quotes = False
+        
+        # First pass: handle quoted strings
+        for word in self.args.split():
+            if in_quotes:
+                if word.endswith('"'):
+                    current_arg.append(word[:-1])
+                    args.append(' '.join(current_arg))
+                    current_arg = []
+                    in_quotes = False
+                else:
+                    current_arg.append(word)
+                continue
+
+            if word.startswith('"'):
+                if word.endswith('"') and len(word) > 1:
+                    args.append(word[1:-1])
+                else:
+                    in_quotes = True
+                    current_arg.append(word[1:])
+                continue
+
+            # Handle underscores by replacing them with spaces
+            if '_' in word:
+                args.append(word.replace('_', ' '))
+            else:
+                args.append(word)
+                
+        if current_arg:  # Handle any remaining words
+            args.append(' '.join(current_arg))
+            
+        # Clean up args
+        args = [arg.strip().lower() for arg in args if arg.strip()]
+        
+        # Track which dice to reroll by index
+        indices_to_reroll = []
+        
+        for arg in args:
+            # Check if it's a raw die (d6, d8, etc. or just 6, 8, etc.)
+            if arg.startswith('d'):
+                die_size = arg[1:]
+            elif arg in DIE_SIZES:
+                die_size = arg
+            else:
+                die_size = None
+                
+            if die_size:
+                # Find all raw dice of this size
+                for i, (value, die, idx) in enumerate(rolls):
+                    if str(die) == die_size and not trait_info[idx].key:
+                        indices_to_reroll.append(i)
+            else:
+                # It's a trait name - find matching traits
+                # Handle the trait being doubled - reroll both dice
+                trait_key = arg.replace(' ', '_')
+                for i, (value, die, idx) in enumerate(rolls):
+                    trait = trait_info[idx]
+                    if trait.key and trait.key.lower() == trait_key:
+                        indices_to_reroll.append(i)
+                        # Check if next die is the doubled version
+                        if i + 1 < len(rolls):
+                            next_trait = trait_info[rolls[i+1][2]]
+                            if not next_trait.key and rolls[i+1][1] == die:
+                                indices_to_reroll.append(i+1)
+        
+        if not indices_to_reroll:
+            self.msg("No matching dice found to reroll. Check your dice names.")
+            return
+            
+        # Remove duplicates and sort
+        indices_to_reroll = sorted(set(indices_to_reroll))
+        
+        # Reroll the specified dice
+        new_rolls = []
+        for i, (value, die, idx) in enumerate(rolls):
+            if i in indices_to_reroll:
+                new_value = roll_die(int(die))
+                new_rolls.append((new_value, die, idx))
+            else:
+                new_rolls.append((value, die, idx))
+        
+        # Store the new roll
+        self.trait_info = trait_info
+        self._store_last_roll(new_rolls)
+        
+        # Check for botch
+        all_values = [value for value, _, _ in new_rolls]
+        if all(value == 1 for value in all_values):
+            result_msg = f"|r{self.caller.key} BOTCHES! All dice came up 1s!|n\n"
+            
+            # Format rolls for botch message
+            formatted_rolls = []
+            i = 0
+            while i < len(new_rolls):
+                t_info = trait_info[new_rolls[i][2]]
+                if i + 1 < len(new_rolls) and t_info.key and not trait_info[new_rolls[i+1][2]].key:
+                    # This is a doubled trait
+                    formatted_rolls.append(format_colored_roll(new_rolls[i][0], new_rolls[i][1], t_info, new_rolls[i+1][0]))
+                    i += 2
+                else:
+                    formatted_rolls.append(format_colored_roll(new_rolls[i][0], new_rolls[i][1], t_info))
+                    i += 1
+                    
+            result_msg += f"Rolled: {', '.join(formatted_rolls)}"
+            self.caller.location.msg_contents(result_msg)
+            return
+        
+        # Process results
+        process_rolls = [(value, die) for value, die, _ in new_rolls]
+        total, effect_die, hitches, extra_die_value = process_results(process_rolls, keep_extra=False)
+        
+        # Format individual roll results with trait names, marking rerolled dice
+        roll_results = []
+        i = 0
+        while i < len(new_rolls):
+            t_info = trait_info[new_rolls[i][2]]
+            rerolled_marker = " |y(rerolled)|n" if i in indices_to_reroll else ""
+            if i + 1 < len(new_rolls) and t_info.key and not trait_info[new_rolls[i+1][2]].key:
+                # This is a doubled trait
+                extra_rerolled = " |y(rerolled)|n" if (i+1) in indices_to_reroll else ""
+                base_text = format_colored_roll(new_rolls[i][0], new_rolls[i][1], t_info, new_rolls[i+1][0])
+                roll_results.append(base_text + rerolled_marker + extra_rerolled)
+                i += 2
+            else:
+                roll_results.append(format_colored_roll(new_rolls[i][0], new_rolls[i][1], t_info) + rerolled_marker)
+                i += 1
+                
+        result_msg = f"{self.caller.key} rerolls: {', '.join(roll_results)}\n"
+        
+        # Build total line
+        non_hitch_count = len([r for r in new_rolls if r[0] != 1])
+        effect_die_text = f"d{effect_die}"
+        if effect_die == 4 and non_hitch_count < 3:
+            effect_die_text += " |y(defaulted to d4)|n"
+        
+        if self.difficulty is not None:
+            success, heroic = get_success_level(total, self.difficulty)
+            if success:
+                if heroic:
+                    success_text = f"|g{self.caller.key} achieves a HEROIC SUCCESS!|n"
+                else:
+                    success_text = "|gSuccess|n"
+            else:
+                success_text = "|yFailure|n"
+            result_msg += f"Total: |w{total}|n (vs {self.difficulty}) - {success_text} | Effect Die: |w{effect_die_text}|n"
+        else:
+            result_msg += f"Total: |w{total}|n | Effect Die: |w{effect_die_text}|n"
+        
+        if hitches:
+            hitch_text = ", ".join(f"d{int(h)}" for h in hitches)
+            result_msg += f"\n|yHitches: {len(hitches)} (rolled 1 on: {hitch_text})|n"
+        
+        # Send result to room
+        self.caller.location.msg_contents(result_msg)
             
     def at_post_cmd(self):
         """

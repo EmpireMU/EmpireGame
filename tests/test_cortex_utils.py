@@ -57,48 +57,46 @@ class TestCortexUtils(EvenniaTest):
         # Sorted by value: 8(d10), 6(d8), 4(d6)
         # Total: 8 + 6 = 14, Effect die: largest unused die size = d6 = 6
         rolls = [(6, 8), (4, 6), (8, 10)]  # (rolled_value, die_size)
-        total, effect_die, hitches = process_results(rolls)
+        total, effect_die, hitches, extra = process_results(rolls)
         self.assertEqual(total, 14)  # Two highest dice: 8 + 6
         self.assertEqual(effect_die, 6)  # Largest unused die size (d6)
         self.assertEqual(len(hitches), 0)  # No 1s rolled
+        self.assertIsNone(extra)  # No extra die kept
         
         # Test roll with hitches
         rolls = [(1, 8), (1, 6), (8, 10)]  # (rolled_value, die_size)
-        total, effect_die, hitches = process_results(rolls)
+        total, effect_die, hitches, extra = process_results(rolls)
         self.assertEqual(total, 8)  # Only one non-hitch die
         self.assertEqual(effect_die, 4)  # Defaults to 4 when no third die available
         self.assertEqual(len(hitches), 2)  # Two 1s rolled
         self.assertEqual(hitches, [8, 6])  # Die sizes that rolled 1s
+        self.assertIsNone(extra)  # No extra die kept
         
         # Test with multiple dice of same size unused
         # Rolls: 5 on d8, 3 on d6, 9 on d10, 2 on d8
         # Sorted by value: 9(d10), 5(d8), 3(d6), 2(d8)
         # Total: 9 + 5 = 14, Effect die: largest unused die size = max(d6, d8) = d8 = 8
         rolls = [(5, 8), (3, 6), (9, 10), (2, 8)]
-        total, effect_die, hitches = process_results(rolls)
+        total, effect_die, hitches, extra = process_results(rolls)
         self.assertEqual(total, 14)  # 9 + 5
         self.assertEqual(effect_die, 8)  # Largest unused die size (d8)
         self.assertEqual(len(hitches), 0)
+        self.assertIsNone(extra)  # No extra die kept
         
         # Test edge case: only two dice
         rolls = [(6, 8), (4, 6)]
-        total, effect_die, hitches = process_results(rolls)
+        total, effect_die, hitches, extra = process_results(rolls)
         self.assertEqual(total, 10)  # 6 + 4
         self.assertEqual(effect_die, 4)  # Defaults to 4 when no unused dice
         self.assertEqual(len(hitches), 0)
-        # Sorted by value: 9(d10), 5(d8), 3(d6), 2(d8)
-        # Total: 9 + 5 = 14, Effect die: largest unused die size = max(d6, d8) = d8 = 8
-        rolls = [(5, 8), (3, 6), (9, 10), (2, 8)]
-        total, effect_die, hitches = process_results(rolls)
-        self.assertEqual(total, 14)  # 9 + 5
-        self.assertEqual(effect_die, 8)  # Largest unused die size (d8)
-        self.assertEqual(len(hitches), 0)
+        self.assertIsNone(extra)  # No extra die kept
         
-        # Test edge case: only two dice
-        rolls = [(6, 8), (4, 6)]
-        total, effect_die, hitches = process_results(rolls)
-        self.assertEqual(total, 10)  # 6 + 4
-        self.assertEqual(effect_die, 4)  # Defaults to 4 when no unused dice
+        # Test keep extra die
+        rolls = [(6, 8), (4, 6), (8, 10), (3, 4)]
+        total, effect_die, hitches, extra = process_results(rolls, keep_extra=True)
+        self.assertEqual(total, 18)  # 8 + 6 + 4
+        self.assertEqual(extra, 4)  # Third highest value
+        self.assertEqual(effect_die, 4)  # Largest unused die size (d4)
         self.assertEqual(len(hitches), 0)
     
     def test_get_success_level(self):

@@ -196,22 +196,24 @@ def roll_die(sides: int) -> int:
     """Roll a single die."""
     return randint(1, int(sides))
 
-def process_results(results, hitches=False):
+def process_results(results, hitches=False, keep_extra=False):
     """
     Process dice roll results.
     
     Args:
         results: List of (value, die_size) tuples
         hitches: Whether to count 1s as hitches (parameter kept for compatibility)
+        keep_extra: Whether to keep a 3rd die in the total
         
     Returns:
-        Tuple of (total, effect_die, hitch_dice_sizes)
-        - total: Sum of the two highest non-hitch dice
+        Tuple of (total, effect_die, hitch_dice_sizes, extra_die_value)
+        - total: Sum of the two (or three if keep_extra) highest non-hitch dice
         - effect_die: The largest die size not used in the final result calculation, or 4 if no unused dice
         - hitch_dice_sizes: List of die sizes that rolled 1s
+        - extra_die_value: The value of the 3rd die if keep_extra, else None
     """
     if not results:
-        return 0, 0, []
+        return 0, 0, [], None
         
     # Sort results by value, highest first
     sorted_results = sorted(results, key=lambda x: x[0], reverse=True)
@@ -222,12 +224,24 @@ def process_results(results, hitches=False):
     # Filter out hitches from total calculation
     non_hitch_results = [result for result in sorted_results if result[0] != 1]
     
-    # Calculate total from two highest non-hitch dice
-    if len(non_hitch_results) >= 2:
+    extra_die_value = None
+    
+    # Calculate total from highest non-hitch dice
+    if keep_extra and len(non_hitch_results) >= 3:
+        # Keep 3 dice
+        total = non_hitch_results[0][0] + non_hitch_results[1][0] + non_hitch_results[2][0]
+        extra_die_value = non_hitch_results[2][0]
+        
+        # Find unused dice (excluding hitches and the 3 used)
+        unused_dice = non_hitch_results[3:]
+        
+        if unused_dice:
+            unused_die_sizes = [int(die_size) for value, die_size in unused_dice]
+            effect_die = max(unused_die_sizes)
+        else:
+            effect_die = 4
+    elif len(non_hitch_results) >= 2:
         total = non_hitch_results[0][0] + non_hitch_results[1][0]
-        # Get the die sizes used for the final result (two highest non-hitch)
-        used_dice = non_hitch_results[:2]
-        used_die_sizes = [die_size for value, die_size in used_dice]
         
         # Find unused dice (excluding hitches)
         unused_dice = non_hitch_results[2:]  # All non-hitch dice after the first two
@@ -248,7 +262,7 @@ def process_results(results, hitches=False):
         total = 0
         effect_die = 4
     
-    return total, effect_die, hitch_dice_sizes
+    return total, effect_die, hitch_dice_sizes, extra_die_value
 
 def get_success_level(total: int, difficulty: Optional[int]) -> Tuple[bool, bool]:
     """

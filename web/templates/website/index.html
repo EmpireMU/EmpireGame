@@ -30,7 +30,7 @@
                 {% endif %}
                 {% if telnet_enabled %}
                 <p>
-                    Telnet: <strong>{{ server_hostname }}</strong>, port
+                    Telnet: <strong>{{ telnet_hostname }}</strong>, port
                     {% for port in telnet_ports %}
                     {% if not forloop.first and forloop.last %} or
                     {% elif forloop.counter != 1 %},

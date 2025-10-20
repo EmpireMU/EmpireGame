@@ -438,7 +438,7 @@ def homepage(request):
         'game_news': game_news,
         'webclient_enabled': settings.WEBCLIENT_ENABLED,
         'telnet_enabled': settings.TELNET_ENABLED,
-        'server_hostname': settings.SERVERNAME,
+        'telnet_hostname': getattr(settings, 'TELNET_HOSTNAME', settings.SERVERNAME),
         'telnet_ports': settings.TELNET_PORTS,
     }
     
