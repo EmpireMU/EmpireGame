@@ -43,6 +43,7 @@ class CmdBoard(MuxCommand):
         |wboard/edit <board>/<post #>=<text>|n - Edit a post
         |wboard/delete <board>/<post #>|n - Delete a post
         |wboard/search <text>|n - Search posts
+        |wboard/search/all <text>|n - Search posts including archives
         |wboard/archive <board>|n - View archived posts on a board
         |wboard/sub <board>|n - Subscribe to a board
         |wboard/unsub <board>|n - Unsubscribe from a board
@@ -131,7 +132,7 @@ class CmdBoard(MuxCommand):
             caller.msg(str(table))
             return
         
-        if "all" in self.switches:
+        if set(self.switches) == {"all"}:
             # List all boards
             boards = ScriptDB.objects.filter(db_typeclass_path="typeclasses.boards.BulletinBoardScript")
             boards = list(boards)  # Convert QuerySet to list
@@ -154,11 +155,12 @@ class CmdBoard(MuxCommand):
             caller.msg(str(table))
             return
             
-        if not self.switches:
+        if not self.switches or set(self.switches) == {"archive"}:
             # Reading a board or post
             if "/" in self.args:
                 # Reading specific post
                 board_name, post_num = self.args.split("/", 1)
+                board_name = board_name.strip()
                 try:
                     post_num = int(post_num)
                 except ValueError:
@@ -175,7 +177,8 @@ class CmdBoard(MuxCommand):
                     caller.msg("You don't have permission to read that board.")
                     return
                     
-                posts = board.get_posts(caller)
+                include_archived = "archive" in self.switches
+                posts = board.get_posts(caller, include_archived)
                 if not posts:
                     caller.msg("No posts found.")
                     return
@@ -191,7 +194,7 @@ class CmdBoard(MuxCommand):
                 
                 # Format post
                 header = f"|wPost {post_num} on {board.key}|n"
-                if hasattr(post, 'pinned') and post.pinned:
+                if post.tags.has("pinned", category="board_messages"):
                     header = f"|y[PINNED]|n {header}"
                 divider = "-" * len(header)
                 caller.msg(f"{header}\n{divider}")
@@ -209,9 +212,10 @@ class CmdBoard(MuxCommand):
                 
             else:
                 # Viewing a board
-                board = find_board(self.args)
+                board_name = self.args.strip()
+                board = find_board(board_name)
                 if not board:
-                    caller.msg(f"Board '{self.args}' not found.")
+                    caller.msg(f"Board '{board_name}' not found.")
                     return
                 
                 if not board.access(caller, "read"):
@@ -234,7 +238,7 @@ class CmdBoard(MuxCommand):
                     marker = "|g*|n " if is_unread else "  "
                     date = post.date_created.strftime("%Y-%m-%d")
                     flags = []
-                    if hasattr(post, 'pinned') and post.pinned:
+                    if post.tags.has("pinned", category="board_messages"):
                         flags.append("|y[P]|n")
                     if hasattr(post, 'last_edited') and post.last_edited:
                         flags.append("|w[E]|n")
@@ -296,6 +300,7 @@ class CmdBoard(MuxCommand):
                 return
                 
             board_name, post_num = post_ref.split("/", 1)
+            board_name = board_name.strip()
             try:
                 post_num = int(post_num)
             except ValueError:
@@ -396,6 +401,7 @@ class CmdBoard(MuxCommand):
                 return
                 
             board_name, post_num = self.args.split("/", 1)
+            board_name = board_name.strip()
             try:
                 post_num = int(post_num)
             except ValueError:
@@ -429,17 +435,17 @@ class CmdBoard(MuxCommand):
                 return
                 
             board_name, post_num = self.args.split("/", 1)
+            board_name = board_name.strip()
             try:
                 post_num = int(post_num)
             except ValueError:
                 caller.msg("Post number must be a number.")
                 return
                 
-            boards = [b for b in search_script("", typeclass=BulletinBoardScript) if b.key == board_name]
-            if not boards:
+            board = find_board(board_name)
+            if not board:
                 caller.msg(f"Board '{board_name}' not found.")
                 return
-            board = boards[0]
             
             posts = board.get_posts(caller)
             if not posts:
@@ -463,13 +469,14 @@ class CmdBoard(MuxCommand):
                 caller.msg("Usage: board/search <text>")
                 return
                 
+            include_archived = "all" in self.switches
             search_text = self.args.lower()
             results = []
             
             # Search all boards the character can read
             for board in search_script("", typeclass=BulletinBoardScript):
                 if board.access(caller, "read"):
-                    for post, _ in board.get_posts(caller):
+                    for post, _ in board.get_posts(caller, include_archived):
                         if (search_text in post.header.lower() or 
                             search_text in post.message.lower()):
                             results.append((board, post))
@@ -485,7 +492,7 @@ class CmdBoard(MuxCommand):
             for board, post in results:
                 date = post.date_created.strftime("%Y-%m-%d")
                 flags = []
-                if hasattr(post, 'pinned') and post.pinned:
+                if post.tags.has("pinned", category="board_messages"):
                     flags.append("|y[P]|n")
                 if hasattr(post, 'last_edited') and post.last_edited:
                     flags.append("|w[E]|n")
@@ -504,11 +511,11 @@ class CmdBoard(MuxCommand):
                 caller.msg("Usage: board/sub <board>")
                 return
                 
-            boards = [b for b in search_script("", typeclass=BulletinBoardScript) if b.key == self.args]
-            if not boards:
-                caller.msg(f"Board '{self.args}' not found.")
+            board_name = self.args.strip()
+            board = find_board(board_name)
+            if not board:
+                caller.msg(f"Board '{board_name}' not found.")
                 return
-            board = boards[0]
             
             if board.subscribe(caller):
                 caller.msg(f"Subscribed to board '{board.key}'.")
@@ -520,11 +527,11 @@ class CmdBoard(MuxCommand):
                 caller.msg("Usage: board/unsub <board>")
                 return
                 
-            boards = [b for b in search_script("", typeclass=BulletinBoardScript) if b.key == self.args]
-            if not boards:
-                caller.msg(f"Board '{self.args}' not found.")
+            board_name = self.args.strip()
+            board = find_board(board_name)
+            if not board:
+                caller.msg(f"Board '{board_name}' not found.")
                 return
-            board = boards[0]
             
             if board.unsubscribe(caller):
                 caller.msg(f"Unsubscribed from board '{board.key}'.")

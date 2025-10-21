@@ -140,7 +140,7 @@ class BulletinBoardScript(DefaultScript):
                 # Archive oldest non-pinned post
                 # Since posts are now sorted oldest-first, we iterate normally (not reversed)
                 for old_post, _ in posts:
-                    if not getattr(old_post, 'pinned', False):
+                    if not old_post.tags.has("pinned", category="board_messages"):
                         old_post.tags.add("archived", category="board_messages")
                         
                         # Update unread counts - subtract this post if it was unread
@@ -231,7 +231,13 @@ class BulletinBoardScript(DefaultScript):
             
         # Sort by date, pinned posts first, but oldest posts get lower numbers
         # Pinned posts still appear first, but within each group (pinned/unpinned), oldest comes first
-        filtered_posts.sort(key=lambda x: (not bool(getattr(x[0], 'pinned', False)), x[0].date_created), reverse=False)
+        filtered_posts.sort(
+            key=lambda x: (
+                not x[0].tags.has("pinned", category="board_messages"),
+                x[0].date_created,
+            ),
+            reverse=False,
+        )
         return filtered_posts
 
     def mark_read(self, reader: "Character", post: "Msg") -> None:
@@ -329,7 +335,11 @@ class BulletinBoardScript(DefaultScript):
         if not self.access(character, "admin"):
             return False
             
-        post.pinned = pin
+        if pin:
+            post.tags.add("pinned", category="board_messages")
+        else:
+            if post.tags.has("pinned", category="board_messages"):
+                post.tags.remove("pinned", category="board_messages")
         return True
 
     def _notify_new_post(self, post: "Msg", poster: "Character") -> None:
