@@ -4,6 +4,7 @@ Manager class for handling request workflow logic.
 
 from evennia.scripts.models import ScriptDB
 from evennia import create_script
+from evennia.accounts.models import AccountDB
 from datetime import datetime, timedelta
 from typeclasses.requests import Request, VALID_STATUSES, DEFAULT_CATEGORIES
 
@@ -19,25 +20,46 @@ class RequestManager:
             message (str): The message to send
             exclude_account (AccountDB, optional): Account to exclude from notification
         """
-        # Get participants (submitter and assigned staff if different)
-        participants = []
-        if request.db.submitter:
-            participants.append((request.db.submitter, request.db.submitter.is_connected))
-        if request.db.assigned_to and request.db.assigned_to != request.db.submitter:
-            participants.append((request.db.assigned_to, request.db.assigned_to.is_connected))
-            
-        # Send notifications
-        for account, is_connected in participants:
-            if account == exclude_account:
-                continue
-                
-            if is_connected:
+        # Track who we've already notified to avoid duplicates
+        notified_ids = set()
+
+        def _notify_account(account, allow_offline=True):
+            if not account or account == exclude_account:
+                return
+            if account.id in notified_ids:
+                return
+
+            if account.is_connected:
                 account.msg(f"[Request #{request.db.id}] {message}")
-            else:
-                # Store offline notification
+                notified_ids.add(account.id)
+                return
+
+            if allow_offline:
                 notifications = account.db.offline_request_notifications or []
                 notifications.append(f"[Request #{request.db.id}] {message}")
                 account.db.offline_request_notifications = notifications
+                notified_ids.add(account.id)
+
+        # Notify participants (submitter and assigned staff)
+        _notify_account(request.db.submitter)
+        if request.db.assigned_to and request.db.assigned_to != request.db.submitter:
+            _notify_account(request.db.assigned_to)
+
+        # Notify other online staff (Builder/Developer/Admin), without storing offline copies
+        for account in AccountDB.objects.all():
+            if account.id in notified_ids:
+                continue
+            if not account.is_connected:
+                continue
+            if not (
+                account.permissions.check("Admin")
+                or account.permissions.check("Builder")
+                or account.permissions.check("Developer")
+            ):
+                continue
+            if getattr(account.db, "request_notify_mute", False):
+                continue
+            _notify_account(account, allow_offline=False)
     
     @classmethod
     def create(cls, title, text, submitter):
@@ -74,7 +96,10 @@ class RequestManager:
         request.db.text = text.strip()
         request.db.submitter = submitter
         
-        cls.notify_update(request, f"New request created: {title[:50]}{'...' if len(title) > 50 else ''}")
+        cls.notify_update(
+            request,
+            f"New request created: {title[:50]}{'...' if len(title) > 50 else ''}"
+        )
         return request
         
     @classmethod
@@ -121,7 +146,8 @@ class RequestManager:
         request.db.comments.append(comment)
         request.db.date_modified = datetime.now()
         
-        cls.notify_update(request, f"New comment by {author.name}")
+        author_name = getattr(author, "name", "Unknown") if author else "Unknown"
+        cls.notify_update(request, f"New comment by {author_name}")
         
     @classmethod
     def assign(cls, request, staff_account):
@@ -135,9 +161,12 @@ class RequestManager:
         request.db.assigned_to = staff_account
         request.db.date_modified = datetime.now()
         
-        msg = f"Assigned to {staff_account.name}"
+        new_name = getattr(staff_account, "name", "Unknown") if staff_account else "Unknown"
+        old_name = getattr(old_assigned, "name", "Unknown") if old_assigned else None
+
+        msg = f"Assigned to {new_name}"
         if old_assigned:
-            msg = f"Reassigned from {old_assigned.name} to {staff_account.name}"
+            msg = f"Reassigned from {old_name} to {new_name}"
         cls.notify_update(request, msg)
         
     @classmethod

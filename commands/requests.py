@@ -25,6 +25,8 @@ class CmdRequest(MuxCommand):
         request/close <#>=<text>    - Close your request with resolution
         request/archive             - List your archived requests
         request/archive <#>         - View a specific archived request
+        request/shownotifications <on|off>
+            - Toggle staff notifications
         
     Examples:
         request                                         - List your requests
@@ -41,6 +43,11 @@ class CmdRequest(MuxCommand):
     locks = "cmd:pperm(Player)"  # Only accounts with Player permission or higher
     help_category = "Communication"
     
+    def _is_staff(self):
+        """Check if caller has staff permissions (Builder or higher)."""
+        return any(perm.lower() in ["admin", "builder", "developer"] 
+                  for perm in self.caller.permissions.all())
+    
     def get_help(self, caller, cmdset):
         """
         Return help text, customized based on caller's permissions.
@@ -55,8 +62,9 @@ class CmdRequest(MuxCommand):
         # Get base help text from docstring
         help_text = super().get_help(caller, cmdset)
         
-        # Add staff commands if caller has Admin permissions
-        if caller.check_permstring("Admin"):
+        # Add staff commands if caller has staff permissions (Builder+)
+        if any(perm.lower() in ["admin", "builder", "developer"] 
+               for perm in caller.permissions.all()):
             help_text += """
     
     |yStaff Commands:|n
@@ -65,6 +73,8 @@ class CmdRequest(MuxCommand):
         request/status <#>=<status> - Change request status
         request/cat <#>=<category>  - Change request category
         request/archive/all         - List all archived requests
+        request/shownotifications <on|off>
+                                    - Toggle staff notifications
         request/unarchive <#>       - Unarchive a request
         request/cleanup             - Delete archived requests older than 30 days
         
@@ -100,8 +110,8 @@ class CmdRequest(MuxCommand):
             self.caller.msg("Request not found.")
             return False
             
-        # Check permissions unless it's a staff member
-        if not self.caller.permissions.check("Admin"):
+        # Check permissions unless it's a staff member (Builder+)
+        if not self._is_staff():
             if request.db.submitter != self.caller.account:
                 self.caller.msg("You don't have permission to do that.")
                 return False
@@ -113,12 +123,13 @@ class CmdRequest(MuxCommand):
         if not req or not hasattr(req, 'db'):
             return None
             
-        # Truncate long names and add ellipsis
-        submitter = req.db.submitter.name if req.db.submitter else "Unknown"
+        # Safely get account names, handling deleted/invalid accounts
+        submitter = getattr(req.db.submitter, 'name', 'Unknown') if req.db.submitter else "Unknown"
         if len(submitter) > 12:
             submitter = submitter[:11] + "…"
             
-        assigned = req.db.assigned_to.name if req.db.assigned_to else "Unassigned"
+        # Safely get account names, handling deleted/invalid accounts
+        assigned = getattr(req.db.assigned_to, 'name', 'Unassigned') if req.db.assigned_to else "Unassigned"
         if len(assigned) > 12:
             assigned = assigned[:11] + "…"
             
@@ -198,8 +209,7 @@ class CmdRequest(MuxCommand):
     def create_request(self, title, text):
         """Create a new request"""
         try:
-            request = RequestManager.create(title, text, self.caller.account)
-            self.caller.msg(f"Request #{request.db.id} created successfully.")
+            RequestManager.create(title, text, self.caller.account)
         except ValueError as e:
             self.caller.msg(str(e))
             
@@ -211,11 +221,15 @@ class CmdRequest(MuxCommand):
             
         # Mark as viewed before showing
         request.mark_viewed(self.caller.account)
-            
+        
+        # Safely get account names, handling deleted/invalid accounts
+        submitter_name = getattr(request.db.submitter, 'name', 'Unknown') if request.db.submitter else "Unknown"
+        assigned_name = getattr(request.db.assigned_to, 'name', 'Unassigned') if request.db.assigned_to else "Unassigned"
+        
         header = f"""Request #{request.db.id}: {request.db.title}
 Status: {request.status}  Category: {request.category}
-Submitted by: {request.db.submitter.name if request.db.submitter else "Unknown"}
-Assigned to: {request.db.assigned_to.name if request.db.assigned_to else "Unassigned"}
+Submitted by: {submitter_name}
+Assigned to: {assigned_name}
 Created: {datetime_format(request.db.date_created)}
 Modified: {datetime_format(request.db.date_modified)}"""
         
@@ -226,7 +240,9 @@ Modified: {datetime_format(request.db.date_modified)}"""
         
         comments = "\nComments:"
         for comment in request.get_comments():
-            comments += f"\n[{datetime_format(comment['date'])}] {comment['author'].name}: {comment['text']}"
+            # Safely get account name, handling deleted/invalid accounts
+            author_name = getattr(comment.get('author'), 'name', 'Unknown') if comment.get('author') else 'Unknown'
+            comments += f"\n[{datetime_format(comment['date'])}] {author_name}: {comment['text']}"
             
         resolution = ""
         if request.db.resolution:
@@ -241,8 +257,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             self.caller.msg("Request not found.")
             return
             
-        # Check permissions - only staff and request owner can comment
-        if not self.caller.permissions.check("Admin"):
+        # Check permissions - only staff (Builder+) and request owner can comment
+        if not self._is_staff():
             if request.db.submitter != self.caller.account:
                 self.caller.msg("You don't have permission to comment on this request.")
                 return
@@ -261,7 +277,7 @@ Modified: {datetime_format(request.db.date_modified)}"""
             return
             
         # Check permissions
-        if not self.caller.permissions.check("Admin"):
+        if not self._is_staff():
             if request.db.submitter != self.caller.account:
                 self.caller.msg("You don't have permission to close this request.")
                 return
@@ -270,9 +286,15 @@ Modified: {datetime_format(request.db.date_modified)}"""
                 return
                 
         try:
-            # First set the resolution
-            request.set_resolution(resolution)
-            # Then close it, which will also archive it
+            # Validate resolution text
+            if not resolution.strip():
+                raise ValueError("Resolution text cannot be empty")
+            
+            # Set resolution directly (without notification - status change will notify)
+            request.db.resolution = resolution.strip()
+            request.db.date_modified = datetime.now()
+            
+            # Close and archive (this will send the notification)
             RequestManager.set_status(request, "Closed")
             self.caller.msg("Request closed and archived.")
         except ValueError as e:
@@ -285,8 +307,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             self.caller.msg("Request not found.")
             return
             
-        # Only staff can assign requests
-        if not self.caller.permissions.check("Admin"):
+        # Only staff (Builder+) can assign requests
+        if not self._is_staff():
             self.caller.msg("You don't have permission to assign requests.")
             return
             
@@ -298,7 +320,9 @@ Modified: {datetime_format(request.db.date_modified)}"""
             
         try:
             RequestManager.assign(request, staff)
-            self.caller.msg(f"Request assigned to {staff.name}.")
+            # Safely get account name, handling deleted/invalid accounts
+            staff_name = getattr(staff, 'name', staff_name) if staff else staff_name
+            self.caller.msg(f"Request assigned to {staff_name}.")
         except ValueError as e:
             self.caller.msg(str(e))
             
@@ -310,9 +334,7 @@ Modified: {datetime_format(request.db.date_modified)}"""
             return
             
         # Check permissions
-        is_staff = any(perm.lower() in ["admin", "builder", "developer"] 
-                      for perm in self.caller.permissions.all())
-        if not is_staff:
+        if not self._is_staff():
             # Non-staff can only close their own open requests
             if request.db.submitter != self.caller.account:
                 self.caller.msg("You don't have permission to change request status.")
@@ -346,8 +368,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             self.caller.msg("Request not found.")
             return
             
-        # Only staff can change category
-        if not self.caller.permissions.check("Admin"):
+        # Only staff (Builder+) can change category
+        if not self._is_staff():
             self.caller.msg("You don't have permission to change request category.")
             return
             
@@ -364,8 +386,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             self.caller.msg("Request not found.")
             return
             
-        # Only staff can archive
-        if not self.caller.permissions.check("Admin"):
+        # Only staff (Builder+) can archive
+        if not self._is_staff():
             self.caller.msg("You don't have permission to archive requests.")
             return
             
@@ -382,8 +404,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             self.caller.msg("Request not found.")
             return
             
-        # Only staff can unarchive
-        if not self.caller.permissions.check("Admin"):
+        # Only staff (Builder+) can unarchive
+        if not self._is_staff():
             self.caller.msg("You don't have permission to unarchive requests.")
             return
             
@@ -401,8 +423,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             return
             
         if "all" in self.switches:
-            # List all active requests (staff only)
-            if not self.caller.permissions.check("Admin"):
+            # List all active requests (staff only - Builder+)
+            if not self._is_staff():
                 self.caller.msg("You don't have permission to list all requests.")
                 return
             self.list_requests(personal=False, show_archived=False)
@@ -411,8 +433,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
         if "archive" in self.switches:
             if not self.args:
                 if "all" in self.switches:
-                    # List all archived requests (staff only)
-                    if not self.caller.permissions.check("Admin"):
+                    # List all archived requests (staff only - Builder+)
+                    if not self._is_staff():
                         self.caller.msg("You don't have permission to list all archived requests.")
                         return
                     self.list_requests(personal=False, show_archived=True)
@@ -430,8 +452,8 @@ Modified: {datetime_format(request.db.date_modified)}"""
             return
             
         if "cleanup" in self.switches:
-            # Only staff can run cleanup
-            if not self.caller.permissions.check("Admin"):
+            # Only staff (Builder+) can run cleanup
+            if not self._is_staff():
                 self.caller.msg("You don't have permission to run request cleanup.")
                 return
                 
@@ -448,6 +470,28 @@ Modified: {datetime_format(request.db.date_modified)}"""
                 self.caller.msg("Usage: request/new <title>=<text>")
                 return
             self.create_request(self.lhs.strip(), self.rhs.strip())
+            return
+
+        if "shownotifications" in self.switches:
+            if not self._is_staff():
+                self.caller.msg("You don't have permission to change notification settings.")
+                return
+
+            normalized = self.args.strip().lower()
+
+            if not normalized:
+                current = "off" if self.caller.account.db.request_notify_mute else "on"
+                self.caller.msg(f"Request notifications are currently {current}.")
+                self.caller.msg("Usage: request/shownotifications <on|off>")
+                return
+
+            if normalized not in {"on", "off"}:
+                self.caller.msg("Usage: request/shownotifications <on|off>")
+                return
+
+            self.caller.account.db.request_notify_mute = normalized == "off"
+            state = "off" if self.caller.account.db.request_notify_mute else "on"
+            self.caller.msg(f"Request notifications are now {state}.")
             return
             
         if "comment" in self.switches:

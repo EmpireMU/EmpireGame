@@ -332,8 +332,8 @@ class Request(DefaultScript):
         if not account:
             return False
             
-        # Get the last_viewed_by dict, creating an empty one if it doesn't exist
-        last_viewed_by = self.attributes.get('last_viewed_by', default={})
+        # Get the last_viewed_by dict, defaulting to empty if it doesn't exist
+        last_viewed_by = self.db.last_viewed_by or {}
         
         # Use account.id as the key
         last_viewed = last_viewed_by.get(str(account.id))
@@ -349,12 +349,11 @@ class Request(DefaultScript):
             account (AccountDB): The account that viewed the request
         """
         if account:
-            # Get current dict or create new one
-            last_viewed_by = self.attributes.get('last_viewed_by', default={})
+            # Ensure the dict exists
+            if not self.db.last_viewed_by:
+                self.db.last_viewed_by = {}
             # Update the timestamp
-            last_viewed_by[str(account.id)] = datetime.now()
-            # Save back to attributes
-            self.attributes.add('last_viewed_by', last_viewed_by)
+            self.db.last_viewed_by[str(account.id)] = datetime.now()
 
     @classmethod
     def cleanup_old_requests(cls, days=30):
