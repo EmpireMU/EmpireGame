@@ -180,8 +180,14 @@ class CmdRequest(MuxCommand):
         """List requests"""
         requests = self.get_requests(show_archived)
         
+        self.caller.msg(f"DEBUG: Got {len(requests)} requests from get_requests")
+        
         if personal:
+            self.caller.msg(f"DEBUG: Filtering for personal requests. self.caller={self.caller}, self.caller.account={self.caller.account}")
+            for r in requests:
+                self.caller.msg(f"DEBUG: Request {r.key} submitter={r.db.submitter}, match={r.db.submitter == self.caller.account}")
             requests = [r for r in requests if r.db.submitter == self.caller.account]
+            self.caller.msg(f"DEBUG: After personal filter: {len(requests)} requests")
             
         if not requests:
             status = "archived" if show_archived else "active"
