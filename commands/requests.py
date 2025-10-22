@@ -156,16 +156,15 @@ class CmdRequest(MuxCommand):
         if not requests:
             return []
             
-        # Convert to Request objects and filter based on archived status
+        # Filter based on archived status
         filtered = []
         for r in requests:
-            if isinstance(r, Request):
-                # A request should be considered archived if:
-                # 1. It has a date_archived, OR
-                # 2. It is closed (for backwards compatibility)
-                is_archived = r.is_archived or r.is_closed
-                if is_archived == show_archived:
-                    filtered.append(r)
+            # A request should be considered archived if:
+            # 1. It has a date_archived, OR
+            # 2. It is closed (for backwards compatibility)
+            is_archived = r.is_archived or r.is_closed
+            if is_archived == show_archived:
+                filtered.append(r)
             
         return filtered
         
