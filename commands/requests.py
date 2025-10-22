@@ -153,41 +153,27 @@ class CmdRequest(MuxCommand):
         """Get all requests, optionally filtering for archived ones."""
         requests = ScriptDB.objects.filter(db_typeclass_path__contains="requests.Request")
         
-        self.caller.msg(f"DEBUG: Found {requests.count()} total request scripts")
-        
         if not requests:
             return []
             
         # Filter based on archived status
         filtered = []
         for r in requests:
-            self.caller.msg(f"DEBUG: Request {r.key}, has is_archived attr? {hasattr(r, 'is_archived')}, has is_closed attr? {hasattr(r, 'is_closed')}")
             # A request should be considered archived if:
             # 1. It has a date_archived, OR
             # 2. It is closed (for backwards compatibility)
-            try:
-                is_archived = r.is_archived or r.is_closed
-                self.caller.msg(f"DEBUG: Request {r.key} is_archived={is_archived}, show_archived={show_archived}")
-                if is_archived == show_archived:
-                    filtered.append(r)
-            except AttributeError as e:
-                self.caller.msg(f"DEBUG: Error accessing request properties: {e}")
+            is_archived = r.is_archived or r.is_closed
+            if is_archived == show_archived:
+                filtered.append(r)
             
-        self.caller.msg(f"DEBUG: Filtered to {len(filtered)} requests")
         return filtered
         
     def list_requests(self, personal=True, show_archived=False):
         """List requests"""
         requests = self.get_requests(show_archived)
         
-        self.caller.msg(f"DEBUG: Got {len(requests)} requests from get_requests")
-        
         if personal:
-            self.caller.msg(f"DEBUG: Filtering for personal requests. self.caller={self.caller}, self.caller.account={self.caller.account}")
-            for r in requests:
-                self.caller.msg(f"DEBUG: Request {r.key} submitter={r.db.submitter}, match={r.db.submitter == self.caller.account}")
             requests = [r for r in requests if r.db.submitter == self.caller.account]
-            self.caller.msg(f"DEBUG: After personal filter: {len(requests)} requests")
             
         if not requests:
             status = "archived" if show_archived else "active"
