@@ -153,19 +153,27 @@ class CmdRequest(MuxCommand):
         """Get all requests, optionally filtering for archived ones."""
         requests = ScriptDB.objects.filter(db_typeclass_path__contains="requests.Request")
         
+        self.caller.msg(f"DEBUG: Found {requests.count()} total request scripts")
+        
         if not requests:
             return []
             
         # Filter based on archived status
         filtered = []
         for r in requests:
+            self.caller.msg(f"DEBUG: Request {r.key}, has is_archived attr? {hasattr(r, 'is_archived')}, has is_closed attr? {hasattr(r, 'is_closed')}")
             # A request should be considered archived if:
             # 1. It has a date_archived, OR
             # 2. It is closed (for backwards compatibility)
-            is_archived = r.is_archived or r.is_closed
-            if is_archived == show_archived:
-                filtered.append(r)
+            try:
+                is_archived = r.is_archived or r.is_closed
+                self.caller.msg(f"DEBUG: Request {r.key} is_archived={is_archived}, show_archived={show_archived}")
+                if is_archived == show_archived:
+                    filtered.append(r)
+            except AttributeError as e:
+                self.caller.msg(f"DEBUG: Error accessing request properties: {e}")
             
+        self.caller.msg(f"DEBUG: Filtered to {len(filtered)} requests")
         return filtered
         
     def list_requests(self, personal=True, show_archived=False):
