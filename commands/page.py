@@ -92,13 +92,17 @@ class CmdPage(DefaultCmdPage):
             if not account:
                 self.caller.msg(f"No account found with the name '{recipient}'.")
                 continue
-            # search_account returns a list, get the first match
-            if isinstance(account, list):
-                if len(account) > 1:
-                    self.caller.msg(f"Multiple accounts match '{recipient}'. Please be more specific.")
-                    continue
-                account = account[0]
-            recipient_objs.append(account)
+            # search_account returns a list or QuerySet - always convert to list
+            if not isinstance(account, list):
+                account = list(account)
+            
+            if len(account) == 0:
+                self.caller.msg(f"No account found with the name '{recipient}'.")
+                continue
+            if len(account) > 1:
+                self.caller.msg(f"Multiple accounts match '{recipient}'. Please be more specific.")
+                continue
+            recipient_objs.append(account[0])
         
         if not recipient_objs:
             return
