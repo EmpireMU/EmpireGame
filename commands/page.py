@@ -125,7 +125,7 @@ class CmdPage(DefaultCmdPage):
         for recipient in online_recipients:
             self.msg_receiver = recipient
             formatted_msg = self.format_message(message, online_recipients)
-            recipient.msg(formatted_msg, from_obj=self.caller)
+            recipient.msg(formatted_msg)
         
         # Send a copy to the sender (only if they weren't already a recipient)
         if self.caller not in online_recipients:
