@@ -517,6 +517,12 @@ def update_character_field(request, char_name, char_id):
         if field not in allowed_fields:
             return JsonResponse({'error': f'Invalid field: {field}'}, status=400)
         
+        # For character descriptions, normalize line breaks:
+        # Convert Evennia line break codes (|/ and |\) to standard newlines
+        # so they work consistently in-game and on web
+        if field == 'desc' and value:
+            value = value.replace('|/', '\n').replace('|\\', '\n')
+        
         # Update the field using Evennia's db handler
         setattr(character.db, field, value)
         logger.info(f"Updated {char_name}'s {field}")

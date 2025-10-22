@@ -364,8 +364,10 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
                 
                 # Update the appropriate attribute
                 if switch == "description":
-                    # For description, set the desc attribute directly
-                    char.db.desc = value
+                    # For description, normalize line breaks: convert Evennia line break codes (|/ and |\)
+                    # to standard newlines so they work consistently in-game and on web
+                    normalized_value = value.replace('|/', '\n').replace('|\\', '\n')
+                    char.db.desc = normalized_value
                 else:
                     setattr(char.db, switch_map[switch], value)
                 

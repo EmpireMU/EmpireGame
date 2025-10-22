@@ -155,3 +155,4 @@ class Channel(DefaultChannel):
             str: The colour code, or 'w' (white) if none is set
         """
         return self.db.channel_colour or "w"
+

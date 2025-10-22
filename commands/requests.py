@@ -163,7 +163,6 @@ class CmdRequest(MuxCommand):
             # 1. It has a date_archived, OR
             # 2. It is closed (for backwards compatibility)
             is_archived = r.is_archived or r.is_closed
-            self.caller.msg(f"DEBUG get_requests: {r.key} is_archived={r.is_archived} is_closed={r.is_closed} combined={is_archived} show_archived={show_archived} match={is_archived == show_archived}")
             if is_archived == show_archived:
                 filtered.append(r)
             
