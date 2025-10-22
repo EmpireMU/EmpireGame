@@ -10,9 +10,10 @@ class CmdHome(CharacterLookupMixin, MuxCommand):
     Set your home location or teleport to it.
     
     Usage:
-        home        - Teleport to your home location
-        home/here   - Set your current location as home
-        home/clear  - Clear your home location
+        home             - Teleport to your home location
+        home/here        - Set your current location as home
+        home/clear       - Clear your home location
+        home/desc <text> - Set description for a room you own
     """
     
     key = "home"
@@ -76,5 +77,25 @@ class CmdHome(CharacterLookupMixin, MuxCommand):
             self.caller.home_location = None
             self.msg(f"Cleared your home location. (Previously: {old_home.name})")
             
+        elif switch == "desc":
+            # Set description for a room the player owns
+            room = self.caller.location
+            if not room:
+                self.msg("You aren't in a location.")
+                return
+            
+            # Check if the player owns this room
+            if self.caller.id not in room.character_owners:
+                self.msg("You must own this room to set its description.")
+                return
+            
+            if not self.args.strip():
+                self.msg("Usage: home/desc <description>")
+                return
+            
+            # Set the room description
+            room.db.desc = self.args.strip()
+            self.msg(f"You set the description for {room.name}.")
+            
         else:
-            self.msg("Usage: home, home/here, or home/clear") 
+            self.msg("Usage: home, home/here, home/clear, or home/desc <text>") 

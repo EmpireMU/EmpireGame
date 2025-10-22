@@ -183,7 +183,6 @@
                                     <th>Gender</th>
                                     <th>Age</th>
                                     <th>Realm</th>
-                                    <th>Player</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -195,12 +194,11 @@
                                     <td>{{ char.db.gender }}</td>
                                     <td>{{ char.db.age }}</td>
                                     <td>{{ char.db.realm }}</td>
-                                    <td>{{ char.account.username }}</td>
                                 </tr>
                             {% empty %}
                                 <tr class="all-chars">
                                     <td class="rank-cell" style="display: none;"></td>
-                                    <td colspan="6" class="text-center">No active characters</td>
+                                    <td colspan="5" class="text-center">No active characters</td>
                                 </tr>
                             {% endfor %}
                             {% for org, members in organizations.active %}
@@ -212,7 +210,6 @@
                                     <td>{{ char.db.gender }}</td>
                                     <td>{{ char.db.age }}</td>
                                     <td>{{ char.db.realm }}</td>
-                                    <td>{{ char.account.username }}</td>
                                 </tr>
                                 {% endfor %}
                             {% endfor %}

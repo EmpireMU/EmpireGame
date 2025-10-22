@@ -42,7 +42,7 @@ class CmdEmit(MuxCommand):
     """
     
     key = "emit"
-    aliases = ["pose"]
+    aliases = ["pose", ";", ":"]
     locks = "cmd:all()"
     help_category = "Social"
     
@@ -138,8 +138,8 @@ class CmdEmit(MuxCommand):
         message = self.args.strip()
         location = self.caller.location
         
-        # Check if user typed 'pose' vs 'emit' to determine message format
-        is_pose = self.cmdstring.lower() == "pose"
+        # Check if user typed 'pose' or ':' vs 'emit' or ';' to determine message format
+        is_pose = self.cmdstring.lower() in ["pose", ":"]
         
         # Send personalized messages to each receiver with their color preferences
         # We need to manually iterate since each person sees different colors
