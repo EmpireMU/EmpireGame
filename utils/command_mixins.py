@@ -32,6 +32,14 @@ class CharacterLookupMixin(MuxCommand):
         if require_traits and not hasattr(char, 'traits'):
             self.msg(f"{char.name} does not support traits (wrong typeclass?).")
             return None
+        
+        # Prevent non-staff from viewing unfinished characters
+        from typeclasses.characters import STATUS_UNFINISHED
+        is_staff = self.caller.check_permstring("Builder")
+        
+        if not is_staff and char.db.status == STATUS_UNFINISHED:
+            self.msg(f"No character found by that name.")
+            return None
             
         return char
     
