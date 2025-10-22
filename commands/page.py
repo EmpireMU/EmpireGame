@@ -33,11 +33,11 @@ class CmdPage(DefaultCmdPage):
         
         # For a single recipient
         if len(recipients) == 1:
-            # If we're sending to the message to the recipient
-            if recipients[0] != self.caller:
-                return f"{sender_name} pages you: {message}"
-            # If we're sending the message to the sender
-            return f"You page |c{recipients[0].key}|n: {message}"
+            # If we're sending to the sender (echo back)
+            if self.msg_receiver == self.caller:
+                return f"You page |c{recipients[0].key}|n: {message}"
+            # If we're sending to the recipient
+            return f"{sender_name} pages you: {message}"
         
         # For multiple recipients
         recipient_names = []
