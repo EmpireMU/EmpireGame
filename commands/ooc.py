@@ -9,9 +9,15 @@ class CmdOOC(MuxCommand):
 
     Usage:
         ooc <message>
+        ooc :<action>
+        ooc ;<action>
 
     This mirrors the feel of `say`, but marks the output as OOC so
     everyone present can tell the chatter is out-of-character.
+    
+    Starting your message with : or ; will format it as an emote:
+        ooc ;waves hello
+        -> (OOC) YourName waves hello
     """
 
     key = "ooc"
@@ -28,8 +34,17 @@ class CmdOOC(MuxCommand):
             return
 
         message = self.args.strip()
-        caller_output = f'(OOC) You say, "{message}"'
-        room_output = f'(OOC) {caller.name} says, "{message}"'
+        
+        # Check if message starts with ; or : for emote-style OOC
+        if message.startswith((";", ":")):
+            # Remove the prefix and format as an emote
+            emote_text = message[1:].strip()
+            caller_output = f'|y(OOC)|n {caller.name} {emote_text}'
+            room_output = f'|y(OOC)|n {caller.name} {emote_text}'
+        else:
+            # Regular say-style OOC
+            caller_output = f'|y(OOC)|n You say, "{message}"'
+            room_output = f'|y(OOC)|n {caller.name} says, "{message}"'
 
         caller.msg(caller_output)
 
