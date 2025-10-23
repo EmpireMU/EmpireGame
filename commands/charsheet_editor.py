@@ -301,6 +301,7 @@ class CmdBiography(CharacterLookupMixin, MuxCommand):
     """
     
     key = "biography"
+    aliases = ["bio"]
     locks = "cmd:all();edit:perm(Builder)"  # Everyone can view, builders can edit
     help_category = "Character"
     

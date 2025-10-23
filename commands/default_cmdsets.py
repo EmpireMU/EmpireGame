@@ -31,7 +31,7 @@ from commands.room_management import CmdRoomManagement
 from commands import home
 from commands.page import CmdPage
 from commands.mail import CmdMailCharacterOOC
-from commands import where
+from commands.where import CmdWho, CmdWhere
 from commands.account_admin import CmdCreatePlayerAccount, CmdSetPassword
 from commands.player_tracking import CmdCheckEmails, CmdEmailNote
 from commands.roster import CmdRoster, CmdApplication
@@ -88,7 +88,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdBoard())
         self.add(CmdRoomManagement())
         self.add(home.CmdHome())
-        self.add(where.CmdWhere())
+        self.add(CmdWho())
+        self.add(CmdWhere())
         self.add(CmdMailCharacterOOC())
         self.add(PlaceCmdSet)
         self.add(CmdInfo())
