@@ -3,12 +3,11 @@ Commands for listing character locations and online players.
 """
 
 from evennia.commands.default.muxcommand import MuxCommand
-from evennia.commands.default.general import CmdWho as DefaultCmdWho
 from evennia.utils.utils import list_to_string
 from evennia.objects.models import ObjectDB
 
 
-class CmdWho(DefaultCmdWho):
+class CmdWho(MuxCommand):
     """
     List who is currently online.
     
@@ -17,6 +16,10 @@ class CmdWho(DefaultCmdWho):
         
     Shows who is currently connected. Displays character full names.
     """
+    
+    key = "who"
+    locks = "cmd:all()"
+    help_category = "General"
     
     def func(self):
         """Execute the command."""
