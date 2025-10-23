@@ -2,6 +2,7 @@
 Commands for listing character locations and online players.
 """
 
+from evennia import SESSION_HANDLER
 from evennia.commands.default.muxcommand import MuxCommand
 from evennia.utils.utils import list_to_string
 from evennia.objects.models import ObjectDB
@@ -24,7 +25,7 @@ class CmdWho(MuxCommand):
     def func(self):
         """Execute the command."""
         # Get all connected sessions
-        sessions = self.sessionhandler.get_sessions()
+        sessions = SESSION_HANDLER.get_sessions()
         
         if not sessions:
             self.msg("No one is currently online.")
