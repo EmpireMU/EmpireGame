@@ -272,7 +272,7 @@ class Character(ObjectParent, DefaultCharacter):
     def return_appearance(self, looker, **kwargs):
         """
         This formats the character's appearance for display.
-        Adds worn items to the description.
+        Adds temporary description and worn items to the description.
         """
         # Get the base appearance
         appearance = super().return_appearance(looker, **kwargs)
@@ -285,6 +285,11 @@ class Character(ObjectParent, DefaultCharacter):
                 continue
             filtered_lines.append(line)
         appearance = "\n".join(filtered_lines)
+        
+        # Add temporary description if set
+        tempdesc = self.db.tempdesc
+        if tempdesc:
+            appearance += f"\n\n{tempdesc}"
         
         # Add worn items if any
         worn_items = self.get_worn_items()
