@@ -126,10 +126,51 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
         return False
         
     # Main command methods
+    def list_my_orgs(self):
+        """List organizations the character is a member of."""
+        from evennia.objects.models import ObjectDB
+        
+        # Get character's organisations
+        orgs_dict = self.caller.organisations
+        
+        if not orgs_dict:
+            self.msg("You are not a member of any organisations.")
+            return
+            
+        # Build list of (org, rank) tuples
+        org_list = []
+        for org_id, rank in orgs_dict.items():
+            org = ObjectDB.objects.filter(id=org_id).first()
+            if org:
+                rank_name = org.db.rank_names.get(rank, f"Rank {rank}")
+                org_list.append((org.name, rank, rank_name))
+                
+        if not org_list:
+            self.msg("You are not a member of any organisations.")
+            return
+            
+        # Sort by organization name
+        org_list.sort(key=lambda x: x[0])
+        
+        # Display table
+        self.msg("\n|yYour Organisations:|n")
+        table = evtable.EvTable(
+            "|wOrganisation|n",
+            "|wRank|n",
+            border="table",
+            width=78
+        )
+        
+        for org_name, rank_num, rank_name in org_list:
+            table.add_row(org_name, rank_name)
+            
+        self.msg(str(table))
+        
     def func(self):
         """Execute the command."""
         if not self.args:
-            self.msg("Usage: org <organization>")
+            # List organizations the character is a member of
+            self.list_my_orgs()
             return
             
         # Handle switches

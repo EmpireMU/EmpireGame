@@ -254,3 +254,39 @@ table td, .table td {
     color: var(--empire-copper) !important;
 }
 
+/* Channel Log Styling - Fix readability */
+pre, code {
+    background-color: var(--empire-card-bg) !important;
+    color: var(--empire-text-light) !important;
+    padding: 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--empire-copper);
+}
+
+/* Ensure channel messages are legible */
+.channel-msg, .msg-content, .msg-timestamp {
+    color: var(--empire-text-light) !important;
+}
+
+/* Fix any grey text that might be used in logs */
+.text-secondary {
+    color: var(--empire-text-muted) !important;
+}
+
+/* Ensure all paragraph text in cards is readable */
+.card-body p, .card-body div {
+    color: var(--empire-text-light) !important;
+}
+
+/* Fix pre-formatted text blocks (used in channel logs) */
+.card-body pre, .card pre {
+    background-color: #1a1a1a !important;
+    color: var(--empire-cream) !important;
+    padding: 1rem;
+    border: 1px solid var(--empire-copper);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+
