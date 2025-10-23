@@ -264,6 +264,16 @@ class CmdInfo(CharacterLookupMixin, Command):
 
         # Determine if the account is currently connected
         if account.sessions.count():
+            # Check if AFK
+            is_afk = char.db.afk or False
+            afk_message = char.db.afk_message or None
+            
+            if is_afk:
+                if afk_message:
+                    return f"AFK: {afk_message}"
+                else:
+                    return "AFK"
+            
             idle_seconds = account.idle_time
             if idle_seconds is None:
                 return "Online"

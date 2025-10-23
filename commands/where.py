@@ -54,6 +54,16 @@ class CmdWho(MuxCommand):
             # Use full name if available, otherwise use regular name
             display_name = char.db.full_name or char.name
             
+            # Check if AFK
+            is_afk = char.db.afk or False
+            afk_message = char.db.afk_message or None
+            
+            # Build the display with AFK status and optional message
+            if is_afk and afk_message:
+                display_name = f"{display_name} |y(AFK: {afk_message})|n"
+            elif is_afk:
+                display_name = f"{display_name} |y(AFK)|n"
+            
             # Get idle time
             account = getattr(char, "account", None) or char.db.account
             if account:
@@ -116,7 +126,14 @@ class CmdWhere(MuxCommand):
             # If room has visible online characters, add it to output
             if visible_chars:
                 found_occupied = True
-                char_names = list_to_string([char.name for char in visible_chars])
+                # Build character names with AFK indicators
+                char_names_with_afk = []
+                for char in visible_chars:
+                    char_name = char.name
+                    if char.db.afk:
+                        char_name = f"{char_name} |y(AFK)|n"
+                    char_names_with_afk.append(char_name)
+                char_names = list_to_string(char_names_with_afk)
                 output_lines.append(f"|w{room.name}|n: {char_names}")
         
         if not found_occupied:

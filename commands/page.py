@@ -126,6 +126,19 @@ class CmdPage(DefaultCmdPage):
             self.msg_receiver = recipient
             formatted_msg = self.format_message(message, online_recipients)
             recipient.msg(formatted_msg)
+            
+            # Check if recipient's character is AFK and notify sender
+            # Get the puppeted character from the account
+            puppet = recipient.puppet if hasattr(recipient, 'puppet') else None
+            if not puppet and hasattr(recipient, 'get_puppet'):
+                puppet = recipient.get_puppet()
+            
+            if puppet and puppet.db.afk:
+                afk_msg = puppet.db.afk_message
+                if afk_msg:
+                    self.caller.msg(f"|y{recipient.key} is AFK: {afk_msg}|n")
+                else:
+                    self.caller.msg(f"|y{recipient.key} is AFK.|n")
         
         # Send a copy to the sender (only if they weren't already a recipient)
         if self.caller not in online_recipients:

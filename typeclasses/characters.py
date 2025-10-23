@@ -269,6 +269,20 @@ class Character(ObjectParent, DefaultCharacter):
             else:
                 raise
 
+    def get_display_name(self, looker, **kwargs):
+        """
+        Returns the name of the character as it should be displayed to the looker.
+        Adds AFK indicator if character is away.
+        """
+        # Get the base display name
+        name = super().get_display_name(looker, **kwargs)
+        
+        # Add AFK indicator if character is AFK (but not the full message)
+        if self.db.afk:
+            name = f"{name} |y(AFK)|n"
+        
+        return name
+
     def return_appearance(self, looker, **kwargs):
         """
         This formats the character's appearance for display.

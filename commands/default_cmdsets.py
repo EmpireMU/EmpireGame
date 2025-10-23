@@ -51,6 +51,7 @@ from commands.wiki import CmdWiki
 from commands.craft import CraftCmdSet
 from commands.wear import WearCmdSet
 from commands.tempdesc import CmdTempDesc
+from commands.afk import CmdAFK
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -109,6 +110,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CraftCmdSet)
         self.add(WearCmdSet)
         self.add(CmdTempDesc())
+        self.add(CmdAFK())
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):
