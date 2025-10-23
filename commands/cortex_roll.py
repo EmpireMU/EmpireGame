@@ -91,6 +91,7 @@ class CmdCortexRoll(MuxCommand):
         roll strength(U) fighting - Roll Strength stepped up + Fighting
         roll strength fighting(D) - Roll Strength + Fighting stepped down
         roll "High Ground" fighting vs hard - Roll High Ground + Fighting vs hard difficulty
+        roll "High Ground"(d) fighting - Roll High Ground stepped down + Fighting
         roll high_ground fighting vs hard - Same as above using underscore
         roll/keepextra prowess fighting warrior - Keep 3rd highest die in total
         roll/reroll prowess d6 - Reroll prowess die and raw d6 from last roll
@@ -156,9 +157,17 @@ class CmdCortexRoll(MuxCommand):
         # First pass: handle quoted strings
         for word in self.args.split():
             if in_quotes:
-                if word.endswith('"'):
-                    current_arg.append(word[:-1])
-                    args.append(' '.join(current_arg))
+                # Check if this word contains a closing quote
+                if '"' in word:
+                    quote_idx = word.index('"')
+                    # Add everything before the quote to current_arg
+                    current_arg.append(word[:quote_idx])
+                    # Join the quoted parts
+                    quoted_text = ' '.join(current_arg)
+                    # Get any modifier after the quote (e.g., (d) or (U))
+                    modifier = word[quote_idx + 1:]
+                    # Combine quoted text with modifier
+                    args.append(quoted_text + modifier if modifier else quoted_text)
                     current_arg = []
                     in_quotes = False
                 else:
@@ -166,8 +175,12 @@ class CmdCortexRoll(MuxCommand):
                 continue
 
             if word.startswith('"'):
-                if word.endswith('"') and len(word) > 1:
-                    args.append(word[1:-1])
+                # Check if the quote closes in the same word
+                if '"' in word[1:]:
+                    quote_idx = word.index('"', 1)
+                    quoted_text = word[1:quote_idx]
+                    modifier = word[quote_idx + 1:]
+                    args.append(quoted_text + modifier if modifier else quoted_text)
                 else:
                     in_quotes = True
                     current_arg.append(word[1:])
@@ -518,9 +531,17 @@ class CmdCortexRoll(MuxCommand):
         # First pass: handle quoted strings
         for word in self.args.split():
             if in_quotes:
-                if word.endswith('"'):
-                    current_arg.append(word[:-1])
-                    args.append(' '.join(current_arg))
+                # Check if this word contains a closing quote
+                if '"' in word:
+                    quote_idx = word.index('"')
+                    # Add everything before the quote to current_arg
+                    current_arg.append(word[:quote_idx])
+                    # Join the quoted parts
+                    quoted_text = ' '.join(current_arg)
+                    # Get any modifier after the quote (e.g., (d) or (U))
+                    modifier = word[quote_idx + 1:]
+                    # Combine quoted text with modifier
+                    args.append(quoted_text + modifier if modifier else quoted_text)
                     current_arg = []
                     in_quotes = False
                 else:
@@ -528,8 +549,12 @@ class CmdCortexRoll(MuxCommand):
                 continue
 
             if word.startswith('"'):
-                if word.endswith('"') and len(word) > 1:
-                    args.append(word[1:-1])
+                # Check if the quote closes in the same word
+                if '"' in word[1:]:
+                    quote_idx = word.index('"', 1)
+                    quoted_text = word[1:quote_idx]
+                    modifier = word[quote_idx + 1:]
+                    args.append(quoted_text + modifier if modifier else quoted_text)
                 else:
                     in_quotes = True
                     current_arg.append(word[1:])
