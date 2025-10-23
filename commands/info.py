@@ -6,6 +6,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from evennia import Command
+from evennia.objects.models import ObjectDB
 from utils.command_mixins import CharacterLookupMixin
 
 
@@ -218,8 +219,7 @@ class CmdInfo(CharacterLookupMixin, Command):
         status_line = self._get_presence_status(char)
 
         # Start building the message
-        msg = f"\n|w{char.name}'s Character Information|n"
-        msg += f"\n|wCharacter Name:|n {display_name}"
+        msg = f"\n|w{display_name}|n"
         msg += f"\n|wWeb Profile:|n {web_url}"
         if status_line:
             msg += f"\n|wStatus:|n {status_line}"
@@ -233,6 +233,23 @@ class CmdInfo(CharacterLookupMixin, Command):
         else:
             if char == self.caller:
                 msg += "\n\n|yNo custom fields set. Use 'info/set <field> = <value>' to add some!|n"
+        
+        # Add organisation memberships
+        orgs = char.organisations
+        if orgs:
+            msg += "\n|wOrganisations:|n"
+            org_list = []
+            for org_id, rank in orgs.items():
+                org = ObjectDB.objects.filter(id=org_id).first()
+                if org:
+                    rank_name = org.get_member_rank_name(char)
+                    org_list.append((org.name, rank_name, rank))
+            
+            # Sort by rank (ascending, so rank 1 is first) then by org name
+            org_list.sort(key=lambda x: (x[2], x[0]))
+            
+            for org_name, rank_name, _ in org_list:
+                msg += f"\n|w{org_name}|n - {rank_name}"
         
         self.msg(msg) 
 
