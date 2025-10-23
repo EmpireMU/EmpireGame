@@ -360,7 +360,13 @@ class CmdOrg(CharacterLookupMixin, MuxCommand):
             return
             
         # Get members
-        members = list(org.get_members())
+        all_members = list(org.get_members())
+        
+        # Filter out unfinished characters
+        from typeclasses.characters import STATUS_UNFINISHED
+        members = [(member, rank_num, rank_name) 
+                   for member, rank_num, rank_name in all_members 
+                   if getattr(member.db, 'status', None) != STATUS_UNFINISHED]
         
         # Show basic info
         self.msg(f"\n|y{org.name}|n")
