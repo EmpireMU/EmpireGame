@@ -25,9 +25,6 @@ from commands.organisations import OrgCmdSet
 from commands.resources import ResourceCmdSet
 from commands.temporary_assets import TemporaryAssetCmdSet
 from commands.complications import ComplicationCmdSet
-from commands.opposition import OppositionCmdSet
-from commands.escalation import EscalationCmdSet
-from commands.step_traits import StepCmdSet
 from commands.requests import CmdRequest
 from commands.board import CmdBoard
 from commands.room_management import CmdRoomManagement
@@ -92,9 +89,6 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(ResourceCmdSet)
         self.add(TemporaryAssetCmdSet)
         self.add(ComplicationCmdSet)
-        self.add(OppositionCmdSet)
-        self.add(EscalationCmdSet)
-        self.add(StepCmdSet)
         self.add(CmdBoard())
         self.add(CmdRoomManagement())
         self.add(home.CmdHome())
