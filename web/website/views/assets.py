@@ -131,7 +131,7 @@ def upload_site_asset(request):
         custom_name = request.POST.get('custom_name', '')  # Optional custom filename
         
         # Validate file type
-        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico']
         ext = os.path.splitext(asset_file.name)[1].lower()
         if ext not in valid_extensions:
             return JsonResponse({'error': 'Invalid file type'}, status=400)
@@ -192,6 +192,100 @@ def upload_site_asset(request):
                 })
             except Exception as e:
                 return JsonResponse({'error': f'Could not save SVG: {e}'}, status=400)
+        
+        # Handle favicons - generate multiple standard sizes
+        if asset_type == 'favicon':
+            try:
+                # Validate favicon file types
+                if ext not in ['.ico', '.png', '.svg']:
+                    return JsonResponse({'error': 'Favicons must be .ico, .png, or .svg files'}, status=400)
+                
+                # For .ico files, save directly without processing
+                if ext == '.ico':
+                    filename = custom_name + '.ico' if custom_name else 'favicon.ico'
+                    path = f"site_assets/{filename}"
+                    saved_path = default_storage.save(path, asset_file)
+                    url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else f"/media/{saved_path}"
+                    actual_filename = os.path.basename(saved_path)
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'filename': actual_filename,
+                        'url': url,
+                        'path': saved_path,
+                        'message': 'Favicon .ico uploaded successfully. Add it to your base.html template.'
+                    })
+                
+                # For PNG/SVG: Generate multiple standard favicon sizes
+                img = Image.open(asset_file)
+                
+                # Convert to RGBA for transparency support
+                if img.mode not in ['RGBA', 'RGB']:
+                    img = img.convert('RGBA')
+                elif img.mode == 'RGB':
+                    # Convert RGB to RGBA to ensure transparency support
+                    img = img.convert('RGBA')
+                
+                original_size = f"{img.width}x{img.height}"
+                
+                # Standard favicon sizes to generate
+                favicon_sizes = {
+                    'favicon-16x16.png': 16,
+                    'favicon-32x32.png': 32,
+                    'apple-touch-icon.png': 180,
+                    'android-chrome-192x192.png': 192,
+                    'android-chrome-512x512.png': 512
+                }
+                
+                generated_files = []
+                base_name = custom_name if custom_name else 'favicon'
+                
+                # Generate each size
+                for filename, size in favicon_sizes.items():
+                    # Use custom name if provided
+                    if custom_name and filename.startswith('favicon-'):
+                        filename = filename.replace('favicon-', f'{base_name}-')
+                    elif custom_name and filename.startswith('android-chrome-'):
+                        filename = filename.replace('android-chrome-', f'{base_name}-android-')
+                    elif custom_name and filename.startswith('apple-touch-icon'):
+                        filename = f'{base_name}-apple-touch-icon.png'
+                    
+                    # Resize image to target size using high-quality resampling
+                    resized = img.copy()
+                    resized.thumbnail((size, size), Image.LANCZOS)
+                    
+                    # Create a new square image with transparency
+                    square_img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+                    
+                    # Center the resized image if it's not square
+                    offset = ((size - resized.width) // 2, (size - resized.height) // 2)
+                    square_img.paste(resized, offset)
+                    
+                    # Save to buffer
+                    buffer = io.BytesIO()
+                    square_img.save(buffer, format='PNG', optimize=True)
+                    buffer.seek(0)
+                    
+                    # Save to storage
+                    path = f"site_assets/{filename}"
+                    saved_path = default_storage.save(path, ContentFile(buffer.read()))
+                    url = default_storage.url(saved_path) if hasattr(default_storage, 'url') else f"/media/{saved_path}"
+                    
+                    generated_files.append({
+                        'filename': os.path.basename(saved_path),
+                        'size': f'{size}x{size}',
+                        'url': url
+                    })
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Generated {len(generated_files)} favicon sizes from {original_size} source image',
+                    'original_size': original_size,
+                    'generated_files': generated_files,
+                    'files': generated_files  # For display in UI
+                })
+            except Exception as e:
+                return JsonResponse({'error': f'Could not process favicon: {e}'}, status=400)
         
         # Handle regular raster assets (logos, icons, etc.)
         # Determine if we should preserve transparency (use 'logo' for any graphic needing transparency)
@@ -255,7 +349,7 @@ def manage_site_assets(request):
                 
                 # Determine file type
                 ext = os.path.splitext(filename)[1].lower()
-                is_image = ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+                is_image = ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico']
                 
                 files.append({
                     'filename': filename,

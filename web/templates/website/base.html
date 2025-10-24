@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block header_ext %}
+<!-- Favicon links - Option 1: Static files -->
+<!-- <link rel="icon" type="image/x-icon" href="{% static 'website/images/favicon.ico' %}"> -->
+<!-- <link rel="icon" type="image/png" sizes="32x32" href="{% static 'website/images/favicon-32x32.png' %}"> -->
+<!-- <link rel="icon" type="image/png" sizes="16x16" href="{% static 'website/images/favicon-16x16.png' %}"> -->
+<!-- <link rel="apple-touch-icon" sizes="180x180" href="{% static 'website/images/apple-touch-icon.png' %}"> -->
+
+<!-- Favicon links - Option 2: Uploaded via asset manager (recommended) -->
+<!-- After uploading via /admin/upload-assets/, uncomment and update these URLs: -->
+<link rel="icon" type="image/png" sizes="16x16" href="/media/site_assets/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/media/site_assets/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/media/site_assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/media/site_assets/android-chrome-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/media/site_assets/android-chrome-512x512.png">
+{{ block.super }}
+{% endblock %}
+

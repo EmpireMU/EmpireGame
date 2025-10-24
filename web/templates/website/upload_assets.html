@@ -27,17 +27,18 @@
                             <label for="type" class="form-label">Asset Type:</label>
                             <select class="form-control" id="type" name="type">
                                 <option value="logo">Logo/Graphic (SVG or PNG with transparency)</option>
+                                <option value="favicon">Favicon (browser tab icon, no resizing)</option>
                                 <option value="banner">Banner/Photo (JPG with white background)</option>
                                 <option value="map">World Map (full resolution, no resizing)</option>
                                 <option value="other">Other</option>
                             </select>
-                            <small class="text-muted">Logo: SVGs saved as-is (best for shields/icons), PNGs preserve transparency. Banner: converts to JPG. Maps: preserve full resolution for tiling.</small>
+                            <small class="text-muted">Favicon: Upload PNG 512x512+ to generate all sizes (16x16, 32x32, 180x180, 192x192, 512x512). Logo: SVGs/PNGs with transparency. Banner: converts to JPG. Maps: full resolution.</small>
                         </div>
                         <div class="mb-3">
                             <label for="asset" class="form-label">File:</label>
                             <input type="file" class="form-control" id="asset" name="asset" 
-                                   accept=".jpg,.jpeg,.png,.gif,.webp,.svg" required>
-                            <small class="text-muted">Supports: JPG, PNG, GIF, WebP, SVG</small>
+                                   accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.ico" required>
+                            <small class="text-muted">Supports: JPG, PNG, GIF, WebP, SVG, ICO</small>
                         </div>
                         <button type="submit" class="btn btn-primary">Upload</button>
                     </form>
@@ -78,11 +79,6 @@ document.getElementById('assetUploadForm').addEventListener('submit', function(e
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            document.getElementById('assetFilename').textContent = data.filename;
-            document.getElementById('assetUrl').value = data.url;
-            document.getElementById('uploadResult').style.display = 'block';
-            document.getElementById('uploadError').style.display = 'none';
-            
             // Show additional message for maps
             if (data.is_map) {
                 document.getElementById('uploadResult').innerHTML = `
@@ -94,6 +90,37 @@ document.getElementById('assetUploadForm').addEventListener('submit', function(e
                     </div>
                 `;
             }
+            // Show multiple files for favicons
+            else if (data.generated_files && data.generated_files.length > 0) {
+                let filesHtml = '<div class="alert alert-success">';
+                filesHtml += `<strong>Generated ${data.generated_files.length} favicon sizes!</strong><br>`;
+                filesHtml += `<strong>Source:</strong> ${data.original_size}<br><br>`;
+                filesHtml += '<div class="table-responsive"><table class="table table-sm">';
+                filesHtml += '<thead><tr><th>Filename</th><th>Size</th><th>URL</th></tr></thead><tbody>';
+                
+                data.generated_files.forEach(file => {
+                    filesHtml += '<tr>';
+                    filesHtml += `<td><strong>${file.filename}</strong></td>`;
+                    filesHtml += `<td>${file.size}</td>`;
+                    filesHtml += `<td><input type="text" class="form-control form-control-sm" value="${file.url}" readonly onclick="this.select();" style="min-width: 250px;"></td>`;
+                    filesHtml += '</tr>';
+                });
+                
+                filesHtml += '</tbody></table></div>';
+                filesHtml += '<p class="mt-2 mb-2"><strong>Next Step:</strong> Update your base.html template to use these URLs.</p>';
+                filesHtml += '<a href="/admin/manage-assets/" class="btn btn-sm btn-primary">View All Assets</a>';
+                filesHtml += '</div>';
+                
+                document.getElementById('uploadResult').innerHTML = filesHtml;
+            }
+            // Standard single file upload
+            else {
+                document.getElementById('assetFilename').textContent = data.filename;
+                document.getElementById('assetUrl').value = data.url;
+            }
+            
+            document.getElementById('uploadResult').style.display = 'block';
+            document.getElementById('uploadError').style.display = 'none';
             
             // Reset the form
             document.getElementById('assetUploadForm').reset();
