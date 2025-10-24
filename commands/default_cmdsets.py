@@ -115,16 +115,8 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(WearCmdSet)
         self.add(CmdTempDesc())
         self.add(CmdAFK())
-        # Scene logging command suite
-        self.add(scenes.CmdSceneStartLog)
-        self.add(scenes.CmdSceneEventLog)
-        self.add(scenes.CmdSceneOrgLog)
-        self.add(scenes.CmdSceneEndLog)
-        self.add(scenes.CmdSceneTitle)
-        self.add(scenes.CmdScenePlot)
-        self.add(scenes.CmdSceneVisibility)
-        self.add(scenes.CmdSceneOrg)
-        self.add(scenes.CmdSceneList)
+        # Scene logging command
+        self.add(scenes.CmdScene)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

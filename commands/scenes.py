@@ -28,140 +28,172 @@ class SceneCommandContext:
     scene: Optional[SceneLog]
 
 
-class SceneCommandMixin:
-    """Shared helpers for all scene commands."""
+class CmdScene(MuxCommand):
+    """
+    Manage scene logging for roleplay sessions.
+    
+    Usage:
+        @scene/startlog              - Start a private scene
+        @scene/eventlog              - Start a public event scene
+        @scene/orglog                - Start an organisation scene
+        @scene/endlog [<scene>]      - End active or specified scene
+        @scene/title [<scene>=]<title>        - Set scene title
+        @scene/plot [<scene>=]<plot>[,<plot>] - Tag scene with plots
+        @scene/org [<scene>=]<org>[,<org>]    - Add organisations
+        @scene/visibility <scene>=<type>      - Change visibility (staff only)
+        @scene/list                  - List your recent scenes
+    
+    Scene Types:
+        private      - Only participants and staff can view (auto-closes)
+        organisation - All members of tagged organisations can view
+        event        - Publicly visible to everyone
+    
+    Examples:
+        @scene/startlog
+        @scene/title A Meeting in the Gardens
+        @scene/plot 5
+        @scene/org House Anadun
+        @scene/endlog
+        @scene/list
+    
+    Private scenes auto-close when the room empties. Organisation and event
+    scenes must be manually ended. All scenes capture poses, emits, says,
+    rolls, arrivals, and departures.
+    
+    For the full web interface with search and filters, visit /scenes/ on
+    the website.
+    """
+
+    key = "@scene"
+    aliases = ["scene"]
+    locks = "cmd:perm(Player)"
+    help_category = "Scenes"
 
     def _is_staff(self) -> bool:
         """Return True if the caller satisfies the staff lock."""
-
         return self.caller.locks.check_lockstring(self.caller, STAFF_LOCKSTRING)
 
     def _get_account(self):
         """Return the caller's account, if any."""
-
         return getattr(self.caller, "account", None)
 
     def _get_room(self):
         """Ensure the caller is located in a room and return it."""
-
         room = getattr(self.caller, "location", None)
         if not room:
             self.caller.msg("You must be in a room to do that.")
             return None
         return room
 
-    def _active_scene(self, room) -> Optional[SceneLog]:
-        ctx = scene_logger.get_room_scene(room)
-        return ctx.scene if ctx else None
-
     def _get_context(self) -> Optional[SceneCommandContext]:
+        """Build a context with room and active scene, if any."""
         room = self._get_room()
         if not room:
             return None
-        return SceneCommandContext(room=room, scene=self._active_scene(room))
+        scene_ctx = scene_logger.get_room_scene(room)
+        return SceneCommandContext(room=room, scene=scene_ctx.scene if scene_ctx else None)
 
     def _split_scene_and_payload(self) -> Tuple[Optional[str], str]:
-        """Support `<scene>=<value>` as well as bare `<value>` syntax."""
-
-        if self.rhs is not None:
-            return (self.lhs or "").strip() or None, (self.rhs or "").strip()
-        return None, (self.args or "").strip()
+        """
+        Parse args like "42=title" or just "title".
+        Returns (scene_token, payload).
+        """
+        if "=" in self.args:
+            scene_token, _, payload = self.args.partition("=")
+            return scene_token.strip() or None, payload.strip()
+        return None, self.args.strip()
 
     def _scene_queryset_for_caller(self):
-        """Limit scene access to staff or participant-owned scenes."""
-
-        if self._is_staff():
-            return SceneLog.objects.all()
+        """Return a queryset of scenes the caller can access."""
         account = self._get_account()
         if not account:
-            self.caller.msg("You must be logged in through an account to manage scenes.")
+            self.caller.msg("You must be logged in to view scenes.")
             return SceneLog.objects.none()
-        return SceneLog.objects.filter(participants__account=account)
+        if self._is_staff():
+            return SceneLog.objects.exclude(status=SceneLog.Status.DELETED)
+        return scene_logger.scenes_for_account(account).exclude(status=SceneLog.Status.DELETED)
 
     def _resolve_scene(
-        self,
-        scene_token: Optional[str],
-        *,
-        require_active: bool,
-        allow_completed: bool,
-        allow_room_fallback: bool = True,
+        self, scene_token: Optional[str], *, require_active: bool = False, allow_completed: bool = False
     ) -> Optional[SceneLog]:
-        """Resolve which scene the caller is trying to act on."""
-
+        """
+        Resolve a scene from a token (number or None).
+        If None, tries active scene in room, then most recent scene.
+        """
         queryset = self._scene_queryset_for_caller()
-        if queryset is SceneLog.objects.none():
-            return None
-
-        room = self._get_room()
-        if not room:
-            return None
-
-        active_scene = self._active_scene(room)
-
+        
         if scene_token:
             try:
-                scene_id = int(scene_token.lstrip("#"))
+                scene_id = int(scene_token)
+                scene = queryset.filter(number=scene_id).first()
+                if not scene:
+                    self.caller.msg(f"Scene {scene_id} not found or not accessible.")
+                    return None
+                if require_active and scene.status != SceneLog.Status.ACTIVE:
+                    self.caller.msg(f"Scene {scene_id} is not active.")
+                    return None
+                return scene
             except ValueError:
-                self.caller.msg("Scene identifier must be a number.")
+                self.caller.msg(f"Invalid scene number: {scene_token}")
                 return None
-            scene = queryset.filter(pk=scene_id).first()
-            if not scene:
-                self.caller.msg(f"You do not have access to scene {scene_id}.")
-                return None
-            return scene
-
-        if require_active:
-            if active_scene and queryset.filter(pk=active_scene.pk).exists():
-                return active_scene
-            self.caller.msg("No active scene log in this room.")
-            return None
-
-        if allow_room_fallback and active_scene and queryset.filter(pk=active_scene.pk).exists():
-            return active_scene
-
+        
+        # Try active scene in current room
+        ctx = self._get_context()
+        if ctx and ctx.scene:
+            return ctx.scene
+        
+        # Try most recent scene
         if allow_completed:
             scene = queryset.order_by("-created_at").first()
             if scene:
                 return scene
-        self.caller.msg("No scene found to operate on.")
+        
+        self.caller.msg("No active scene in this room. Specify a scene number.")
         return None
 
     def _has_participant_rights(self, scene: SceneLog) -> bool:
-        """Enforce that the caller is staff or part of the scene."""
-
+        """Check if caller can edit this scene (staff or participant)."""
         if self._is_staff():
             return True
-        participant = scene.participants.filter(character_id=getattr(self.caller, "id", None)).exists()
-        if participant:
+        account = self._get_account()
+        if not account:
+            return False
+        if scene.participants.filter(account=account).exists():
             return True
         self.caller.msg("Only participants or staff may do that.")
         return False
 
-
-class CmdSceneStartLog(SceneCommandMixin, MuxCommand):
-    """
-    Begin logging a private scene in the current room.
-    
-    Usage:
-        @scene/startlog
-        scene/startlog
-    
-    Starts recording all poses, emits, says, rolls, arrivals, and departures
-    in the current room. The scene will be private (visible only to participants
-    and staff) and will automatically be tagged with the current chapter.
-    
-    The scene will auto-close when the room empties, or you can manually end it
-    with @scene/endlog.
-    
-    For public events, use @scene/eventlog instead.
-    """
-
-    key = "@scene/startlog"
-    aliases = ["scene/startlog", "scenelog/start"]
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
     def func(self):
+        """Route to the appropriate switch handler."""
+        if not self.switches:
+            self.caller.msg("Usage: @scene/startlog, @scene/endlog, @scene/title, etc. See 'help @scene'")
+            return
+
+        switch = self.switches[0].lower()
+        
+        if switch == "startlog":
+            self.do_startlog()
+        elif switch == "eventlog":
+            self.do_eventlog()
+        elif switch == "orglog":
+            self.do_orglog()
+        elif switch == "endlog":
+            self.do_endlog()
+        elif switch == "title":
+            self.do_title()
+        elif switch == "plot":
+            self.do_plot()
+        elif switch == "org":
+            self.do_org()
+        elif switch == "visibility":
+            self.do_visibility()
+        elif switch == "list":
+            self.do_list()
+        else:
+            self.caller.msg(f"Unknown switch: {switch}. See 'help @scene'")
+
+    def do_startlog(self):
+        """Start a private scene."""
         ctx = self._get_context()
         if not ctx:
             return
@@ -177,32 +209,8 @@ class CmdSceneStartLog(SceneCommandMixin, MuxCommand):
         )
         self.caller.msg(f"Scene logging started (Scene {scene.number}).")
 
-
-class CmdSceneEventLog(SceneCommandMixin, MuxCommand):
-    """
-    Begin logging a public event scene in the current room.
-    
-    Usage:
-        @scene/eventlog
-        scene/eventlog
-    
-    Starts recording an event scene that will be publicly visible to everyone.
-    Use this for public events which all characters might reasonably be
-    expected to know about.
-
-    Event scenes will not auto-close when the room empties - you must manually
-    end them with @scene/endlog.
-    
-    For private scenes, use @scene/startlog instead.
-    For organisation-restricted scenes, use @scene/orglog instead.
-    """
-
-    key = "@scene/eventlog"
-    aliases = ["scene/eventlog", "scenelog/event"]
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_eventlog(self):
+        """Start a public event scene."""
         ctx = self._get_context()
         if not ctx:
             return
@@ -218,33 +226,8 @@ class CmdSceneEventLog(SceneCommandMixin, MuxCommand):
         )
         self.caller.msg(f"Event scene logging started (Scene {scene.number}). This scene is publicly visible.")
 
-
-class CmdSceneOrgLog(SceneCommandMixin, MuxCommand):
-    """
-    Begin logging an organisation-restricted scene in the current room.
-    
-    Usage:
-        @scene/orglog
-        scene/orglog
-    
-    Starts recording an organisation scene that will be visible to all members
-    of organisations you specify with @scene/org. Use this for scenes that
-    should be visible to entire organisations rather than just
-    participants.
-
-    Organisation scenes will not auto-close when the room empties - you must
-    manually end them with @scene/endlog.
-    
-    For private scenes, use @scene/startlog instead.
-    For public event scenes, use @scene/eventlog instead.
-    """
-
-    key = "@scene/orglog"
-    aliases = ["scene/orglog", "scenelog/org"]
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_orglog(self):
+        """Start an organisation scene."""
         ctx = self._get_context()
         if not ctx:
             return
@@ -263,27 +246,8 @@ class CmdSceneOrgLog(SceneCommandMixin, MuxCommand):
             "Use @scene/org to specify which organisations can view this scene."
         )
 
-
-class CmdSceneEndLog(SceneCommandMixin, MuxCommand):
-    """
-    End an active scene log.
-    
-    Usage:
-        @scene/endlog
-        @scene/endlog <scene number>  (staff only)
-    
-    Stops logging the active scene in your current room. All participants will
-    be notified that the scene has ended, and the scene will be marked as
-    completed and viewable on the website.
-    
-    """
-
-    key = "@scene/endlog"
-    aliases = ["scene/endlog", "scenelog/end"]
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_endlog(self):
+        """End an active scene."""
         scene_token, _ = self._split_scene_and_payload()
         
         # If a specific scene number was provided, only staff can end it remotely
@@ -299,18 +263,11 @@ class CmdSceneEndLog(SceneCommandMixin, MuxCommand):
         scene_logger.finalize_scene(scene, auto_closed=False)
         self.caller.msg(f"Scene {scene.number} closed.")
 
-
-class CmdSceneTitle(SceneCommandMixin, MuxCommand):
-    """Set or update a scene's title."""
-
-    key = "@scene/title"
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_title(self):
+        """Set or update a scene's title."""
         scene_token, title = self._split_scene_and_payload()
         if not title:
-            self.caller.msg("Usage: @scene/title [scene]=<title>")
+            self.caller.msg("Usage: @scene/title [<scene>=]<title>")
             return
         scene = self._resolve_scene(scene_token, require_active=False, allow_completed=True)
         if not scene:
@@ -319,30 +276,13 @@ class CmdSceneTitle(SceneCommandMixin, MuxCommand):
             return
         scene.title = title
         scene.save(update_fields=["title"])
-        self.caller.msg(f"Scene {scene.number} title set to '{title}'.")
+        self.caller.msg(f"Scene {scene.number} title set to: {title}")
 
-
-class CmdScenePlot(SceneCommandMixin, MuxCommand):
-    """
-    Tag a scene with one or more plots.
-    
-    Usage:
-        @scene/plot <plot>
-        @scene/plot <plot1>,<plot2>,<plot3>
-        @scene/plot <scene number>=<plot>
-    
-    Associates your scene with story plots. You can specify plots by name or ID.
-    Multiple plots can be separated by commas.
-    """
-
-    key = "@scene/plot"
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_plot(self):
+        """Associate plots with a scene."""
         scene_token, payload = self._split_scene_and_payload()
         if not payload:
-            self.caller.msg("Usage: @scene/plot [scene]=<plot>[,<plot>...]")
+            self.caller.msg("Usage: @scene/plot [<scene>=]<plot>[,<plot>...]")
             return
         scene = self._resolve_scene(scene_token, require_active=False, allow_completed=True)
         if not scene:
@@ -362,33 +302,44 @@ class CmdScenePlot(SceneCommandMixin, MuxCommand):
         scene.plots.set(plots)
         self.caller.msg(f"Scene {scene.number} plots updated.")
 
+    def do_org(self):
+        """Add organisations to a scene."""
+        scene_token, payload = self._split_scene_and_payload()
+        if not payload:
+            self.caller.msg("Usage: @scene/org [<scene>=]<organisation>[,<organisation>...]")
+            return
+        scene = self._resolve_scene(scene_token, require_active=False, allow_completed=True)
+        if not scene:
+            return
+        if not self._has_participant_rights(scene):
+            return
+        orgs = []
+        for token in [token.strip() for token in payload.split(",") if token.strip()]:
+            org = get_org(token)
+            if org:
+                orgs.append(org)
+            else:
+                self.caller.msg(f"Organisation '{token}' not found.")
+        if not orgs:
+            self.caller.msg("No valid organisations specified.")
+            return
+        scene.organisations.add(*orgs)
+        if scene.visibility == SceneLog.Visibility.PRIVATE:
+            scene.visibility = SceneLog.Visibility.ORGANISATION
+            scene.save(update_fields=["visibility"])
+            self.caller.msg(f"Scene {scene.number} visibility changed to organisation.")
+        self.caller.msg(f"Scene {scene.number} organisations updated.")
 
-class CmdSceneVisibility(SceneCommandMixin, MuxCommand):
-    """
-    Change a scene's visibility level (staff only).
-    
-    Usage:
-        @scene/visibility <scene number>=<private|organisation|event>
-    
-    Visibility levels:
-        private      - Only participants and staff can view
-        organisation - All members of tagged organisations can view
-        event        - Publicly visible to everyone
-
-    This command allows staff to retroactively change a scene's visibility.
-    Players should use @scene/startlog, @scene/orglog, or @scene/eventlog
-    to start scenes with the appropriate visibility from the beginning.
-    """
-
-    key = "@scene/visibility"
-    locks = "cmd:pperm(Builder)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_visibility(self):
+        """Change a scene's visibility (staff only)."""
+        if not self._is_staff():
+            self.caller.msg("Only staff can change scene visibility.")
+            return
+        
         scene_token, visibility = self._split_scene_and_payload()
         visibility = visibility.lower()
         if not visibility or not scene_token:
-            self.caller.msg("Usage: @scene/visibility <scene number>=<private|organisation|event>")
+            self.caller.msg("Usage: @scene/visibility <scene>=<private|organisation|event>")
             return
         if visibility not in SceneLog.Visibility.values:
             self.caller.msg("Invalid visibility option. Choose: private, organisation, or event.")
@@ -399,103 +350,31 @@ class CmdSceneVisibility(SceneCommandMixin, MuxCommand):
         if visibility == SceneLog.Visibility.ORGANISATION and not scene.organisations.exists():
             self.caller.msg("Add organisations with @scene/org before switching to organisation visibility.")
             return
-        if not self._has_participant_rights(scene):
-            return
         scene.visibility = visibility
         scene.save(update_fields=["visibility"])
-        self.caller.msg(f"Scene {scene.number} visibility set to {scene.get_visibility_display()}.")
+        self.caller.msg(f"Scene {scene.number} visibility changed to {visibility}.")
 
-
-class CmdSceneOrg(SceneCommandMixin, MuxCommand):
-    """
-    Grant organisation-wide access to a scene.
-    
-    Usage:
-        @scene/org <organisation>
-        @scene/org <org1>,<org2>,<org3>
-        @scene/org <scene number>=<organisation>
-    
-    Examples:
-        @scene/org House Anadun
-        @scene/org The Guild,House Otrese
-        @scene/org 42=House Anadun
-    
-    Allows all members of the specified organisation(s) to view the scene.
-    This is good for meetings and similar which organisation members but
-    not all characters on the game might know about.
-
-    If the scene is currently private, it will automatically be changed to
-    organisation visibility.
-    """
-
-    key = "@scene/org"
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
-        scene_token, payload = self._split_scene_and_payload()
-        if not payload:
-            self.caller.msg("Usage: @scene/org [scene]=<organisation>[,<organisation>...]")
-            return
-        scene = self._resolve_scene(scene_token, require_active=False, allow_completed=True)
-        if not scene:
-            return
-        if not self._has_participant_rights(scene):
-            return
-        organisations = []
-        for token in [token.strip() for token in payload.split(",") if token.strip()]:
-            org = get_org(token, caller=self.caller)
-            if org:
-                organisations.append(org)
-        if not organisations:
-            self.caller.msg("No valid organisations specified.")
-            return
-        scene.organisations.set(organisations)
-        if scene.visibility == SceneLog.Visibility.PRIVATE:
-            scene.visibility = SceneLog.Visibility.ORGANISATION
-            scene.save(update_fields=["visibility"])
-            self.caller.msg(
-                "Organisations added. Scene visibility set to Organisation."
-            )
-        else:
-            scene.save(update_fields=["title"])  # touch instance without changing fields
-            self.caller.msg("Organisations added to scene.")
-
-
-class CmdSceneList(SceneCommandMixin, MuxCommand):
-    """
-    List your recent scenes.
-    
-    Usage:
-        @scene/list
-        scene/list
-    
-    Shows the 20 most recent scenes you participated in, including their titles,
-    status (Active/Completed), visibility level, and chapter.
-    
-    For a full browsable list with search and filters, visit the scenes page
-    on the website.
-    """
-
-    key = "@scene/list"
-    aliases = ["scene/list", "@scenelist"]
-    locks = "cmd:perm(Player)"
-    help_category = "Scenes"
-
-    def func(self):
+    def do_list(self):
+        """List recent scenes."""
         queryset = self._scene_queryset_for_caller()
         if queryset is SceneLog.objects.none():
             return
-        scenes = queryset.filter(status__in=[SceneLog.Status.ACTIVE, SceneLog.Status.COMPLETED]).order_by("-created_at")[:20]
+        
+        scenes = queryset.order_by("-created_at")[:20]
         if not scenes:
-            self.caller.msg("You are not part of any recorded scenes yet.")
+            self.caller.msg("No scenes found.")
             return
-        lines = ["|wYour Scenes|n"]
+        
+        lines = ["|wRecent Scenes|n", "=" * 78]
         for scene in scenes:
-            title = scene.title or "Untitled"
-            chapter = f"Chapter {scene.chapter.db.story_id}" if scene.chapter else "No chapter"
             status = scene.get_status_display()
+            visibility = scene.get_visibility_display()
+            title = scene.title or "(untitled)"
+            chapter_id = scene.chapter.db.story_id if scene.chapter else "?"
             lines.append(
-                f"Scene {scene.number}: {title} ({status}, {scene.get_visibility_display()}, {chapter})"
+                f"|c{scene.number:4d}|n | {title[:40]:40s} | {status:9s} | {visibility:12s} | Ch.{chapter_id}"
             )
+        lines.append("=" * 78)
+        lines.append("Use @scene/title, @scene/plot, @scene/org to edit your scenes.")
+        lines.append("Visit /scenes/ on the website for full search and filters.")
         self.caller.msg("\n".join(lines))
