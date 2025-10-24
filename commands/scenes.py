@@ -111,7 +111,20 @@ class CmdScene(MuxCommand):
             return SceneLog.objects.none()
         if self._is_staff():
             return SceneLog.objects.exclude(status=SceneLog.Status.DELETED)
-        return scene_logger.scenes_for_account(account).exclude(status=SceneLog.Status.DELETED)
+        
+        # Non-staff: scenes where they participated or that match their org/event visibility
+        from django.db.models import Q
+        from utils.org_utils import get_account_organisations
+        
+        filters = Q(participants__account=account)  # Scenes they participated in
+        filters |= Q(visibility=SceneLog.Visibility.EVENT)  # Public events
+        
+        # Organisation scenes for orgs they're in
+        account_orgs = get_account_organisations(account)
+        if account_orgs:
+            filters |= Q(visibility=SceneLog.Visibility.ORGANISATION, organisations__in=account_orgs)
+        
+        return SceneLog.objects.filter(filters).exclude(status=SceneLog.Status.DELETED).distinct()
 
     def _resolve_scene(
         self, scene_token: Optional[str], *, require_active: bool = False, allow_completed: bool = False
@@ -120,36 +133,37 @@ class CmdScene(MuxCommand):
         Resolve a scene from a token (number or None).
         If None, tries active scene in room, then most recent scene.
         """
+        # If no token provided, try active scene in current room first
+        if not scene_token:
+            ctx = self._get_context()
+            if ctx and ctx.scene:
+                return ctx.scene
+            
+            # Try most recent scene if allowed
+            if allow_completed:
+                queryset = self._scene_queryset_for_caller()
+                scene = queryset.order_by("-created_at").first()
+                if scene:
+                    return scene
+            
+            self.caller.msg("No active scene in this room. Specify a scene number.")
+            return None
+        
+        # Token provided - look it up in accessible scenes
         queryset = self._scene_queryset_for_caller()
-        
-        if scene_token:
-            try:
-                scene_id = int(scene_token)
-                scene = queryset.filter(number=scene_id).first()
-                if not scene:
-                    self.caller.msg(f"Scene {scene_id} not found or not accessible.")
-                    return None
-                if require_active and scene.status != SceneLog.Status.ACTIVE:
-                    self.caller.msg(f"Scene {scene_id} is not active.")
-                    return None
-                return scene
-            except ValueError:
-                self.caller.msg(f"Invalid scene number: {scene_token}")
+        try:
+            scene_id = int(scene_token)
+            scene = queryset.filter(number=scene_id).first()
+            if not scene:
+                self.caller.msg(f"Scene {scene_id} not found or not accessible.")
                 return None
-        
-        # Try active scene in current room
-        ctx = self._get_context()
-        if ctx and ctx.scene:
-            return ctx.scene
-        
-        # Try most recent scene
-        if allow_completed:
-            scene = queryset.order_by("-created_at").first()
-            if scene:
-                return scene
-        
-        self.caller.msg("No active scene in this room. Specify a scene number.")
-        return None
+            if require_active and scene.status != SceneLog.Status.ACTIVE:
+                self.caller.msg(f"Scene {scene_id} is not active.")
+                return None
+            return scene
+        except ValueError:
+            self.caller.msg(f"Invalid scene number: {scene_token}")
+            return None
 
     def _has_participant_rights(self, scene: SceneLog) -> bool:
         """Check if caller can edit this scene (staff or participant)."""
