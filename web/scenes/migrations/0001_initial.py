@@ -12,8 +12,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("objects", "0015_organisation"),
-        ("scripts", "0017_scriptbase_defaultscript_botstarter_dbprototype_and_more"),
+        ("objects", "__first__"),
+        ("scripts", "__first__"),
     ]
 
     operations = [
