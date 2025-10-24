@@ -87,3 +87,14 @@ def ansi_to_html(text):
     
     return mark_safe(html)
 
+
+@register.filter(name='strip_ansi')
+def strip_ansi(text):
+    """Strip ANSI color codes from text."""
+    if not text:
+        return ""
+    # Remove xterm-256 codes
+    text = re.sub(r'\|\d{3}', '', text)
+    # Remove basic ANSI codes
+    text = re.sub(r'\|[a-zA-Z]', '', text)
+    return text

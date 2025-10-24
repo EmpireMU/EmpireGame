@@ -38,7 +38,7 @@
                 <div class="card-header">Details</div>
                 <div class="card-body">
                     {% if scene.room %}
-                    <p><strong>Location:</strong> {{ scene.room.key }}</p>
+                    <p><strong>Location:</strong> {{ scene.room.key|strip_ansi }}</p>
                     {% endif %}
                     <p><strong>Visibility:</strong> {{ scene.get_visibility_display }}</p>
                     <p><strong>Status:</strong> {{ scene.get_status_display }}</p>
@@ -70,7 +70,7 @@
                     {% if participants %}
                     <ul class="list-unstyled mb-0">
                         {% for participant in participants %}
-                        <li>{{ participant.character.key }}</li>
+                        <li><a href="{% url 'roster:character_detail' participant.character.key participant.character.id %}">{{ participant.character.key }}</a></li>
                         {% endfor %}
                     </ul>
                     {% else %}
