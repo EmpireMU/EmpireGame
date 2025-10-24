@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load scene_filters %}
+
+{% block titleblock %}Scene {{ scene.number }}{% if scene.title %}: {{ scene.title }}{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+.scene-text {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+.scene-entry-text em {
+    color: #999;
+}
+</style>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>Scene {{ scene.number }}{% if scene.title %}: {{ scene.title }}{% endif %}</h1>
+            <p class="text-muted mb-0">Started {{ scene.created_at|date:"Y-m-d H:i" }}</p>
+            {% if scene.completed_at %}
+            <p class="text-muted">Completed {{ scene.completed_at|date:"Y-m-d H:i" }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <a href="{% url 'scenes:download' scene.pk %}" class="btn btn-outline-secondary">Download .txt</a>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header">Details</div>
+                <div class="card-body">
+                    {% if scene.room %}
+                    <p><strong>Location:</strong> {{ scene.room.key }}</p>
+                    {% endif %}
+                    <p><strong>Visibility:</strong> {{ scene.get_visibility_display }}</p>
+                    <p><strong>Status:</strong> {{ scene.get_status_display }}</p>
+                    {% if scene.chapter %}
+                    <p><strong>Chapter:</strong> {{ scene.chapter.db.story_id }} - {{ scene.chapter.db.title }}</p>
+                    {% endif %}
+                    {% if scene.plots.exists %}
+                    <p><strong>Plots:</strong></p>
+                    <ul class="mb-2">
+                        {% for plot in scene.plots.all %}
+                        <li>{{ plot.db.story_id }} - {{ plot.db.title }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    {% if scene.organisations.exists %}
+                    <p><strong>Organisations:</strong></p>
+                    <ul class="mb-0">
+                        {% for org in scene.organisations.all %}
+                        <li>{{ org.key }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">Participants</div>
+                <div class="card-body">
+                    {% with participants=scene.participants.all %}
+                    {% if participants %}
+                    <ul class="list-unstyled mb-0">
+                        {% for participant in participants %}
+                        <li>{{ participant.character.key }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No participants recorded.</p>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Transcript</div>
+                <div class="card-body">
+                    {% if entries %}
+                    <div class="scene-transcript">
+                        {% for entry in entries %}
+                        <div class="scene-entry scene-entry-{{ entry.entry_type }} mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                {% if entry.entry_type == "system" or entry.entry_type == "arrival" or entry.entry_type == "depart" %}
+                                <span class="badge bg-secondary">{{ entry.get_entry_type_display|title }}</span>
+                                {% elif entry.actor %}
+                                <span class="badge bg-primary">{{ entry.actor.key }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ entry.get_entry_type_display|title }}</span>
+                                {% endif %}
+                                <span class="text-muted small">{{ entry.created_at|date:"Y-m-d H:i" }}</span>
+                            </div>
+                            <div class="mt-2 scene-entry-text">
+                                {% if entry.entry_type == "system" or entry.entry_type == "arrival" or entry.entry_type == "depart" %}
+                                <em>{{ entry.text_plain }}</em>
+                                {% else %}
+                                <div class="scene-text">{{ entry.text|ansi_to_html }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p>No transcript entries available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

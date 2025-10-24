@@ -48,10 +48,11 @@ from commands.directions import CmdDirections
 from commands.emit import CmdEmit
 from commands.ooc import CmdOOC, CmdUnpuppet
 from commands.wiki import CmdWiki
+from commands.afk import CmdAFK
+from commands.tempdesc import CmdTempDesc
 from commands.craft import CraftCmdSet
 from commands.wear import WearCmdSet
-from commands.tempdesc import CmdTempDesc
-from commands.afk import CmdAFK
+from commands import scenes
 
 
 class CharacterCmdSet(default_cmds.CharacterCmdSet):
@@ -104,6 +105,9 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(CmdFamily())
         self.add(BalanceCmdSet)
         self.add(CmdDirections())
+        # Replace base speech commands with logging variants
+        self.remove(default_cmds.CmdSay)
+        self.remove(default_cmds.CmdPose)
         self.add(CmdEmit())
         self.add(CmdOOC())
         self.add(CmdWiki())
@@ -111,6 +115,15 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         self.add(WearCmdSet)
         self.add(CmdTempDesc())
         self.add(CmdAFK())
+        # Scene logging command suite
+        self.add(scenes.CmdSceneStartLog)
+        self.add(scenes.CmdSceneEventLog)
+        self.add(scenes.CmdSceneEndLog)
+        self.add(scenes.CmdSceneTitle)
+        self.add(scenes.CmdScenePlot)
+        self.add(scenes.CmdSceneVisibility)
+        self.add(scenes.CmdSceneOrg)
+        self.add(scenes.CmdSceneList)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

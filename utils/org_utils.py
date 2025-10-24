@@ -184,3 +184,39 @@ def get_org_and_char(org_name, char_name, caller=None):
     return org, char
 
 
+def get_character_organisation_ids(character: Character) -> set[int]:
+    organisations = character.attributes.get("organisations", category="organisations") or {}
+    return {int(org_id) for org_id in organisations.keys()}
+
+
+def get_account_organisations(account) -> set[int]:
+    org_ids: set[int] = set()
+    characters = []
+    # Include any stored character relations on the account
+    if hasattr(account, "characters"):
+        try:
+            characters = list(account.characters.all())
+        except Exception:  # pragma: no cover - extremely defensive
+            characters = []
+
+    # Fallback to currently puppeted characters if available
+    if not characters:
+        session_handler = getattr(account, "sessions", None)
+        if session_handler:
+            get_sessions = getattr(session_handler, "get_sessions", None)
+            if callable(get_sessions):
+                for session in get_sessions():
+                    puppet = getattr(session, "get_puppet", None)
+                    if callable(puppet):
+                        puppet_obj = puppet()
+                        if puppet_obj:
+                            characters.append(puppet_obj)
+
+    for character in characters:
+        org_ids.update(get_character_organisation_ids(character))
+    if hasattr(account, "db"):
+        tracked = account.attributes.get("organisations", category="organisations") or {}
+        org_ids.update(int(org_id) for org_id in tracked.keys())
+    return org_ids
+
+

@@ -42,7 +42,7 @@ class CmdEmit(MuxCommand):
     """
     
     key = "emit"
-    aliases = ["pose", ";", ":"]
+    aliases = ["pose", ";", ":", "say", "'"]
     locks = "cmd:all()"
     help_category = "Social"
     
@@ -128,29 +128,45 @@ class CmdEmit(MuxCommand):
             return
         
         if not self.args:
-            self.msg("Usage: emit <message>, emit/shownames, emit/speechcolour <colour>, or emit/colourword <word>=<colour>")
+            self.msg(
+                "Usage: emit <message>, emit/shownames, emit/speechcolour <colour>, or emit/colourword <word>=<colour>"
+            )
             return
-            
+
         if not self.caller.location:
             self.msg("You must be in a room to use emit.")
             return
-            
+             
         message = self.args.strip()
         location = self.caller.location
-        
+ 
         # Check if user typed 'pose' or ':' vs 'emit' or ';' to determine message format
-        is_pose = self.cmdstring.lower() in ["pose", ":"]
-        
+        cmd = self.cmdstring.lower()
+        is_pose = cmd in ["pose", ":"]
+        is_say = cmd in ["say", "'"]
+
+        # Determine message format and recipients
+        if is_say:
+            # Say: format as 'Name says, "message"'
+            formatted_message = f'{self.caller.name} says, "{message}"'
+            message_to_log = formatted_message
+        else:
+            formatted_message = None
+            message_to_log = None
+
         # Send personalized messages to each receiver with their color preferences
-        # We need to manually iterate since each person sees different colors
-        for obj in self.caller.location.contents:
+        recipients = list(self.caller.location.contents)
+        for obj in recipients:
             # Only send to characters with active sessions (online players)
             if hasattr(obj, 'sessions') and obj.sessions.all():
                 # Apply this receiver's color preferences to the message
                 colored_message = apply_character_coloring(message, obj)
                 colored_sender_name = apply_name_coloring(self.caller.name, obj)
                 
-                if is_pose:
+                if is_say:
+                    # Say: format as 'Name says, "message"'
+                    final_message = f'{colored_sender_name} says, "{colored_message}"'
+                elif is_pose:
                     # Pose: always show sender name at the start
                     final_message = f"{colored_sender_name} {colored_message}"
                 else:
@@ -164,3 +180,31 @@ class CmdEmit(MuxCommand):
                         final_message = colored_message
                 
                 obj.msg(final_message)
+
+        # If this was a say-alias usage, message_to_log already contains what was sent
+        if is_say and message_to_log:
+            rendered = message_to_log
+        else:
+            rendered = (
+                f"({self.caller.name}) {message}" if not is_pose else f"{self.caller.name} {message}"
+            )
+
+        # After broadcasting, capture the raw emit for scene logging
+        from utils import scene_logger
+        from web.scenes.models import SceneEntry
+
+        scene_ctx = scene_logger.get_room_scene(self.caller.location)
+        if scene_ctx and rendered:
+            if is_say:
+                entry_type = SceneEntry.EntryType.SAY
+            elif is_pose:
+                entry_type = SceneEntry.EntryType.POSE
+            else:
+                entry_type = SceneEntry.EntryType.EMIT
+            scene_logger.record_entry(
+                scene_ctx.scene,
+                entry_type,
+                text=rendered,
+                actor=self.caller,
+                text_plain=scene_logger.strip_ansi(rendered),
+            )

@@ -28,6 +28,9 @@ urlpatterns = [
     path("webclient/", include("web.webclient.urls")),
     # web admin
     path("admin/", include("web.admin.urls")),
+    path('relationships/', include('web.relationships.urls')),
+    path('roster/', include('web.roster.urls')),
+    path('scenes/', include(('web.scenes.urls', 'scenes'), namespace='scenes')),
     # add any extra urls here:
     # path("mypath/", include("path.to.my.urls.file")),
 ]

@@ -344,6 +344,21 @@ class Character(ObjectParent, DefaultCharacter):
         if notifications:
             self.msg("\n".join(notifications))
             self.attributes.remove("_stored_notifications")
+        
+        # Register with active scene if present
+        if self.location:
+            from utils import scene_logger
+            from web.scenes.models import SceneEntry
+            
+            scene_ctx = scene_logger.get_room_scene(self.location)
+            if scene_ctx and self.account:
+                scene_logger.record_participant_join(scene_ctx.scene, self, self.account)
+                scene_logger.record_entry(
+                    scene_ctx.scene,
+                    SceneEntry.EntryType.ARRIVAL,
+                    text=f"|w{self.key}|n arrives.",
+                    actor=self,
+                )
 
     def at_msg_receive(self, text=None, from_obj=None, **kwargs):
         """
@@ -378,7 +393,7 @@ class Character(ObjectParent, DefaultCharacter):
     def at_pre_move(self, destination, **kwargs):
         """
         Called just before moving. Remove character from any places
-        in the current location.
+        in the current location and log departure from active scenes.
         
         Args:
             destination: The location we're moving to
@@ -390,8 +405,60 @@ class Character(ObjectParent, DefaultCharacter):
         # Clean up places in current location before leaving
         if self.location and hasattr(self.location, 'db') and self.location.db.places:
             self._cleanup_places(self.location)
+        
+        # Log departure from active scene
+        if self.location and self.account:
+            from utils import scene_logger
+            from web.scenes.models import SceneEntry
+            
+            scene_ctx = scene_logger.get_room_scene(self.location)
+            if scene_ctx:
+                scene_logger.record_participant_depart(scene_ctx.scene, self)
+                scene_logger.record_entry(
+                    scene_ctx.scene,
+                    SceneEntry.EntryType.DEPART,
+                    text=f"|w{self.key}|n departs.",
+                    actor=self,
+                )
+                
+                # Check if room will be empty after this character leaves
+                # Only auto-close private and organisation scenes, not events
+                from web.scenes.models import SceneLog
+                if scene_ctx.scene.visibility != SceneLog.Visibility.EVENT:
+                    remaining_players = [
+                        obj for obj in self.location.contents
+                        if obj != self and getattr(obj, "account", None)
+                    ]
+                    if not remaining_players:
+                        scene_logger.finalize_scene(scene_ctx.scene, auto_closed=True)
             
         return result
+    
+    def at_post_move(self, source_location, **kwargs):
+        """
+        Called after moving to a new location. Log arrival in active scenes.
+        
+        Args:
+            source_location: The location we just left
+            **kwargs: Arbitrary keyword arguments
+        """
+        # Call parent first
+        super().at_post_move(source_location, **kwargs)
+        
+        # Log arrival in new scene
+        if self.location and self.account:
+            from utils import scene_logger
+            from web.scenes.models import SceneEntry
+            
+            scene_ctx = scene_logger.get_room_scene(self.location)
+            if scene_ctx:
+                scene_logger.record_participant_join(scene_ctx.scene, self, self.account)
+                scene_logger.record_entry(
+                    scene_ctx.scene,
+                    SceneEntry.EntryType.ARRIVAL,
+                    text=f"|w{self.key}|n arrives.",
+                    actor=self,
+                )
         
     def at_object_delete(self):
         """Called just before object deletion. Remove character from any places."""

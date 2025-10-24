@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block titleblock %}Scenes{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-0">Scenes</h1>
+            <p class="text-muted mb-0">Browse the scenes you can access. Private scenes only appear if you participated.</p>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" href="{% url 'scenes:list' %}">Reset Filters</a>
+        </div>
+    </div>
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-md-3">
+            <label class="form-label">Keyword</label>
+            <input type="text" name="q" value="{{ filters.keyword }}" class="form-control" placeholder="Title or transcript text">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Chapter ID</label>
+            <input type="text" name="chapter" value="{{ filters.chapter }}" class="form-control" placeholder="Numeric chapter">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Plot ID</label>
+            <input type="text" name="plot" value="{{ filters.plot }}" class="form-control" placeholder="Numeric plot">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Visibility</label>
+            <select name="visibility" class="form-select">
+                <option value="">Any</option>
+                {% for value, label in object_list.model.Visibility.choices %}
+                <option value="{{ value }}" {% if filters.visibility == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </div>
+    </form>
+    {% if object_list %}
+    <div class="list-group">
+        {% for scene in object_list %}
+        <a href="{% url 'scenes:detail' scene.pk %}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+                <div>
+                    <h5 class="mb-1">Scene {{ scene.number }}{% if scene.title %}: {{ scene.title }}{% endif %}</h5>
+                    <span class="badge bg-secondary me-1">{{ scene.get_visibility_display }}</span>
+                    <span class="badge bg-light text-dark me-1">{{ scene.get_status_display }}</span>
+                    {% if scene.chapter %}
+                    <span class="badge bg-info text-dark">Chapter {{ scene.chapter.db.story_id }}</span>
+                    {% endif %}
+                </div>
+                <small class="text-muted">Created {{ scene.created_at|date:"Y-m-d H:i" }}</small>
+            </div>
+            {% if scene.plots.exists %}
+            <p class="mb-1 small text-muted">Plots: {% for plot in scene.plots.all %}{{ plot.db.story_id }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    <nav class="mt-4" aria-label="Scene pagination">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% else %}
+    <div class="alert alert-info">No scenes found with the current filters.</div>
+    {% endif %}
+</div>
+{% endblock %}

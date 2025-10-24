@@ -14,6 +14,8 @@ from utils.cortex import (
     process_results,
     get_success_level
 )
+from utils import scene_logger
+from web.scenes.models import SceneEntry
 from collections import defaultdict
 
 # Constants for validation
@@ -481,7 +483,18 @@ class CmdCortexRoll(MuxCommand):
             
             # Send result to room
             self.caller.location.msg_contents(result_msg)
-            
+
+            # Log the roll to the active scene, if any
+            scene_ctx = scene_logger.get_room_scene(self.caller.location)
+            if scene_ctx:
+                scene_logger.record_entry(
+                    scene_ctx.scene,
+                    SceneEntry.EntryType.ROLL,
+                    text=result_msg,
+                    actor=self.caller,
+                    text_plain=scene_logger.strip_ansi(result_msg),
+                )
+
         except Exception as e:
             self.msg(f"Error during dice roll: {e}")
             return

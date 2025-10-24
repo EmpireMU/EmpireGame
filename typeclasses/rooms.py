@@ -163,20 +163,35 @@ class Room(ObjectParent, DefaultRoom):
         # Get the base appearance from the parent class
         appearance = super().return_appearance(looker, **kwargs)
         
+        # Split appearance into lines for insertion
+        lines = appearance.split('\n')
+        
+        # Find where to insert extra info (after exits, before character list)
+        insert_index = len(lines)
+        for i, line in enumerate(lines):
+            # Look for the start of character/contents listing (after exits)
+            if any(keyword in line.lower() for keyword in ['you see:', 'contents:']):
+                insert_index = i
+                break
+        
+        # Check for active scene and add notification
+        scene_id = self.attributes.get("active_scene_id", category="scene")
+        if scene_id:
+            # Get the scene to check its visibility
+            from web.scenes.models import SceneLog
+            try:
+                scene = SceneLog.objects.get(pk=scene_id, status=SceneLog.Status.ACTIVE)
+                visibility_display = scene.get_visibility_display()
+                lines.insert(insert_index, f"|yScene {scene_id} ({visibility_display}) is in progress here.|n")
+            except SceneLog.DoesNotExist:
+                # Fallback if scene not found
+                lines.insert(insert_index, f"|yScene {scene_id} is in progress here.|n")
+            lines.insert(insert_index + 1, "")  # Add blank line
+            insert_index += 2
+        
         # Add places to the description
         places = self.db.places or {}
         if places:
-            # Insert places section after room description but before characters/objects
-            lines = appearance.split('\n')
-            
-            # Find where to insert places (after description, before character list)
-            insert_index = len(lines)
-            for i, line in enumerate(lines):
-                # Look for the start of character/contents listing
-                if any(keyword in line.lower() for keyword in ['exits:', 'you see:', 'contents:']):
-                    insert_index = i
-                    break
-            
             # Build places display - just names on one line
             place_names = []
             for place_key, place_data in places.items():
@@ -202,7 +217,7 @@ class Room(ObjectParent, DefaultRoom):
             place_text = '\n'.join(place_lines)
             lines.insert(insert_index, place_text)
             lines.insert(insert_index + 1, "")  # Add blank line after places
-            
-            appearance = '\n'.join(lines)
+        
+        appearance = '\n'.join(lines)
         
         return appearance

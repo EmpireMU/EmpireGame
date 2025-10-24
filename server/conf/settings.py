@@ -54,10 +54,14 @@ INSTALLED_APPS += (
     'web.roster',
     'web.worldinfo',
     'web.relationships',
+    'web.scenes',
 )
 
 # Web profile domain for generating character URLs in info command
 WEB_PROFILE_DOMAIN = 'localhost:4001'  # Development setting
+
+# Enable debug mode for development
+DEBUG = True
 
 ######################################################################
 # Text processing settings

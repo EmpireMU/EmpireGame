@@ -3,7 +3,7 @@ Scripts
 
 Scripts are powerful jacks-of-all-trades. They have no in-game
 existence and can be used to represent persistent game systems in some
-circumstances. Scripts can also have a time component that allows them
+circumstances. Scripts can also have a timer component that allows them
 to "fire" regularly or a limited number of times.
 
 There is generally no "tree" of Scripts inheriting from each other.
