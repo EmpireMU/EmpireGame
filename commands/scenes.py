@@ -221,7 +221,8 @@ class CmdScene(MuxCommand):
             chapter=chapter,
             visibility=SceneLog.Visibility.PRIVATE,
         )
-        self.caller.msg(f"Scene logging started (Scene {scene.number}).")
+        # Notify everyone in the room
+        ctx.room.msg_contents(f"|yScene logging started (Scene {scene.number}). This is a private scene.|n")
 
     def do_eventlog(self):
         """Start a public event scene."""
@@ -238,7 +239,8 @@ class CmdScene(MuxCommand):
             chapter=chapter,
             visibility=SceneLog.Visibility.EVENT,
         )
-        self.caller.msg(f"Event scene logging started (Scene {scene.number}). This scene is publicly visible.")
+        # Notify everyone in the room
+        ctx.room.msg_contents(f"|yScene logging started (Scene {scene.number}). This is a public event scene.|n")
 
     def do_orglog(self):
         """Start an organisation scene."""
@@ -255,9 +257,9 @@ class CmdScene(MuxCommand):
             chapter=chapter,
             visibility=SceneLog.Visibility.ORGANISATION,
         )
-        self.caller.msg(
-            f"Organisation scene logging started (Scene {scene.number}). "
-            "Use @scene/org to specify which organisations can view this scene."
+        # Notify everyone in the room
+        ctx.room.msg_contents(
+            f"|yScene logging started (Scene {scene.number}). This is an organisation scene.|n"
         )
 
     def do_endlog(self):
