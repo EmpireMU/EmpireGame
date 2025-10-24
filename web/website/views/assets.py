@@ -237,8 +237,28 @@ def upload_site_asset(request):
                     'android-chrome-512x512.png': 512
                 }
                 
-                generated_files = []
                 base_name = custom_name if custom_name else 'favicon'
+                
+                # Delete old favicon files before generating new ones
+                for filename_pattern in favicon_sizes.keys():
+                    # Use custom name if provided
+                    if custom_name and filename_pattern.startswith('favicon-'):
+                        old_filename = filename_pattern.replace('favicon-', f'{base_name}-')
+                    elif custom_name and filename_pattern.startswith('android-chrome-'):
+                        old_filename = filename_pattern.replace('android-chrome-', f'{base_name}-android-')
+                    elif custom_name and filename_pattern.startswith('apple-touch-icon'):
+                        old_filename = f'{base_name}-apple-touch-icon.png'
+                    else:
+                        old_filename = filename_pattern
+                    
+                    old_path = f"site_assets/{old_filename}"
+                    if default_storage.exists(old_path):
+                        try:
+                            default_storage.delete(old_path)
+                        except Exception:
+                            pass  # Ignore deletion errors, continue with generation
+                
+                generated_files = []
                 
                 # Generate each size
                 for filename, size in favicon_sizes.items():
