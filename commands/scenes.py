@@ -194,6 +194,7 @@ class CmdSceneEventLog(SceneCommandMixin, MuxCommand):
     end them with @scene/endlog.
     
     For private scenes, use @scene/startlog instead.
+    For organisation-restricted scenes, use @scene/orglog instead.
     """
 
     key = "@scene/eventlog"
@@ -216,6 +217,51 @@ class CmdSceneEventLog(SceneCommandMixin, MuxCommand):
             visibility=SceneLog.Visibility.EVENT,
         )
         self.caller.msg(f"Event scene logging started (Scene {scene.number}). This scene is publicly visible.")
+
+
+class CmdSceneOrgLog(SceneCommandMixin, MuxCommand):
+    """
+    Begin logging an organisation-restricted scene in the current room.
+    
+    Usage:
+        @scene/orglog
+        scene/orglog
+    
+    Starts recording an organisation scene that will be visible to all members
+    of organisations you specify with @scene/org. Use this for scenes that
+    should be visible to entire organisations rather than just
+    participants.
+
+    Organisation scenes will not auto-close when the room empties - you must
+    manually end them with @scene/endlog.
+    
+    For private scenes, use @scene/startlog instead.
+    For public event scenes, use @scene/eventlog instead.
+    """
+
+    key = "@scene/orglog"
+    aliases = ["scene/orglog", "scenelog/org"]
+    locks = "cmd:perm(Player)"
+    help_category = "Scenes"
+
+    def func(self):
+        ctx = self._get_context()
+        if not ctx:
+            return
+        if ctx.scene:
+            self.caller.msg("This room already has an active scene log.")
+            return
+        chapter = StoryManager.get_current_chapter()
+        scene = scene_logger.start_scene(
+            ctx.room,
+            owner=self.caller,
+            chapter=chapter,
+            visibility=SceneLog.Visibility.ORGANISATION,
+        )
+        self.caller.msg(
+            f"Organisation scene logging started (Scene {scene.number}). "
+            "Use @scene/org to specify which organisations can view this scene."
+        )
 
 
 class CmdSceneEndLog(SceneCommandMixin, MuxCommand):
@@ -319,37 +365,33 @@ class CmdScenePlot(SceneCommandMixin, MuxCommand):
 
 class CmdSceneVisibility(SceneCommandMixin, MuxCommand):
     """
-    Change a scene's visibility level.
+    Change a scene's visibility level (staff only).
     
     Usage:
-        @scene/visibility <private|organisation|event>
         @scene/visibility <scene number>=<private|organisation|event>
     
     Visibility levels:
-        private      - Only participants and staff can view (default)
+        private      - Only participants and staff can view
         organisation - All members of tagged organisations can view
-        event        - Publicly visible to everyone (staff only)
+        event        - Publicly visible to everyone
 
-    
-    Note: Only staff can retroactively mark scenes as events. Players can start
-    event scenes using @scene/eventlog.
+    This command allows staff to retroactively change a scene's visibility.
+    Players should use @scene/startlog, @scene/orglog, or @scene/eventlog
+    to start scenes with the appropriate visibility from the beginning.
     """
 
     key = "@scene/visibility"
-    locks = "cmd:perm(Player)"
+    locks = "cmd:pperm(Builder)"
     help_category = "Scenes"
 
     def func(self):
         scene_token, visibility = self._split_scene_and_payload()
         visibility = visibility.lower()
-        if not visibility:
-            self.caller.msg("Usage: @scene/visibility [scene]=<private|organisation|event>")
-            return
-        if visibility == SceneLog.Visibility.EVENT and not self._is_staff():
-            self.caller.msg("Only staff may retroactively mark scenes as events.")
+        if not visibility or not scene_token:
+            self.caller.msg("Usage: @scene/visibility <scene number>=<private|organisation|event>")
             return
         if visibility not in SceneLog.Visibility.values:
-            self.caller.msg("Invalid visibility option.")
+            self.caller.msg("Invalid visibility option. Choose: private, organisation, or event.")
             return
         scene = self._resolve_scene(scene_token, require_active=False, allow_completed=True)
         if not scene:

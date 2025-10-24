@@ -118,6 +118,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
         # Scene logging command suite
         self.add(scenes.CmdSceneStartLog)
         self.add(scenes.CmdSceneEventLog)
+        self.add(scenes.CmdSceneOrgLog)
         self.add(scenes.CmdSceneEndLog)
         self.add(scenes.CmdSceneTitle)
         self.add(scenes.CmdScenePlot)

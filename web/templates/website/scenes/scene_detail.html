@@ -88,16 +88,13 @@
                     <div class="scene-transcript">
                         {% for entry in entries %}
                         <div class="scene-entry scene-entry-{{ entry.entry_type }} mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                {% if entry.entry_type == "system" or entry.entry_type == "arrival" or entry.entry_type == "depart" %}
-                                <span class="badge bg-secondary">{{ entry.get_entry_type_display|title }}</span>
-                                {% elif entry.actor %}
-                                <span class="badge bg-primary">{{ entry.actor.key }}</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ entry.get_entry_type_display|title }}</span>
-                                {% endif %}
-                                <span class="text-muted small">{{ entry.created_at|date:"Y-m-d H:i" }}</span>
-                            </div>
+                            {% if entry.entry_type == "system" or entry.entry_type == "arrival" or entry.entry_type == "depart" %}
+                            <span class="badge bg-secondary">{{ entry.get_entry_type_display|title }}</span>
+                            {% elif entry.actor %}
+                            <span class="badge bg-primary">{{ entry.actor.key }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ entry.get_entry_type_display|title }}</span>
+                            {% endif %}
                             <div class="mt-2 scene-entry-text">
                                 {% if entry.entry_type == "system" or entry.entry_type == "arrival" or entry.entry_type == "depart" %}
                                 <em>{{ entry.text_plain }}</em>

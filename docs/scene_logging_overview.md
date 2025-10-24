@@ -55,9 +55,9 @@ extend the feature.
 ## Data Model Summary
 
 - `SceneLog`: top-level record with room reference, visibility (private,
-  organisation, event, public), status (active/completed/archived/deleted),
-  chapter FK, optional title, M2M to organisations and plots, timestamps, and
-  auto-closed flag.
+  organisation, event), status (active/completed/archived/deleted), chapter FK,
+  optional title, M2M to organisations and plots, timestamps, and auto-closed
+  flag.
 - `SceneParticipant`: link between scene and character/account plus first join,
   last leave, and "present" flag.
 - `SceneParticipantSegment`: join/leave pairs used for per-participant transcript
@@ -71,17 +71,30 @@ extend the feature.
 All commands live in `commands/scenes.py` and are registered via
 `commands/default_cmdsets.py`.
 
-- `@scene/startlog`: begin logging in the current room (one active scene per
-  room). Autoselects the current chapter.
+### Starting Scenes
+
+- `@scene/startlog`: begin logging a **private** scene in the current room (one
+  active scene per room). Autoselects the current chapter. Private scenes are
+  only visible to participants and staff.
+- `@scene/eventlog`: begin logging a **public event** scene. Event scenes are
+  visible to everyone (including non-logged-in website visitors) and will not
+  auto-close when the room empties.
+- `@scene/orglog`: begin logging an **organisation-restricted** scene. These
+  scenes are visible to all members of organisations you specify with
+  `@scene/org`, and will not auto-close when the room empties.
+
+### Managing Scenes
+
 - `@scene/endlog [scene]`: finalize the active scene (or a specific scene by ID).
+  Remote ending by scene number is staff-only.
 - `@scene/title [scene]=<title>`: set or update the scene title.
 - `@scene/plot [scene]=<plot id or name>[,<plot>...]`: associate plots with the
   scene.
-- `@scene/tag [scene]=<chapter id>`: assign a chapter (single chapter per scene).
-- `@scene/visibility [scene]=<visibility>`: change visibility (requires staff for
-  event/public; organisation visibility requires attached organisations).
+- `@scene/visibility <scene>=<visibility>`: **staff only** - retroactively change
+  visibility between private, organisation, and event. Players should use the
+  appropriate start command instead.
 - `@scene/org [scene]=<organisation>[,<organisation>...]`: grant organisation
-  access; defaults visibility to organisation.
+  access to an organisation scene.
 - `@scene/list`: show the 20 most recent scenes the player can access.
 
 Syntax supports optional explicit scene IDs (`@scene/title 12=New Title`),
@@ -99,15 +112,16 @@ they were participants.
 
 ## Scene Lifecycle
 
-1. Player runs `@scene/startlog`. Service creates `SceneLog`, attaches
-   `SceneTrackerScript`, and registers present participants.
+1. Player runs `@scene/startlog`, `@scene/eventlog`, or `@scene/orglog`. Service
+   creates `SceneLog` with appropriate visibility, attaches `SceneTrackerScript`,
+   and registers present participants.
 2. While active, speech/roll commands feed entries via `scene_logger.record_entry`.
 3. Participants arriving/leaving update `SceneParticipant` and `SceneParticipantSegment`.
 4. Closing (`@scene/endlog` or auto-close) sets status to completed, removes room
-   reference, and closes open segments.
-5. Players can continue to edit metadata (title, plots, chapter, organisations)
-   if they participated; staff can archive or delete scenes via admin tools
-   (future work).
+   reference, and closes open segments. **Note**: Only **private** scenes auto-close
+   when the room empties. Organisation and event scenes must be manually ended.
+5. Players can continue to edit metadata (title, plots, organisations) if they
+   participated; staff can archive or delete scenes via admin tools (future work).
 
 ## Web Interface
 
