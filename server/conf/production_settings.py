@@ -54,6 +54,7 @@ INSTALLED_APPS += (
     'web.roster',
     'web.worldinfo',
     'web.relationships',
+    'web.scenes',
 )
 
 MULTISESSION_MODE = 1  #Many sessions per account, with input and output being the same across all sessions.
