@@ -107,6 +107,9 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 IDLE_TIMEOUT = -1  # Disable idle timeout for MUD connections
 
+# Websocket settings for better mobile reconnection handling
+WEBSOCKET_CLIENT_ENABLED = True
+
 TIME_ZONE = 'UTC'
 
 # Security settings for reverse proxy (Caddy)
@@ -139,6 +142,19 @@ USE_X_FORWARDED_HOST = True
 # Send cookies only over HTTPS
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Cookie SameSite settings for mobile browser compatibility
+# 'Lax' allows cookies to be sent on same-site requests and top-level navigation
+# This helps prevent session loss when mobile browsers suspend/resume tabs
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Save session on every request to ensure it persists across websocket reconnections
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Use HttpOnly for session cookie (CSRF needs to be readable by JS for AJAX)
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 
 # HTTP Strict Transport Security (Caddy also redirects HTTP->HTTPS)
 SECURE_HSTS_SECONDS = 31536000  # 1 year
