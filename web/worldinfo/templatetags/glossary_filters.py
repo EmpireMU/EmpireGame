@@ -115,14 +115,15 @@ def glossary(text):
         if last_open_tag > last_close_tag:
             continue
         
-        # Check if we're inside an existing glossary span by looking for data-glossary attribute
-        # Look back for opening tags
-        recent_context = text_before[max(0, start_pos - 200):start_pos]
-        if 'data-glossary-term' in recent_context:
-            # Check if there's a closing glossary element between the last glossary trigger and here
-            last_glossary_attr = recent_context.rfind('data-glossary-term')
-            context_after_span = recent_context[last_glossary_attr:]
-            if ('</span>' not in context_after_span) and ('</button>' not in context_after_span):
+        # Check if we're inside an existing glossary button by looking for unclosed button tags
+        # Look back for the most recent button opening
+        recent_context = text_before[max(0, start_pos - 500):start_pos]
+        last_glossary_open = recent_context.rfind('<button type="button" class="glossary-term"')
+        if last_glossary_open != -1:
+            # Check if there's a closing button tag after this opening
+            context_after_open = recent_context[last_glossary_open:]
+            if '</button>' not in context_after_open:
+                # We're inside an unclosed glossary button
                 continue
         
         # Build the replacement HTML
