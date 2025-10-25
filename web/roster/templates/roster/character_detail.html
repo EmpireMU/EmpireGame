@@ -1328,9 +1328,9 @@ function closeModal(modalId) {
 
 /* Glossary term styling */
 .glossary-term {
-    border-bottom: 1px dotted #6c757d;
+    border-bottom: 1px dotted rgba(13, 110, 253, 0.45);
     cursor: pointer;
-    color: #495057;
+    color: inherit;
     position: relative;
     background: none;
     border: none;
@@ -1339,11 +1339,28 @@ function closeModal(modalId) {
     text-align: left;
 }
 
+.glossary-term::after {
+    content: '';
+    display: inline-block;
+    width: 0.4em;
+    height: 0.4em;
+    margin-left: 0.35em;
+    border-radius: 50%;
+    background-color: rgba(13, 110, 253, 0.45);
+    vertical-align: middle;
+    transition: background-color 0.15s ease;
+}
+
 .glossary-term:hover,
 .glossary-term:focus {
-    border-bottom-color: #007bff;
-    color: #007bff;
+    border-bottom-color: #0a58ca;
+    color: #0a58ca;
     outline: none;
+}
+
+.glossary-term:hover::after,
+.glossary-term:focus::after {
+    background-color: #0a58ca;
 }
 
 /* Glossary popover styling */
@@ -1381,6 +1398,7 @@ function closeModal(modalId) {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
     line-height: 1.5;
+    color: #212529;
 }
 
 .glossary-popover-footer {
@@ -1398,7 +1416,8 @@ function closeModal(modalId) {
     text-decoration: none;
 }
 
-.glossary-popover-footer a:hover {
+.glossary-popover-footer a:hover,
+.glossary-popover-footer a:focus {
     text-decoration: underline;
 }
 
