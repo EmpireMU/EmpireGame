@@ -113,16 +113,9 @@ def glossary(text):
         last_close_tag = text_before.rfind('>')
         
         if last_open_tag > last_close_tag:
-            # We might be inside a tag, but check if we're in an attribute value
-            # Count quotes after the last < to see if we're inside a quoted string
-            tag_content = text_before[last_open_tag:]
-            # Count unescaped quotes
-            quote_count = tag_content.count('"') - tag_content.count('\\"')
-            # If odd number of quotes, we're inside a quoted attribute value, which is OK
-            if quote_count % 2 == 0:
-                # Even quotes means we're in actual tag markup, skip it
-                continue
-            # Odd quotes means we're inside an attribute value, continue processing
+            # We're inside a tag (between < and >), skip it entirely
+            # This includes both tag markup AND attribute values
+            continue
         
         # Check if we're inside an existing glossary button's CONTENT (not attributes)
         last_glossary_open = result.rfind('<button type="button" class="glossary-term"', 0, start_pos)
