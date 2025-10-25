@@ -1327,28 +1327,16 @@ function closeModal(modalId) {
 }
 
 /* Glossary term styling */
+
 .glossary-term {
-    border-bottom: 1px dotted rgba(13, 110, 253, 0.45);
+    border-bottom: 1px dotted rgba(13, 110, 253, 0.4);
     cursor: pointer;
     color: inherit;
-    position: relative;
     background: none;
     border: none;
-    padding: 0;
+    padding: 0 0 0.1em 0;
     font: inherit;
     text-align: left;
-}
-
-.glossary-term::after {
-    content: '';
-    display: inline-block;
-    width: 0.4em;
-    height: 0.4em;
-    margin-left: 0.35em;
-    border-radius: 50%;
-    background-color: rgba(13, 110, 253, 0.45);
-    vertical-align: middle;
-    transition: background-color 0.15s ease;
 }
 
 .glossary-term:hover,
@@ -1356,11 +1344,6 @@ function closeModal(modalId) {
     border-bottom-color: #0a58ca;
     color: #0a58ca;
     outline: none;
-}
-
-.glossary-term:hover::after,
-.glossary-term:focus::after {
-    background-color: #0a58ca;
 }
 
 /* Glossary popover styling */
