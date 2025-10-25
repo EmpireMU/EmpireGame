@@ -38,7 +38,11 @@ def glossary(text):
         return text
     
     # Track which terms we've already replaced (one per term per document)
-    replaced_terms = set()
+    replaced_term_keys = set()
+
+    def normalize_term(term_text, is_case_sensitive):
+        """Normalize term text for deduplication depending on case sensitivity."""
+        return term_text if is_case_sensitive else term_text.lower()
     
     # Work with the text
     result = str(text)
@@ -52,8 +56,8 @@ def glossary(text):
         
         for search_term in all_terms:
             # Skip if we've already replaced this specific term
-            search_term_lower = search_term.lower()
-            if search_term_lower in replaced_terms:
+            term_key = (normalize_term(search_term, term_obj.case_sensitive), term_obj.case_sensitive)
+            if term_key in replaced_term_keys:
                 continue
             
             # Build the pattern for this term
@@ -157,7 +161,9 @@ def glossary(text):
         
         # Mark all terms (primary + aliases) as replaced so we don't match them again
         for t in all_terms:
-            replaced_terms.add(t.lower())
+            # Track both the case-sensitive and case-insensitive keys to avoid duplicates
+            replaced_term_keys.add((normalize_term(t, term_obj.case_sensitive), term_obj.case_sensitive))
+            replaced_term_keys.add((normalize_term(t, False), False))
     
     return mark_safe(result)
 
