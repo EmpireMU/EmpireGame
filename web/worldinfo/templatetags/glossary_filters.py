@@ -109,21 +109,30 @@ def glossary(text):
         match = first_match
         matched_text = match.group(0)
         
-        # Check if this match is inside an HTML tag or existing glossary span
-        # Look backwards from match position to find if we're inside a tag
+        # Check if this match is inside an HTML tag or existing glossary button
+        # Look backwards from match position to find if we're inside actual tag content
         start_pos = match.start()
-        
-        # Simple heuristic: if the last < before this position doesn't have a closing >
-        # then we're inside a tag
         text_before = result[:start_pos]
+        
+        # Check if we're between < and > (inside a tag definition, not content)
+        # But we need to be careful: we could be inside a data attribute value
+        # Strategy: find the last < and >, and check if we're truly in tag markup
         last_open_tag = text_before.rfind('<')
         last_close_tag = text_before.rfind('>')
         
-        # Skip if we're inside a tag
         if last_open_tag > last_close_tag:
-            if term_obj.term == "Sanctuary":
-                logger.warning(f"DEBUG: Sanctuary skipped - inside HTML tag")
-            continue
+            # We might be inside a tag, but check if we're in an attribute value
+            # Count quotes after the last < to see if we're inside a quoted string
+            tag_content = text_before[last_open_tag:]
+            # Count unescaped quotes
+            quote_count = tag_content.count('"') - tag_content.count('\\"')
+            # If odd number of quotes, we're inside a quoted attribute value, which is OK
+            if quote_count % 2 == 0:
+                # Even quotes means we're in actual tag markup, skip it
+                if term_obj.term == "Sanctuary":
+                    logger.warning(f"DEBUG: Sanctuary skipped - inside HTML tag markup")
+                continue
+            # Odd quotes means we're inside an attribute value, continue processing
         
         # Check if we're inside an existing glossary button by ensuring the last opening button tag is closed
         last_glossary_open = result.rfind('<button type="button" class="glossary-term"', 0, start_pos)
