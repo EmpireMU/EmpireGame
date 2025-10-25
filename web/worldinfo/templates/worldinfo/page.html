@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load glossary_filters %}
 
 {% block header_ext %}
 <link rel="stylesheet" href="{% static 'website/css/custom.css' %}">
@@ -53,7 +54,7 @@ document.title = "Empire - {{ page.title }}";
                      alt="{{ page.title }} emblem" 
                      class="article-emblem">
                 {% endif %}
-                {{ content|safe }}
+                {{ content|safe|glossary }}
             </div>
         </div>
         <div class="card-footer text-muted">
@@ -108,6 +109,298 @@ document.title = "Empire - {{ page.title }}";
         max-height: 250px;
     }
 }
+
+/* Glossary term styling */
+.glossary-term {
+    border-bottom: 1px dotted #6c757d;
+    cursor: pointer;
+    color: #495057;
+    position: relative;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+}
+
+.glossary-term:hover,
+.glossary-term:focus {
+    border-bottom-color: #007bff;
+    color: #007bff;
+    outline: none;
+}
+
+/* Glossary popover styling */
+.glossary-popover {
+    position: absolute;
+    z-index: 1060;
+    max-width: 350px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.3rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    padding: 0;
+    display: none;
+}
+
+.glossary-popover.show {
+    display: block;
+}
+
+.glossary-popover:focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.glossary-popover-header {
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.3rem 0.3rem 0 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.glossary-popover-body {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.glossary-popover-footer {
+    padding: 0.5rem 1rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 0.3rem 0.3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.glossary-popover-footer a {
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.glossary-popover-footer a:hover {
+    text-decoration: underline;
+}
+
+.glossary-close-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.glossary-close-btn:hover,
+.glossary-close-btn:focus {
+    color: #343a40;
+    outline: none;
+}
 </style>
+
+<script>
+// Glossary popover functionality
+document.addEventListener('DOMContentLoaded', function() {
+    let currentPopover = null;
+    let currentTermElement = null;
+    
+    const glossaryTerms = document.querySelectorAll('.glossary-term');
+    const tabindexableSelectors = 'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])';
+
+    const openPopover = (trigger) => {
+        // Close any existing popover
+        closePopover();
+
+        const termText = trigger.dataset.glossaryTerm;
+        const description = trigger.dataset.glossaryDesc;
+        const url = trigger.dataset.glossaryUrl;
+        const linkText = trigger.dataset.glossaryLinkText || 'Learn more';
+        const popoverId = trigger.dataset.glossaryPopoverId;
+
+        const popover = document.createElement('div');
+        popover.className = 'glossary-popover';
+        popover.id = popoverId;
+        popover.setAttribute('role', 'dialog');
+        popover.setAttribute('aria-modal', 'false');
+        popover.setAttribute('aria-labelledby', `${popoverId}-title`);
+        popover.setAttribute('aria-describedby', `${popoverId}-desc`);
+        popover.tabIndex = -1;
+
+        let popoverHTML = `
+            <div class="glossary-popover-header" id="${popoverId}-title">${escapeHtml(termText)}</div>
+            <div class="glossary-popover-body" id="${popoverId}-desc">${escapeHtml(description)}</div>
+        `;
+
+        popoverHTML += '<div class="glossary-popover-footer">';
+        if (url) {
+            popoverHTML += `
+                <a href="${escapeHtml(url)}" class="text-primary" target="_blank" rel="noopener">
+                    ${escapeHtml(linkText)} →
+                </a>
+            `;
+        } else {
+            popoverHTML += '<span></span>';
+        }
+        popoverHTML += `
+            <button type="button" class="glossary-close-btn" aria-label="Close glossary popover">Close</button>
+        </div>`;
+
+        popover.innerHTML = popoverHTML;
+
+        document.body.appendChild(popover);
+        positionPopover(trigger, popover);
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.setAttribute('aria-controls', popoverId);
+
+        setTimeout(() => {
+            popover.classList.add('show');
+            popover.focus();
+        }, 10);
+
+        const closeButton = popover.querySelector('.glossary-close-btn');
+        closeButton.addEventListener('click', () => closePopover());
+
+        popover.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closePopover();
+            }
+        });
+
+        // Trap focus within the popover
+        const focusableElements = popover.querySelectorAll(tabindexableSelectors);
+        if (!focusableElements.length) {
+            return;
+        }
+
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+
+        popover.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                if (e.shiftKey) {
+                    if (document.activeElement === firstFocusable) {
+                        e.preventDefault();
+                        lastFocusable.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastFocusable) {
+                        e.preventDefault();
+                        firstFocusable.focus();
+                    }
+                }
+            }
+        });
+
+        currentPopover = popover;
+        currentTermElement = trigger;
+    };
+
+    const closePopover = () => {
+        if (!currentPopover) {
+            return;
+        }
+
+        currentPopover.classList.remove('show');
+        if (currentTermElement) {
+            currentTermElement.setAttribute('aria-expanded', 'false');
+            currentTermElement.removeAttribute('aria-controls');
+        }
+
+        setTimeout(() => {
+            if (currentPopover && currentPopover.parentNode) {
+                currentPopover.parentNode.removeChild(currentPopover);
+            }
+            if (currentTermElement) {
+                currentTermElement.focus();
+            }
+            currentPopover = null;
+            currentTermElement = null;
+        }, 150);
+    };
+
+    const positionPopover = (termElement, popover) => {
+        const rect = termElement.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+
+        let top = rect.bottom + window.scrollY + 8;
+        let left = rect.left + window.scrollX;
+
+        if (rect.bottom + popoverRect.height + 8 > window.innerHeight) {
+            top = rect.top + window.scrollY - popoverRect.height - 8;
+        }
+
+        if (left + popoverRect.width > window.innerWidth) {
+            left = window.innerWidth - popoverRect.width - 16;
+        }
+
+        if (left < 8) {
+            left = 8;
+        }
+
+        popover.style.top = `${top}px`;
+        popover.style.left = `${left}px`;
+    };
+
+    tooltipInteractionSetup(glossaryTerms, openPopover);
+
+    document.addEventListener('click', (e) => {
+        if (currentPopover && !e.target.closest('.glossary-popover') && !e.target.closest('.glossary-term')) {
+            closePopover();
+        }
+    });
+
+    window.addEventListener('scroll', () => {
+        if (currentPopover && currentTermElement) {
+            positionPopover(currentTermElement, currentPopover);
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (currentPopover) {
+            closePopover();
+        }
+    });
+
+    function tooltipInteractionSetup(terms, openFn) {
+        terms.forEach(term => {
+            term.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (currentPopover && currentTermElement === term) {
+                    closePopover();
+                    return;
+                }
+
+                openFn(term);
+            });
+
+            term.addEventListener('keydown', (e) => {
+                if (['Enter', ' '].includes(e.key)) {
+                    e.preventDefault();
+                    if (currentPopover && currentTermElement === term) {
+                        closePopover();
+                        return;
+                    }
+                    openFn(term);
+                }
+                if (e.key === 'Escape' && currentPopover) {
+                    closePopover();
+                }
+            });
+        });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
 
 {% endblock %} 

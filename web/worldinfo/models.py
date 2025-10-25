@@ -104,3 +104,52 @@ class MapLocation(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.map_name})"
+
+
+class GlossaryTerm(models.Model):
+    """
+    A glossary term that can be automatically highlighted in worldinfo and roster pages.
+    """
+    term = models.CharField(
+        max_length=200,
+        unique=True,
+        db_index=True,
+        help_text="The term to highlight (e.g., 'Westelth', 'The Empire')"
+    )
+    short_description = models.TextField(
+        max_length=500,
+        help_text="Brief description shown in the popover (max 500 characters)"
+    )
+    link_url = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Optional URL to full page (e.g., /world/westelth/ or /wiki/empire/)"
+    )
+    link_text = models.CharField(
+        max_length=100,
+        blank=True,
+        default="Learn more",
+        help_text="Text for the 'Learn more' link (default: 'Learn more')"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Uncheck to temporarily disable highlighting for this term"
+    )
+    case_sensitive = models.BooleanField(
+        default=False,
+        help_text="Check if the term should be matched case-sensitively"
+    )
+    priority = models.IntegerField(
+        default=0,
+        help_text="Higher priority terms are matched first (useful for overlapping terms)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-priority', 'term']
+        verbose_name = "Glossary Term"
+        verbose_name_plural = "Glossary Terms"
+    
+    def __str__(self):
+        return self.term

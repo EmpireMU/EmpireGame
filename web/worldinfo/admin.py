@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import WorldInfoPage, News, MapLocation
+from .models import WorldInfoPage, News, MapLocation, GlossaryTerm
 
 
 @admin.register(WorldInfoPage)
@@ -57,4 +57,31 @@ class MapLocationAdmin(admin.ModelAdmin):
             'fields': ('link_url',)
         }),
     )
+
+
+@admin.register(GlossaryTerm)
+class GlossaryTermAdmin(admin.ModelAdmin):
+    list_display = ['term', 'is_active', 'case_sensitive', 'priority', 'has_link', 'updated_at']
+    list_filter = ['is_active', 'case_sensitive']
+    search_fields = ['term', 'short_description']
+    list_editable = ['is_active', 'priority']
+    
+    fieldsets = (
+        ('Term', {
+            'fields': ('term', 'short_description')
+        }),
+        ('Link', {
+            'fields': ('link_url', 'link_text'),
+            'description': 'Optional link to a full page for this term'
+        }),
+        ('Settings', {
+            'fields': ('is_active', 'case_sensitive', 'priority'),
+            'description': 'Priority: higher numbers are matched first (useful for overlapping terms like "Empire" vs "The Empire")'
+        }),
+    )
+    
+    def has_link(self, obj):
+        return bool(obj.link_url)
+    has_link.boolean = True
+    has_link.short_description = 'Has Link'
 
