@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('worldinfo', '0003_news_alter_worldinfopage_options_maplocation'),
+        ('worldinfo', '0006_alter_worldinfopage_category_and_more'),
     ]
 
     operations = [
@@ -31,4 +31,5 @@ class Migration(migrations.Migration):
             },
         ),
     ]
+
 
