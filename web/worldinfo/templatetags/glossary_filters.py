@@ -26,9 +26,6 @@ def glossary(text):
     if not text:
         return text
     
-    import logging
-    logger = logging.getLogger(__name__)
-    
     # Get all active glossary terms, ordered by priority (higher first)
     terms = (
         GlossaryTerm.objects
@@ -53,9 +50,6 @@ def glossary(text):
     for term_obj in terms:
         # Get all terms (primary + aliases) for this glossary entry
         all_terms = term_obj.get_all_terms()
-        
-        if term_obj.term == "Sanctuary":
-            logger.warning(f"DEBUG: Processing Sanctuary - all_terms: {all_terms}, case_sensitive: {term_obj.case_sensitive}, priority: {term_obj.priority}")
         
         # Try to match any of the terms
         first_match = None
@@ -102,8 +96,6 @@ def glossary(text):
         
         # If we didn't find any matches for this glossary entry, continue
         if first_match is None:
-            if term_obj.term == "Sanctuary":
-                logger.warning(f"DEBUG: No match found for Sanctuary in text")
             continue
         
         match = first_match
@@ -129,21 +121,21 @@ def glossary(text):
             # If odd number of quotes, we're inside a quoted attribute value, which is OK
             if quote_count % 2 == 0:
                 # Even quotes means we're in actual tag markup, skip it
-                if term_obj.term == "Sanctuary":
-                    logger.warning(f"DEBUG: Sanctuary skipped - inside HTML tag markup")
                 continue
             # Odd quotes means we're inside an attribute value, continue processing
         
-        # Check if we're inside an existing glossary button by ensuring the last opening button tag is closed
+        # Check if we're inside an existing glossary button's CONTENT (not attributes)
         last_glossary_open = result.rfind('<button type="button" class="glossary-term"', 0, start_pos)
         if last_glossary_open != -1:
-            # Look for a closing </button> between the opening and the current match
-            button_close = result.find('</button>', last_glossary_open, start_pos)
-            if button_close == -1:
-                # No closing tag before this position, so we're inside the button
-                if term_obj.term == "Sanctuary":
-                    logger.warning(f"DEBUG: Sanctuary skipped - inside glossary button")
-                continue
+            # Look for the end of the opening tag (the >) after the button start
+            opening_tag_end = result.find('>', last_glossary_open, start_pos)
+            if opening_tag_end != -1 and opening_tag_end < start_pos:
+                # The opening tag has closed, now check if the button itself has closed
+                button_close = result.find('</button>', opening_tag_end, start_pos)
+                if button_close == -1:
+                    # We're between the > of the opening tag and the </button>, so we're in button content
+                    continue
+            # If opening_tag_end is -1 or >= start_pos, we're in the attributes, which we already handled above
         
         # Build the replacement HTML
         # Escape the description for HTML
@@ -178,9 +170,6 @@ def glossary(text):
         
         # Replace only this first occurrence
         result = result[:match.start()] + replacement + result[match.end():]
-        
-        if term_obj.term == "Sanctuary":
-            logger.warning(f"DEBUG: Sanctuary REPLACED successfully at position {match.start()}")
         
         # Mark all terms (primary + aliases) as replaced so we don't match them again
         for t in all_terms:
