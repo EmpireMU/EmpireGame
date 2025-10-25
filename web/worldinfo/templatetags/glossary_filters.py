@@ -161,9 +161,8 @@ def glossary(text):
         
         # Mark all terms (primary + aliases) as replaced so we don't match them again
         for t in all_terms:
-            # Track both the case-sensitive and case-insensitive keys to avoid duplicates
+            # Only track the key with the actual case sensitivity of this entry
             replaced_term_keys.add((normalize_term(t, term_obj.case_sensitive), term_obj.case_sensitive))
-            replaced_term_keys.add((normalize_term(t, False), False))
     
     return mark_safe(result)
 
