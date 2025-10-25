@@ -44,34 +44,57 @@ def glossary(text):
     result = str(text)
     
     for term_obj in terms:
-        # Skip if we've already replaced this term
-        term_lower = term_obj.term.lower()
-        if term_lower in replaced_terms:
+        # Get all terms (primary + aliases) for this glossary entry
+        all_terms = term_obj.get_all_terms()
+        
+        # Try to match any of the terms
+        first_match = None
+        
+        for search_term in all_terms:
+            # Skip if we've already replaced this specific term
+            search_term_lower = search_term.lower()
+            if search_term_lower in replaced_terms:
+                continue
+            
+            # Build the pattern for this term
+            if term_obj.case_sensitive:
+                # Case-sensitive: match exact term
+                pattern = re.escape(search_term)
+                flags = 0
+            else:
+                # Case-insensitive
+                pattern = re.escape(search_term)
+                flags = re.IGNORECASE
+            
+            # Important: Only match whole words, not parts of words
+            # Use word boundaries but handle special characters
+            pattern = r'\b' + pattern + r'\b'
+            
+            # We need to avoid matching inside HTML tags or existing glossary spans
+            # Strategy: Find all matches, then check if they're inside tags
+            matches = list(re.finditer(pattern, result, flags=flags))
+            
+            if not matches:
+                continue
+            
+            # Check if this is the earliest match we've found
+            for match in matches:
+                if (
+                    first_match is None
+                    or match.start() < first_match.start()
+                    or (
+                        match.start() == first_match.start()
+                        and match.end() > first_match.end()
+                    )
+                ):
+                    first_match = match
+                    break  # Only need the first match of this term
+        
+        # If we didn't find any matches for this glossary entry, continue
+        if first_match is None:
             continue
         
-        # Build the pattern for this term
-        if term_obj.case_sensitive:
-            # Case-sensitive: match exact term
-            pattern = re.escape(term_obj.term)
-            flags = 0
-        else:
-            # Case-insensitive
-            pattern = re.escape(term_obj.term)
-            flags = re.IGNORECASE
-        
-        # Important: Only match whole words, not parts of words
-        # Use word boundaries but handle special characters
-        pattern = r'\b' + pattern + r'\b'
-        
-        # We need to avoid matching inside HTML tags or existing glossary spans
-        # Strategy: Find all matches, then check if they're inside tags
-        matches = list(re.finditer(pattern, result, flags=flags))
-        
-        if not matches:
-            continue
-        
-        # Only process the first match
-        match = matches[0]
+        match = first_match
         matched_text = match.group(0)
         
         # Check if this match is inside an HTML tag or existing glossary span
@@ -132,8 +155,9 @@ def glossary(text):
         # Replace only this first occurrence
         result = result[:match.start()] + replacement + result[match.end():]
         
-        # Mark this term as replaced
-        replaced_terms.add(term_lower)
+        # Mark all terms (primary + aliases) as replaced so we don't match them again
+        for t in all_terms:
+            replaced_terms.add(t.lower())
     
     return mark_safe(result)
 

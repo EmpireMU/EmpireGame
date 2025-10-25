@@ -61,14 +61,15 @@ class MapLocationAdmin(admin.ModelAdmin):
 
 @admin.register(GlossaryTerm)
 class GlossaryTermAdmin(admin.ModelAdmin):
-    list_display = ['term', 'is_active', 'case_sensitive', 'priority', 'has_link', 'updated_at']
+    list_display = ['term', 'alias_count', 'is_active', 'case_sensitive', 'priority', 'has_link', 'updated_at']
     list_filter = ['is_active', 'case_sensitive']
-    search_fields = ['term', 'short_description']
+    search_fields = ['term', 'aliases', 'short_description']
     list_editable = ['is_active', 'priority']
     
     fieldsets = (
         ('Term', {
-            'fields': ('term', 'short_description')
+            'fields': ('term', 'aliases', 'short_description'),
+            'description': 'Enter alternative terms (aliases) one per line. For example, if the term is "Greytide", you could add "Greytides" as an alias.'
         }),
         ('Link', {
             'fields': ('link_url', 'link_text'),
@@ -84,4 +85,11 @@ class GlossaryTermAdmin(admin.ModelAdmin):
         return bool(obj.link_url)
     has_link.boolean = True
     has_link.short_description = 'Has Link'
+    
+    def alias_count(self, obj):
+        """Show how many aliases this term has."""
+        if not obj.aliases:
+            return 0
+        return len([a for a in obj.aliases.split('\n') if a.strip()])
+    alias_count.short_description = 'Aliases'
 

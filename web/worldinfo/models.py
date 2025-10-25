@@ -114,7 +114,11 @@ class GlossaryTerm(models.Model):
         max_length=200,
         unique=True,
         db_index=True,
-        help_text="The term to highlight (e.g., 'Westelth', 'The Empire')"
+        help_text="The primary term to highlight (e.g., 'Westelth', 'The Empire')"
+    )
+    aliases = models.TextField(
+        blank=True,
+        help_text="Alternative terms that should show the same definition (one per line, e.g., 'Imperial House' for 'House Otrese', or 'Greytides' for 'Greytide')"
     )
     short_description = models.TextField(
         max_length=500,
@@ -153,3 +157,14 @@ class GlossaryTerm(models.Model):
     
     def __str__(self):
         return self.term
+    
+    def get_all_terms(self):
+        """
+        Returns a list of all terms (primary + aliases) for matching.
+        """
+        terms = [self.term]
+        if self.aliases:
+            # Split by newlines and strip whitespace
+            aliases = [alias.strip() for alias in self.aliases.split('\n') if alias.strip()]
+            terms.extend(aliases)
+        return terms
