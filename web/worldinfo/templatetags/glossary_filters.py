@@ -26,6 +26,9 @@ def glossary(text):
     if not text:
         return text
     
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Get all active glossary terms, ordered by priority (higher first)
     terms = (
         GlossaryTerm.objects
@@ -50,6 +53,9 @@ def glossary(text):
     for term_obj in terms:
         # Get all terms (primary + aliases) for this glossary entry
         all_terms = term_obj.get_all_terms()
+        
+        if term_obj.term == "Sanctuary":
+            logger.warning(f"DEBUG: Processing Sanctuary - all_terms: {all_terms}, case_sensitive: {term_obj.case_sensitive}, priority: {term_obj.priority}")
         
         # Try to match any of the terms
         first_match = None
@@ -96,6 +102,8 @@ def glossary(text):
         
         # If we didn't find any matches for this glossary entry, continue
         if first_match is None:
+            if term_obj.term == "Sanctuary":
+                logger.warning(f"DEBUG: No match found for Sanctuary in text")
             continue
         
         match = first_match
@@ -113,6 +121,8 @@ def glossary(text):
         
         # Skip if we're inside a tag
         if last_open_tag > last_close_tag:
+            if term_obj.term == "Sanctuary":
+                logger.warning(f"DEBUG: Sanctuary skipped - inside HTML tag")
             continue
         
         # Check if we're inside an existing glossary button by ensuring the last opening button tag is closed
@@ -122,6 +132,8 @@ def glossary(text):
             button_close = result.find('</button>', last_glossary_open, start_pos)
             if button_close == -1:
                 # No closing tag before this position, so we're inside the button
+                if term_obj.term == "Sanctuary":
+                    logger.warning(f"DEBUG: Sanctuary skipped - inside glossary button")
                 continue
         
         # Build the replacement HTML
@@ -157,6 +169,9 @@ def glossary(text):
         
         # Replace only this first occurrence
         result = result[:match.start()] + replacement + result[match.end():]
+        
+        if term_obj.term == "Sanctuary":
+            logger.warning(f"DEBUG: Sanctuary REPLACED successfully at position {match.start()}")
         
         # Mark all terms (primary + aliases) as replaced so we don't match them again
         for t in all_terms:
