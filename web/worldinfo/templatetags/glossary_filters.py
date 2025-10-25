@@ -81,8 +81,29 @@ def glossary(text):
             if not matches:
                 continue
             
-            # Check if this is the earliest match we've found
+            # Check if this is the earliest match we've found that's NOT inside a tag
             for match in matches:
+                match_pos = match.start()
+                
+                # Check if this match is inside a tag (between < and >)
+                text_before_match = result[:match_pos]
+                last_open = text_before_match.rfind('<')
+                last_close = text_before_match.rfind('>')
+                
+                # Skip matches inside tags
+                if last_open > last_close:
+                    continue
+                
+                # Check if this match is inside a glossary button's content
+                last_button = result.rfind('<button type="button" class="glossary-term"', 0, match_pos)
+                if last_button != -1:
+                    button_tag_end = result.find('>', last_button, match_pos)
+                    if button_tag_end != -1 and button_tag_end < match_pos:
+                        button_close = result.find('</button>', button_tag_end, match_pos)
+                        if button_close == -1:
+                            continue  # Inside button content
+                
+                # This match is valid, check if it's the earliest
                 if (
                     first_match is None
                     or match.start() < first_match.start()
@@ -92,7 +113,7 @@ def glossary(text):
                     )
                 ):
                     first_match = match
-                    break  # Only need the first match of this term
+                    break  # Found the first valid match for this term
         
         # If we didn't find any matches for this glossary entry, continue
         if first_match is None:
@@ -100,35 +121,7 @@ def glossary(text):
         
         match = first_match
         matched_text = match.group(0)
-        
-        # Check if this match is inside an HTML tag or existing glossary button
-        # Look backwards from match position to find if we're inside actual tag content
         start_pos = match.start()
-        text_before = result[:start_pos]
-        
-        # Check if we're between < and > (inside a tag definition, not content)
-        # But we need to be careful: we could be inside a data attribute value
-        # Strategy: find the last < and >, and check if we're truly in tag markup
-        last_open_tag = text_before.rfind('<')
-        last_close_tag = text_before.rfind('>')
-        
-        if last_open_tag > last_close_tag:
-            # We're inside a tag (between < and >), skip it entirely
-            # This includes both tag markup AND attribute values
-            continue
-        
-        # Check if we're inside an existing glossary button's CONTENT (not attributes)
-        last_glossary_open = result.rfind('<button type="button" class="glossary-term"', 0, start_pos)
-        if last_glossary_open != -1:
-            # Look for the end of the opening tag (the >) after the button start
-            opening_tag_end = result.find('>', last_glossary_open, start_pos)
-            if opening_tag_end != -1 and opening_tag_end < start_pos:
-                # The opening tag has closed, now check if the button itself has closed
-                button_close = result.find('</button>', opening_tag_end, start_pos)
-                if button_close == -1:
-                    # We're between the > of the opening tag and the </button>, so we're in button content
-                    continue
-            # If opening_tag_end is -1 or >= start_pos, we're in the attributes, which we already handled above
         
         # Build the replacement HTML
         # Escape the description for HTML
