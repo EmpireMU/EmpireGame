@@ -45,6 +45,9 @@ class BulletinBoardScript(DefaultScript):
         self.db.cached_latest_post = None
         self.db.unread_counts = {}  # {"character_key": unread_count}
         
+        # Initialize board numbering
+        self.db.board_number = None  # None = unnumbered, admins can set explicit numbers
+        
         # Make this script persistent and not repeating
         self.persistent = True
         self.interval = -1
