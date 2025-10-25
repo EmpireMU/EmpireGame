@@ -1331,21 +1331,23 @@ function closeModal(modalId) {
 .glossary-term {
     cursor: pointer;
     color: inherit;
-    background: none;
+    background: rgba(13, 110, 253, 0.08);
     border: none;
-    padding: 0;
+    padding: 0 2px;
     font: inherit;
     text-align: left;
     text-decoration: underline;
     text-decoration-style: dotted;
-    text-decoration-color: rgba(13, 110, 253, 0.6);
+    text-decoration-color: rgba(13, 110, 253, 0.5);
     text-decoration-thickness: 1px;
     text-underline-offset: 0.15em;
+    border-radius: 2px;
 }
 
 .glossary-term:hover,
 .glossary-term:focus {
     color: #0a58ca;
+    background: rgba(13, 110, 253, 0.12);
     text-decoration-color: #0a58ca;
     outline: none;
 }
